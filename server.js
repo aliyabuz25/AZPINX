@@ -222,10 +222,18 @@ let db;
 
         for (const m of migrations) {
             try {
-                const [columns] = await db.execute(`SHOW COLUMNS FROM ${m.table} LIKE ?`, [m.column]);
-                if (columns.length === 0) {
+                // Use information_schema for better compatibility with prepared statements
+                const [cols] = await db.execute(
+                    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                    [m.table, m.column]
+                );
+
+                if (cols.length === 0) {
                     if (m.oldColumn) {
-                        const [oldCols] = await db.execute(`SHOW COLUMNS FROM ${m.table} LIKE ?`, [m.oldColumn]);
+                        const [oldCols] = await db.execute(
+                            "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                            [m.table, m.oldColumn]
+                        );
                         if (oldCols.length > 0) {
                             console.log(`Migrating ${m.table}: Renaming ${m.oldColumn} to ${m.column}`);
                             await db.execute(`ALTER TABLE ${m.table} CHANGE ${m.oldColumn} ${m.column} ${m.definition}`);
