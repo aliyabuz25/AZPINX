@@ -176,6 +176,8 @@ let db;
                 receipt_path VARCHAR(255),
                 status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
                 payment_method VARCHAR(50) DEFAULT 'C2C Card Transfer',
+                player_id VARCHAR(100),
+                player_nickname VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS home_sections (
@@ -217,7 +219,9 @@ let db;
             { table: 'home_sections', column: 'category_id', definition: 'INT NULL AFTER title' },
             { table: 'home_sections', column: 'order_index', definition: 'INT DEFAULT 0 AFTER product_ids', oldColumn: 'sort_order' },
             { table: 'sliders', column: 'order_index', definition: 'INT DEFAULT 0 AFTER link', oldColumn: 'sort_order' },
-            { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' }
+            { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' },
+            { table: 'orders', column: 'player_id', definition: 'VARCHAR(100) AFTER payment_method' },
+            { table: 'orders', column: 'player_nickname', definition: 'VARCHAR(255) AFTER player_id' }
         ];
 
         for (const m of migrations) {

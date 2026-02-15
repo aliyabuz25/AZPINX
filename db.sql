@@ -71,6 +71,8 @@ CREATE TABLE orders (
     receipt_path VARCHAR(255),
     status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
     payment_method VARCHAR(50) DEFAULT 'C2C Card Transfer',
+    player_id VARCHAR(100),
+    player_nickname VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
