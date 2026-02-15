@@ -1,5 +1,6 @@
 services:
   azpinx-app:
+    build: .
     image: azpinx-app:latest
     restart: unless-stopped
     depends_on:
