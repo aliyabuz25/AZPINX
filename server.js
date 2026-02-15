@@ -119,6 +119,8 @@ let db;
                 balance DECIMAL(10, 2) DEFAULT 0.00,
                 phone VARCHAR(20),
                 two_factor_enabled TINYINT(1) DEFAULT 0,
+                otp_code VARCHAR(10) NULL,
+                otp_expiry DATETIME NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS categories (
@@ -221,7 +223,9 @@ let db;
             { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' },
             { table: 'orders', column: 'player_id', definition: 'VARCHAR(100) AFTER payment_method' },
             { table: 'orders', column: 'player_nickname', definition: 'VARCHAR(255) AFTER player_id' },
-            { table: 'users', column: 'two_factor_enabled', definition: 'TINYINT(1) DEFAULT 0 AFTER phone', oldColumn: 'two_fa_enabled' }
+            { table: 'users', column: 'two_factor_enabled', definition: 'TINYINT(1) DEFAULT 0 AFTER phone', oldColumn: 'two_fa_enabled' },
+            { table: 'users', column: 'otp_code', definition: 'VARCHAR(10) NULL AFTER two_factor_enabled' },
+            { table: 'users', column: 'otp_expiry', definition: 'DATETIME NULL AFTER otp_code' }
         ];
 
         for (const m of migrations) {

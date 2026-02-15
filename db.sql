@@ -14,6 +14,8 @@ CREATE TABLE users (
     balance DECIMAL(10, 2) DEFAULT 0.00,
     phone VARCHAR(20),
     two_factor_enabled TINYINT(1) DEFAULT 0,
+    otp_code VARCHAR(10) NULL,
+    otp_expiry DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
