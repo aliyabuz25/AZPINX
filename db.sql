@@ -13,7 +13,7 @@ CREATE TABLE users (
     role ENUM('user', 'admin', 'reseller') DEFAULT 'user',
     balance DECIMAL(10, 2) DEFAULT 0.00,
     phone VARCHAR(20),
-    two_fa_enabled TINYINT(1) DEFAULT 0,
+    two_factor_enabled TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

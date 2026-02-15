@@ -118,7 +118,7 @@ let db;
                 role ENUM('user', 'admin', 'reseller') DEFAULT 'user',
                 balance DECIMAL(10, 2) DEFAULT 0.00,
                 phone VARCHAR(20),
-                two_fa_enabled TINYINT(1) DEFAULT 0,
+                two_factor_enabled TINYINT(1) DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS categories (
@@ -214,14 +214,14 @@ let db;
         }
         console.log("Database Schema Verified/Created.");
 
-        // --- Migration: Ensure columns exist in existing tables ---
         const migrations = [
             { table: 'home_sections', column: 'category_id', definition: 'INT NULL AFTER title' },
             { table: 'home_sections', column: 'order_index', definition: 'INT DEFAULT 0 AFTER product_ids', oldColumn: 'sort_order' },
             { table: 'sliders', column: 'order_index', definition: 'INT DEFAULT 0 AFTER link', oldColumn: 'sort_order' },
             { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' },
             { table: 'orders', column: 'player_id', definition: 'VARCHAR(100) AFTER payment_method' },
-            { table: 'orders', column: 'player_nickname', definition: 'VARCHAR(255) AFTER player_id' }
+            { table: 'orders', column: 'player_nickname', definition: 'VARCHAR(255) AFTER player_id' },
+            { table: 'users', column: 'two_factor_enabled', definition: 'TINYINT(1) DEFAULT 0 AFTER phone', oldColumn: 'two_fa_enabled' }
         ];
 
         for (const m of migrations) {
