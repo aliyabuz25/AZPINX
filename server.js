@@ -108,26 +108,119 @@ let db;
         });
         console.log("MySQL Connected!");
 
-        // Auto-create wishlist table if not exists
-        await db.execute(`CREATE TABLE IF NOT EXISTS wishlist (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            product_id INT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_wish (user_id, product_id)
-        )`);
+        // --- Database Initialization ---
+        const tables = [
+            `CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                role ENUM('user', 'admin', 'reseller') DEFAULT 'user',
+                balance DECIMAL(10, 2) DEFAULT 0.00,
+                phone VARCHAR(20),
+                two_fa_enabled TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                icon VARCHAR(50) DEFAULT 'fa-layer-group',
+                description TEXT,
+                image_path VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS products (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                api_id VARCHAR(50) UNIQUE NULL,
+                name VARCHAR(255) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                price DECIMAL(10, 2) NOT NULL,
+                description TEXT,
+                image_path VARCHAR(255),
+                status ENUM('sale', 'draft') DEFAULT 'sale',
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS wishlist (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                product_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_wish (user_id, product_id)
+            )`,
+            `CREATE TABLE IF NOT EXISTS tickets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                order_id INT NULL,
+                subject VARCHAR(255) NOT NULL,
+                status ENUM('open', 'closed') DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS ticket_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id INT,
+                sender_id INT,
+                message TEXT NOT NULL,
+                is_admin TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS orders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_name VARCHAR(255) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                sender_name VARCHAR(100) NOT NULL,
+                receipt_path VARCHAR(255),
+                status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+                payment_method VARCHAR(50) DEFAULT 'C2C Card Transfer',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS home_sections (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                type ENUM('featured', 'popular', 'new') DEFAULT 'featured',
+                product_ids TEXT,
+                sort_order INT DEFAULT 0,
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS sliders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255),
+                image_path VARCHAR(255) NOT NULL,
+                link VARCHAR(255),
+                sort_order INT DEFAULT 0,
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'info',
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`
+        ];
 
-        // Auto-create announcements table if not exists
-        await db.execute(`CREATE TABLE IF NOT EXISTS announcements (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            message TEXT NOT NULL,
-            type VARCHAR(50) DEFAULT 'info',
-            is_active TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`);
+        for (const sql of tables) {
+            await db.execute(sql);
+        }
+        console.log("Database Schema Verified/Created.");
+
+        // Check if admin user exists, if not create default
+        const [admins] = await db.execute("SELECT * FROM users WHERE role = 'admin'");
+        if (admins.length === 0) {
+            const hashedPw = await bcrypt.hash('admin123', 10);
+            await db.execute("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)",
+                ['Admin User', 'admin@azpinx.com', hashedPw, 'admin']);
+            console.log("Default Admin user created: admin@azpinx.com / admin123");
+        }
+
     } catch (err) {
-        console.error("MySQL Connection Failed:", err.message);
+        console.error("Database Error:", err.message);
     }
 })();
 

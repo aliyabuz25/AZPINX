@@ -11,6 +11,9 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('user', 'admin', 'reseller') DEFAULT 'user',
+    balance DECIMAL(10, 2) DEFAULT 0.00,
+    phone VARCHAR(20),
+    two_fa_enabled TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
