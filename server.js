@@ -212,6 +212,34 @@ let db;
         }
         console.log("Database Schema Verified/Created.");
 
+        // --- Migration: Ensure columns exist in existing tables ---
+        const migrations = [
+            { table: 'home_sections', column: 'category_id', definition: 'INT NULL AFTER title' },
+            { table: 'home_sections', column: 'order_index', definition: 'INT DEFAULT 0 AFTER product_ids', oldColumn: 'sort_order' },
+            { table: 'sliders', column: 'order_index', definition: 'INT DEFAULT 0 AFTER link', oldColumn: 'sort_order' },
+            { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' }
+        ];
+
+        for (const m of migrations) {
+            try {
+                const [columns] = await db.execute(`SHOW COLUMNS FROM ${m.table} LIKE ?`, [m.column]);
+                if (columns.length === 0) {
+                    if (m.oldColumn) {
+                        const [oldCols] = await db.execute(`SHOW COLUMNS FROM ${m.table} LIKE ?`, [m.oldColumn]);
+                        if (oldCols.length > 0) {
+                            console.log(`Migrating ${m.table}: Renaming ${m.oldColumn} to ${m.column}`);
+                            await db.execute(`ALTER TABLE ${m.table} CHANGE ${m.oldColumn} ${m.column} ${m.definition}`);
+                            continue;
+                        }
+                    }
+                    console.log(`Migrating ${m.table}: Adding column ${m.column}`);
+                    await db.execute(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.definition}`);
+                }
+            } catch (err) {
+                console.warn(`Migration Warning for ${m.table}.${m.column}:`, err.message);
+            }
+        }
+
         // Check if admin user exists, if not create default
         const [admins] = await db.execute("SELECT * FROM users WHERE role = 'admin'");
         if (admins.length === 0) {
