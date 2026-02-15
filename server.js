@@ -116,6 +116,16 @@ let db;
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY unique_wish (user_id, product_id)
         )`);
+
+        // Auto-create announcements table if not exists
+        await db.execute(`CREATE TABLE IF NOT EXISTS announcements (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            type VARCHAR(50) DEFAULT 'info',
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
     } catch (err) {
         console.error("MySQL Connection Failed:", err.message);
     }
@@ -228,25 +238,34 @@ app.use(session({
 
 // Global Context Middleware
 app.use(async (req, res, next) => {
-    res.locals.user = req.session.user || null;
-    res.locals.error = req.session.error || null;
-    res.locals.success = req.session.success || null;
+    try {
+        res.locals.user = req.session.user || null;
+        res.locals.error = req.session.error || null;
+        res.locals.success = req.session.success || null;
 
-    // Fetch user balance if logged in
-    if (req.session.user) {
-        const [userData] = await db.execute('SELECT balance FROM users WHERE id = ?', [req.session.user.id]);
-        if (userData.length > 0) {
-            req.session.user.balance = userData[0].balance; // Update session
-            res.locals.user.balance = userData[0].balance;
+        // Fetch user balance if logged in
+        if (req.session.user && db) {
+            const [userData] = await db.execute('SELECT balance FROM users WHERE id = ?', [req.session.user.id]);
+            if (userData.length > 0) {
+                req.session.user.balance = userData[0].balance; // Update session
+                res.locals.user.balance = userData[0].balance;
+            }
         }
+
+        // Fetch active announcements (HubMsg)
+        if (db) {
+            const [announcements] = await db.execute('SELECT * FROM announcements WHERE is_active = 1 ORDER BY created_at DESC').catch(() => [[]]);
+            res.locals.announcements = announcements;
+        } else {
+            res.locals.announcements = [];
+        }
+
+        delete req.session.error;
+        delete req.session.success;
+    } catch (err) {
+        console.error("Middleware Error:", err.message);
+        res.locals.announcements = [];
     }
-
-    // Fetch active announcements (HubMsg)
-    const [announcements] = await db.execute('SELECT * FROM announcements WHERE is_active = 1 ORDER BY created_at DESC');
-    res.locals.announcements = announcements;
-
-    delete req.session.error;
-    delete req.session.success;
     next();
 });
 
