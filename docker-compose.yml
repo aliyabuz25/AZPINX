@@ -1,7 +1,8 @@
 services:
   azpinx-app:
-    build: .
-    image: azpinx-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       azpinx-db:
