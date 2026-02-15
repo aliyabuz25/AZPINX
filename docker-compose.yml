@@ -7,11 +7,13 @@ services:
         condition: service_healthy
     environment:
       PORT: "3000"
+      HOST: "0.0.0.0"
       DB_HOST: "azpinx-db"
       DB_USER: "azpinx"
       DB_PASSWORD: "azpinx_secret_2026"
       DB_NAME: "azpinx_db"
       NODE_ENV: "production"
+      SESSION_SECRET: "azpinx-session-key-2026-production"
     volumes:
       - /datastore/azpinx/uploads/receipts:/app/public/uploads/receipts
       - /datastore/azpinx/uploads/products:/app/public/uploads/products
@@ -23,7 +25,7 @@ services:
     labels:
       - 'traefik.enable=true'
       - 'traefik.docker.network=edge'
-      - 'traefik.http.routers.azpinx.rule=Host(`azpinx.com`) || Host(`www.azpinx.com`)'
+      - 'traefik.http.routers.azpinx.rule=Host(`azpinx.com`) || Host(`www.azpinx.com`) || Host(`azpinx.octotech.az`)'
       - 'traefik.http.routers.azpinx.entrypoints=web'
       - 'traefik.http.services.azpinx.loadbalancer.server.port=3000'
 
