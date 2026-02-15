@@ -1,0 +1,190 @@
+<%- include('partials/header') %>
+
+    <div class="product-page-container">
+        <div class="breadcrumb">
+            <a href="/">Ana Səhifə</a> <i class="fa-solid fa-chevron-right"></i>
+            <span>
+                <%= product.category %>
+            </span> <i class="fa-solid fa-chevron-right"></i>
+            <span>
+                <%= product.name %>
+            </span>
+        </div>
+
+        <div class="product-detail-grid">
+            <div class="product-detail-left">
+                <div class="product-gallery">
+                    <img src="<%= product.image %>" alt="<%= product.name %>" id="mainProdImage">
+                    <div class="badge-float">
+                        <%= product.badge %>
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-detail-right">
+                <span class="p-cat-tag">
+                    <%= product.category %>
+                </span>
+                <h1 class="p-title">
+                    <%= product.name %>
+                </h1>
+
+                <div class="p-meta">
+                    <span><i class="fa-solid fa-check-circle"></i> Stokdadır</span>
+                    <span><i class="fa-solid fa-bolt"></i> Anında teslimat</span>
+                </div>
+
+                <div class="p-price-card">
+                    <div class="p-prices">
+                        <% if (product.oldPrice) { %>
+                            <span class="p-old">
+                                <%= product.oldPrice.toFixed(2) %> AZN
+                            </span>
+                            <% } %>
+                                <span class="p-current">
+                                    <%= product.price.toFixed(2) %> AZN
+                                </span>
+                    </div>
+
+                    <% if (product.category.toUpperCase().includes('PUBG')) { %>
+                        <div class="mb-4">
+                            <label class="small font-weight-bold text-uppercase"
+                                style="letter-spacing: 0.5px; color: #64748b;">Player ID</label>
+                            <div class="d-flex" style="gap: 8px;">
+                                <input type="text" id="player_id" class="form-control" placeholder="5124018318"
+                                    style="height: 48px; border-radius: 8px; font-weight: 600;">
+                                <button class="btn btn-dark" id="btnCheckID"
+                                    style="height: 48px; border-radius: 8px; padding: 0 25px; font-weight: 600;">Yoxla</button>
+                            </div>
+                            <div id="idStatus" class="mt-2"
+                                style="min-height: 20px; font-size: 0.85rem; font-weight: 500;"></div>
+                            <input type="hidden" id="player_nickname" value="">
+                        </div>
+
+                        <script>
+                            document.getElementById('btnCheckID').addEventListener('click', async function () {
+                                const id = document.getElementById('player_id').value;
+                                if (!id) return;
+
+                                const btn = this;
+                                const statusDiv = document.getElementById('idStatus');
+
+                                btn.disabled = true;
+                                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                                statusDiv.innerHTML = '<span class="text-muted">Yoxlanılır...</span>';
+
+                                try {
+                                    const res = await fetch('/api/pubg-check?player_id=' + id);
+                                    const data = await res.json();
+
+                                    if (data.success) {
+                                        statusDiv.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> ' + data.nickname + '</span>';
+                                        document.getElementById('player_nickname').value = data.nickname;
+                                        const cartBtn = document.getElementById('btnAddToCart');
+                                        if (cartBtn) {
+                                            cartBtn.disabled = false;
+                                            cartBtn.style.opacity = '1';
+                                            cartBtn.style.cursor = 'pointer';
+                                        }
+                                    } else {
+                                        statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ID tapılmadı.</span>';
+                                        document.getElementById('player_nickname').value = '';
+                                    }
+                                } catch (e) {
+                                    statusDiv.innerHTML = '<span class="text-danger">Bağlantı xətası.</span>';
+                                }
+
+                                btn.disabled = false;
+                                btn.innerHTML = 'Yoxla';
+                            });
+                        </script>
+                        <% } %>
+
+                            <div class="p-actions">
+                                <button class="btn btn-primary btn-large" id="btnAddToCart" onclick="handleAddToCart()"
+                                    <% if (product.category.toUpperCase().includes('PUBG')) { %> disabled
+                                    style="opacity: 0.6; cursor: not-allowed;" <% } %>>
+                                        <i class="fa-solid fa-cart-shopping"></i> Səbətə əlavə et
+                                </button>
+                                <button class="btn btn-outline wishlist-btn"
+                                    onclick="toggleWishlist('<%= product.id %>', this)" style="min-width: 50px;">
+                                    <i class="fa-regular fa-heart"></i>
+                                </button>
+                            </div>
+
+                            <script>
+                                function handleAddToCart() {
+                                    const isPubg = "<%= product.category.toUpperCase().includes('PUBG') %>" === "true";
+                                    let extra = {};
+                                    if (isPubg) {
+                                        const pid = document.getElementById('player_id').value;
+                                        const pnick = document.getElementById('player_nickname').value;
+                                        if (!pid || !pnick) {
+                                            Toastify({ text: "Zəhmət olmasa Player ID daxil edin və yoxlayın.", backgroundColor: "#ef4444" }).showToast();
+                                            return;
+                                        }
+                                        extra = { player_id: pid, player_nickname: pnick };
+                                    }
+                                    const productObj = {
+                                        id: '<%= product.id %>',
+                                        name: <%- JSON.stringify(product.name || "") %>,
+                                        price: <%= Number(product.price) || 0 %>,
+                                        img: <%- JSON.stringify(product.image_path || product.image || "") %>,
+                                        ...extra
+                                    };
+                                    addToCartFromPage(productObj);
+                                }
+                            </script>
+                </div>
+
+                <div class="p-features">
+                    <div class="f-item"><i class="fa-solid fa-check"></i> 100% Orijinal Məhsul</div>
+                    <div class="f-item"><i class="fa-solid fa-check"></i> 7/24 Dəstək</div>
+                    <div class="f-item"><i class="fa-solid fa-check"></i> Anında Teslimat</div>
+                    <div class="f-item"><i class="fa-solid fa-check"></i> Təhlükəsiz Ödəniş</div>
+                </div>
+
+                <div class="p-description-box">
+                    <h4>Məhsul Haqqında</h4>
+                    <p>
+                        <%= product.description %>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <% if (similarProducts && similarProducts.length> 0) { %>
+            <section class="section-container" style="margin-top: 80px;">
+                <div class="section-header">
+                    <h3>Oxşar Məhsullar</h3>
+                </div>
+                <div class="product-grid">
+                    <% similarProducts.forEach(prod=> { %>
+                        <%- include('partials/product_card', { product: prod }) %>
+                            <% }) %>
+                </div>
+            </section>
+            <% } %>
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3>Səbətin</h3>
+            <div class="modal-close" id="closeCart"><i class="fa-solid fa-xmark"></i></div>
+        </div>
+        <div class="cart-items" id="cartItemsList">
+            <!-- Cart items injected here -->
+        </div>
+        <div class="cart-footer">
+            <div class="total-row">
+                <span>Cəmi:</span>
+                <span id="cartTotal">0.00 AZN</span>
+            </div>
+            <a href="/checkout" class="btn btn-primary"
+                style="width: 100%; padding: 15px; text-decoration: none; display: block; text-align: center;">Sifarişi
+                tamamla</a>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>

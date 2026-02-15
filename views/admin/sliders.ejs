@@ -1,0 +1,113 @@
+<%- include('header') %>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Yeni Slayder (Banner)</h3>
+                </div>
+                <form action="/admin/sliders/create" method="POST" enctype="multipart/form-data">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Banner Şəkli</label>
+                            <div class="input-group">
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input" name="image" accept="image/*" required
+                                        id="sliderImage">
+                                    <label class="custom-file-label" for="sliderImage">Fayl seçin</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Başlıq (Opsiyonel)</label>
+                            <input type="text" name="title" class="form-control" placeholder="Məs: Ən Yeni Oyunlar">
+                        </div>
+                        <div class="form-group">
+                            <label>Təsvir (Opsiyonel)</label>
+                            <textarea name="description" class="form-control" rows="3"
+                                placeholder="Qısa məlumat..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Link (URL)</label>
+                            <input type="text" name="link" class="form-control" placeholder="Məs: /product/12"
+                                value="#">
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary btn-block">Yüklə və Əlavə et</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Mövcud Slayderlər</h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px">ID</th>
+                                <th>Şəkil</th>
+                                <th>Mətn</th>
+                                <th>Link</th>
+                                <th>Əməliyyatlar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% sliders.forEach(slider=> { %>
+                                <tr>
+                                    <td>
+                                        <%= slider.id %>
+                                    </td>
+                                    <td>
+                                        <img src="<%= slider.image_path %>" alt="Banner"
+                                            style="height: 60px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    </td>
+                                    <td>
+                                        <% if (slider.title) { %>
+                                            <strong>
+                                                <%= slider.title %>
+                                            </strong><br>
+                                            <% } %>
+                                                <% if (slider.description) { %>
+                                                    <small class="text-muted">
+                                                        <%= slider.description %>
+                                                    </small>
+                                                    <% } %>
+                                                        <% if (!slider.title && !slider.description) { %>
+                                                            <span class="text-muted italic small">Yalnız şəkil</span>
+                                                            <% } %>
+                                    </td>
+                                    <td><code><%= slider.link %></code></td>
+                                    <td>
+                                        <form action="/admin/sliders/delete" method="POST"
+                                            onsubmit="return confirm('Bu slayderi silmək istədiyinizə əminsiniz?');"
+                                            style="display:inline;">
+                                            <input type="hidden" name="id" value="<%= slider.id %>">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update the label for custom file input
+        document.getElementById('sliderImage').addEventListener('change', function (e) {
+            var fileName = e.target.files[0].name;
+            var nextSibling = e.target.nextElementSibling;
+            nextSibling.innerText = fileName;
+        });
+    </script>
+
+    <%- include('footer') %>

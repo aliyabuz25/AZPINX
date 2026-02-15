@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.DS_Store
+__MACOSX
+._*
+test_api*.js
+verify_api.js
+server-end.txt
+site-logo.jpeg
+*.md
+docker-compose.yml

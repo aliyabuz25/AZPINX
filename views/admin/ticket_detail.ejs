@@ -1,0 +1,127 @@
+<%- include('header') %>
+    <div class="content-wrapper">
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between">
+                    <h1 class="m-0">
+                        <%= ticket.subject %> <small class="text-muted">(Ticket #<%= ticket.id %>)</small>
+                    </h1>
+                    <div>
+                        <% if (ticket.status==='open' ) { %>
+                            <button class="btn btn-danger" onclick="closeTicket()">Bileti Bağla</button>
+                            <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card direct-chat direct-chat-primary">
+                            <div class="card-header">
+                                <h3 class="card-title">Müştəri ilə Söhbət</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="direct-chat-messages" id="chatBox" style="height: 450px;">
+                                    <% messages.forEach(m=> { %>
+                                        <div class="direct-chat-msg <%= m.is_admin ? 'right' : '' %>">
+                                            <div class="direct-chat-infos clearfix">
+                                                <span
+                                                    class="direct-chat-name <%= m.is_admin ? 'float-right' : 'float-left' %>">
+                                                    <%= m.is_admin ? 'ADMIN' : ticket.user_name %>
+                                                </span>
+                                                <span
+                                                    class="direct-chat-timestamp <%= m.is_admin ? 'float-left' : 'float-right' %>">
+                                                    <%= new Date(m.created_at).toLocaleString('az-AZ') %>
+                                                </span>
+                                            </div>
+                                            <div class="direct-chat-text"
+                                                style="background: <%= m.is_admin ? '#38bdf8' : '#e2e8f0' %>; color: <%= m.is_admin ? '#fff' : '#1e293b' %>; border-color: <%= m.is_admin ? '#38bdf8' : '#ddd' %>;">
+                                                <%= m.message %>
+                                            </div>
+                                        </div>
+                                        <% }) %>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <% if (ticket.status==='open' ) { %>
+                                    <form id="replyForm">
+                                        <div class="input-group">
+                                            <input type="text" name="message" placeholder="Cavabınızı yazın..."
+                                                class="form-control" required style="color: #1e293b !important;">
+                                            <span class="input-group-append">
+                                                <button type="submit" class="btn btn-primary">Göndər</button>
+                                            </span>
+                                        </div>
+                                    </form>
+                                    <% } else { %>
+                                        <div class="text-center text-muted">Bu bilet bağlanıb.</div>
+                                        <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Müştəri Məlumatı</h3>
+                            </div>
+                            <div class="card-body">
+                                <strong><i class="fas fa-user mr-1"></i> Ad Soyad</strong>
+                                <p class="text-muted">
+                                    <%= ticket.user_name %>
+                                </p>
+                                <hr>
+                                <strong><i class="fas fa-phone mr-1"></i> Telefon</strong>
+                                <p class="text-muted">
+                                    <%= ticket.user_phone || 'Qeyd edilməyib' %>
+                                </p>
+                                <hr>
+                                <strong><i class="fas fa-clock mr-1"></i> Yaradılma Tarixi</strong>
+                                <p class="text-muted">
+                                    <%= new Date(ticket.created_at).toLocaleString('az-AZ') %>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const chat = document.getElementById('chatBox');
+        chat.scrollTop = chat.scrollHeight;
+
+        $('#replyForm').on('submit', async function (e) {
+            e.preventDefault();
+            const msg = this.message.value;
+            console.log("Sending reply:", msg);
+            try {
+                const res = await fetch('/admin/ticket/<%= ticket.id %>/reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+                const result = await res.json();
+                console.log("Reply result:", result);
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.error || 'Xəta baş verdi');
+                }
+            } catch (err) {
+                console.error("Reply AJAX error:", err);
+                alert("Serverə qoşulmaq mümkün olmadı.");
+            }
+        });
+
+        async function closeTicket() {
+            if (!confirm('Bileti bağlamaq istədiyinizə əminsiniz?')) return;
+            const res = await fetch('/admin/ticket/<%= ticket.id %>/close', { method: 'POST' });
+            const result = await res.json();
+            if (result.success) location.reload();
+        }
+    </script>
+    <%- include('footer') %>

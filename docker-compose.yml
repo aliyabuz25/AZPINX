@@ -1,0 +1,54 @@
+services:
+  azpinx-app:
+    image: azpinx-app:latest
+    restart: unless-stopped
+    depends_on:
+      azpinx-db:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      DB_HOST: "azpinx-db"
+      DB_USER: "azpinx"
+      DB_PASSWORD: "azpinx_secret_2026"
+      DB_NAME: "azpinx_db"
+      NODE_ENV: "production"
+    volumes:
+      - /datastore/azpinx/uploads/receipts:/app/public/uploads/receipts
+      - /datastore/azpinx/uploads/products:/app/public/uploads/products
+      - /datastore/azpinx/uploads/categories:/app/public/uploads/categories
+      - /datastore/azpinx/uploads/sliders:/app/public/uploads/sliders
+    networks:
+      - edge
+      - internal
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=edge'
+      - 'traefik.http.routers.azpinx.rule=Host(`azpinx.com`) || Host(`www.azpinx.com`)'
+      - 'traefik.http.routers.azpinx.entrypoints=web'
+      - 'traefik.http.services.azpinx.loadbalancer.server.port=3000'
+
+  azpinx-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "azpinx_root_2026"
+      MYSQL_DATABASE: "azpinx_db"
+      MYSQL_USER: "azpinx"
+      MYSQL_PASSWORD: "azpinx_secret_2026"
+    volumes:
+      - /datastore/azpinx/mysql-data:/var/lib/mysql
+      - ./db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - internal
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pazpinx_root_2026" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  edge:
+    external: true
+  internal:
+    driver: bridge

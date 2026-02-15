@@ -1,0 +1,65 @@
+<%- include('header') %>
+    <div class="content-wrapper">
+        <div class="content-header">
+            <div class="container-fluid">
+                <h1 class="m-0">Dəstək İdarəetməsi</h1>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header border-0">
+                        <h3 class="card-title">Bütün Biletlər</h3>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-striped table-valign-middle">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>İstifadəçi</th>
+                                    <th>Mövzu</th>
+                                    <th>Status</th>
+                                    <th>Son Yenilənmə</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% tickets.forEach(t=> { %>
+                                    <tr>
+                                        <td>#<%= t.id %>
+                                        </td>
+                                        <td>
+                                            <%= t.user_name %>
+                                        </td>
+                                        <td>
+                                            <%= t.subject %>
+                                                <% if (t.order_id) { %>
+                                                    <span class="badge badge-secondary ml-1">Sifariş #<%= t.order_id %>
+                                                            </span>
+                                                    <% } %>
+                                        </td>
+                                        <td>
+                                            <% if (t.status==='open' ) { %>
+                                                <span class="badge badge-success">AÇIQ</span>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">BAĞLI</span>
+                                                    <% } %>
+                                        </td>
+                                        <td>
+                                            <%= new Date(t.updated_at).toLocaleString('az-AZ') %>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="/admin/ticket/<%= t.id %>"
+                                                class="btn btn-sm btn-outline-primary">İdarə et</a>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <%- include('footer') %>

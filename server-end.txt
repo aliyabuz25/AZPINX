@@ -1,0 +1,48 @@
+    } catch (e) {
+        console.error(e);
+        res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
+    }
+});
+
+// Admin User Balance Update
+app.post('/admin/users/balance', isAdmin, async (req, res) => {
+    const { user_id, amount, action } = req.body;
+    const numericAmount = parseFloat(amount);
+    
+    if (isNaN(numericAmount)) {
+        return res.redirect('/admin/users?error=Düzgün məbləğ daxil edin');
+    }
+
+    try {
+        if (action === 'add') {
+            await db.execute('UPDATE users SET balance = balance + ? WHERE id = ?', [numericAmount, user_id]);
+        } else if (action === 'subtract') {
+            await db.execute('UPDATE users SET balance = balance - ? WHERE id = ?', [numericAmount, user_id]);
+        } else {
+            await db.execute('UPDATE users SET balance = ? WHERE id = ?', [numericAmount, user_id]);
+        }
+        res.redirect('/admin/users?success=Bakiye yeniləndi');
+    } catch (e) {
+        res.redirect('/admin/users?error=' + encodeURIComponent(e.message));
+    }
+});
+
+// Admin HubMsg (Announcements)
+app.get('/admin/hubmsg', isAdmin, async (req, res) => {
+    const [messages] = await db.execute('SELECT * FROM announcements ORDER BY created_at DESC');
+    res.render('admin/hubmsg', { title: 'HubMsg Bildirişlər', messages });
+});
+
+app.post('/admin/hubmsg/create', isAdmin, async (req, res) => {
+    const { title, message, type } = req.body;
+    await db.execute('INSERT INTO announcements (title, message, type) VALUES (?, ?, ?)', [title, message, type]);
+    res.redirect('/admin/hubmsg?success=Bildiriş yaradıldı');
+});
+
+app.post('/admin/hubmsg/delete', isAdmin, async (req, res) => {
+    const { id } = req.body;
+    await db.execute('DELETE FROM announcements WHERE id = ?', [id]);
+    res.redirect('/admin/hubmsg?success=Bildiriş silindi');
+});
+
+app.listen(PORT, () => console.log(`AZPIN-X Server on http://localhost:${PORT}`));

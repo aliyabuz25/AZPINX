@@ -1,0 +1,174 @@
+<%- include('partials/header') %>
+    <div class="support-wrapper py-5">
+        <div class="container">
+            <div class="support-header d-flex justify-content-between align-items-center mb-5 pb-4 border-bottom">
+                <div>
+                    <h1 class="h2 font-weight-bold text-dark mb-1">Dəstək Mərkəzi</h1>
+                    <p class="text-muted mb-0">Bütün müraciətlərinizə buradan nəzarət edə bilərsiniz.</p>
+                </div>
+                <button class="btn btn-primary btn-lg shadow-sm" onclick="$('#newTicketModal').modal('show')">
+                    <i class="fas fa-plus-circle mr-2"></i> Yeni Bilet
+                </button>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+                        <% if (tickets.length===0) { %>
+                            <div class="card-body text-center py-5">
+                                <div class="mb-4 text-muted" style="font-size: 64px; opacity: 0.3;">
+                                    <i class="fas fa-headset"></i>
+                                </div>
+                                <h4 class="text-dark font-weight-bold">Hələ biletiniz yoxdur</h4>
+                                <p class="text-muted">Hər hansı bir probleminiz olarsa, bizə yazmaqdan çəkinməyin.</p>
+                                <button class="btn btn-outline-primary mt-3"
+                                    onclick="$('#newTicketModal').modal('show')">İlk Bileti Yaradın</button>
+                            </div>
+                            <% } else { %>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th
+                                                    class="border-0 px-4 py-3 text-muted small text-uppercase font-weight-bold">
+                                                    Bilet Mövzusu</th>
+                                                <th
+                                                    class="border-0 px-4 py-3 text-muted small text-uppercase font-weight-bold">
+                                                    Status</th>
+                                                <th
+                                                    class="border-0 px-4 py-3 text-muted small text-uppercase font-weight-bold">
+                                                    Sifariş №</th>
+                                                <th
+                                                    class="border-0 px-4 py-3 text-right text-muted small text-uppercase font-weight-bold">
+                                                    Son Yenilənmə</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% tickets.forEach(t=> { %>
+                                                <tr onclick="window.location.href='/ticket/<%= t.id %>'"
+                                                    style="cursor: pointer;">
+                                                    <td class="px-4 py-3">
+                                                        <div class="font-weight-bold text-dark">
+                                                            <%= t.subject %>
+                                                        </div>
+                                                        <div class="small text-muted">ID: #<%= t.id %>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 align-middle">
+                                                        <% if (t.status==='open' ) { %>
+                                                            <span
+                                                                class="badge badge-success-light text-success px-3 py-2"
+                                                                style="border-radius: 20px; font-size: 11px;">
+                                                                <i class="fas fa-circle mr-1 small"></i> Açıq
+                                                            </span>
+                                                            <% } else { %>
+                                                                <span class="badge badge-secondary px-3 py-2"
+                                                                    style="border-radius: 20px; font-size: 11px; background: #e2e8f0; color: #475569;">
+                                                                    <i class="fas fa-lock mr-1 small"></i> Bağlı
+                                                                </span>
+                                                                <% } %>
+                                                    </td>
+                                                    <td class="px-4 py-3 align-middle text-muted">
+                                                        <%= t.order_id ? '#' + t.order_id : '-' %>
+                                                    </td>
+                                                    <td class="px-4 py-3 align-middle text-right text-muted small">
+                                                        <%= new Date(t.updated_at).toLocaleString('az-AZ', {
+                                                            day: '2-digit' , month: 'short' , hour: '2-digit' ,
+                                                            minute: '2-digit' }) %>
+                                                    </td>
+                                                </tr>
+                                                <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Ticket Modal -->
+    <div class="modal fade" id="newTicketModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0 p-4 pb-0">
+                    <h4 class="modal-title font-weight-bold text-dark">Yeni Dəstək Bileti</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="newTicketForm">
+                        <div class="form-group mb-4">
+                            <label class="text-muted small font-weight-bold text-uppercase mb-2">MÖVZU</label>
+                            <input type="text" name="subject" class="form-control form-control-lg border-light bg-light"
+                                required placeholder="Məsələn: Ödəniş xətası"
+                                style="border-radius: 10px; font-size: 16px;">
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="text-muted small font-weight-bold text-uppercase mb-2">ƏLAQƏLİ SİFARİŞ</label>
+                            <select name="order_id" class="form-control form-control-lg border-light bg-light"
+                                style="border-radius: 10px; font-size: 16px;">
+                                <option value="">Sifariş seçilməyib (İstəyə bağlı)</option>
+                                <% (locals.orders || []).forEach(order=> { %>
+                                    <option value="<%= order.id %>">#<%= order.id %> - <%= order.product_name %> (<%=
+                                                    new Date(order.created_at).toLocaleDateString('az-AZ') %>)</option>
+                                    <% }) %>
+                            </select>
+                        </div>
+                        <div class="alert alert-info border-0 small mb-4"
+                            style="border-radius: 10px; background: #eff6ff; color: #1e40af;">
+                            <i class="fas fa-info-circle mr-2"></i> Müraciətinizə ən qısa zamanda cavab veriləcək.
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block btn-lg py-3 shadow"
+                            style="border-radius: 12px; font-weight: 700;">
+                            Bileti Yaradın
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .badge-success-light {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            box-shadow: none;
+            border-color: var(--primary-color) !important;
+            background: #fff !important;
+        }
+    </style>
+
+    <script>
+        $('#newTicketForm').on('submit', async function (e) {
+            e.preventDefault();
+            const data = {
+                subject: this.subject.value,
+                order_id: this.order_id.value
+            };
+
+            const res = await fetch('/tickets/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.success) {
+                window.location.href = '/ticket/' + result.ticketId;
+            } else {
+                Swal.fire('Xəta', result.error || 'Xəta baş verdi', 'error');
+            }
+        });
+    </script>
+
+    <%- include('partials/footer') %>

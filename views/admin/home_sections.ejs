@@ -1,0 +1,101 @@
+<%- include('header') %>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Yeni Bölmə Yarat</h3>
+                </div>
+                <form action="/admin/home-sections/create" method="POST">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Bölmə Başlığı</label>
+                            <input type="text" name="title" class="form-control" placeholder="Məs: Populyar Oyunlar"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>Kateqoriya Seç</label>
+                            <select name="category_id" class="form-control">
+                                <option value="">-- Kateqoriya Seçin --</option>
+                                <% categories.forEach(cat=> { %>
+                                    <option value="<%= cat.id %>">
+                                        <%= cat.name %>
+                                    </option>
+                                    <% }) %>
+                            </select>
+                            <small class="form-text text-muted">Əgər boş buraxsanız, başlıq sadəcə mətn kimi
+                                görünəcək.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Sıralama (Order Index)</label>
+                            <input type="number" name="order_index" class="form-control" value="0">
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary btn-block">Əlavə et</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Ana Səhifə Bölmələri</h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px">Sıra</th>
+                                <th>Başlıq</th>
+                                <th>Kateqoriya</th>
+                                <th>Status</th>
+                                <th>Əməliyyatlar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% sections.forEach(section=> { %>
+                                <tr>
+                                    <td>
+                                        <%= section.order_index %>
+                                    </td>
+                                    <td><strong>
+                                            <%= section.title %>
+                                        </strong></td>
+                                    <td>
+                                        <% if (section.category_name) { %>
+                                            <span class="badge badge-info">
+                                                <%= section.category_name %>
+                                            </span>
+                                            <% } else { %>
+                                                <span class="text-muted">-</span>
+                                                <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (section.is_active) { %>
+                                            <span class="badge badge-success">Aktiv</span>
+                                            <% } else { %>
+                                                <span class="badge badge-secondary">Deaktiv</span>
+                                                <% } %>
+                                    </td>
+                                    <td>
+                                        <form action="/admin/home-sections/delete" method="POST"
+                                            onsubmit="return confirm('Bu bölməni silmək istədiyinizə əminsiniz?');"
+                                            style="display:inline;">
+                                            <input type="hidden" name="id" value="<%= section.id %>">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Sil">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('footer') %>

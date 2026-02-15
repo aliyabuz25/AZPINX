@@ -1,0 +1,13 @@
+node_modules/
+npm-debug.log
+.DS_Store
+__MACOSX/
+._*
+public/uploads/receipts/*
+public/uploads/products/*
+public/uploads/categories/*
+public/uploads/sliders/*
+!public/uploads/receipts/.gitkeep
+!public/uploads/products/.gitkeep
+!public/uploads/categories/.gitkeep
+!public/uploads/sliders/.gitkeep

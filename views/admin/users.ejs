@@ -1,0 +1,166 @@
+<%- include('header') %>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Yeni İstifadəçi Yarat</h3>
+                </div>
+                <form action="/admin/users/create" method="POST">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <input type="text" name="full_name" class="form-control" placeholder="Ad Soyad"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <input type="email" name="email" class="form-control" placeholder="Email" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <input type="password" name="password" class="form-control" placeholder="Şifrə"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <select name="role" class="form-control">
+                                        <option value="user">İstifadəçi</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="reseller">Bayi (Reseller)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">İstifadəçi Yarat</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">İstifadəçilər</h3>
+                </div>
+                <div class="card-body table-responsive p-0">
+                    <table class="table table-hover text-nowrap">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Ad Soyad</th>
+                                <th>E-poçt</th>
+                                <th>Bakiye</th>
+                                <th>Rol</th>
+                                <th>Əməliyyat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.forEach(u=> { %>
+                                <tr>
+                                    <td>#<%= u.id %>
+                                    </td>
+                                    <td>
+                                        <%= u.full_name %>
+                                    </td>
+                                    <td>
+                                        <%= u.email %>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success" style="font-size: 0.9rem;">
+                                            <%= Number(u.balance || 0).toFixed(2) %> AZN
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <% if (u.role==='admin' ) { %>
+                                            <span class="badge badge-danger">ADMIN</span>
+                                            <% } else if (u.role==='reseller' ) { %>
+                                                <span class="badge badge-info">RESELLER</span>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">USER</span>
+                                                    <% } %>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-xs btn-outline-primary"
+                                                onclick="openBalanceModal(this)" data-id="<%= u.id %>"
+                                                data-name="<%= u.full_name %>" data-balance="<%= u.balance || 0 %>">
+                                                <i class="fas fa-wallet"></i> Bakiye
+                                            </button>
+                                            <form action="/admin/users/delete" method="POST"
+                                                onsubmit="return confirm('Silmək istəyirsiniz?')"
+                                                style="display:inline;">
+                                                <input type="hidden" name="user_id" value="<%= u.id %>">
+                                                <button type="submit" class="btn btn-xs btn-outline-danger"><i
+                                                        class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Modal -->
+    <div class="modal fade" id="balanceModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <form action="/admin/users/balance" method="POST">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Bakiye İdarəetmə - <span id="modalUserName"></span></h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="user_id" id="modalUserId">
+                        <div class="form-group text-center">
+                            <p class="mb-1">Mövcud Bakiye:</p>
+                            <h3 class="text-success"><span id="modalCurrentBalance"></span> AZN</h3>
+                        </div>
+                        <div class="form-group">
+                            <label>Əməliyyat Növü</label>
+                            <select name="action" class="form-control">
+                                <option value="add">Bakiye Artır (+)</option>
+                                <option value="subtract">Bakiye Azalt (-)</option>
+                                <option value="set">Birbaşa Təyin Et (=)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Məbləğ (AZN)</label>
+                            <input type="number" step="0.01" name="amount" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Bağla</button>
+                        <button type="submit" class="btn btn-primary">Yadda Saxla</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openBalanceModal(el) {
+            const id = el.getAttribute('data-id');
+            const name = el.getAttribute('data-name');
+            const balance = el.getAttribute('data-balance');
+
+            document.getElementById('modalUserId').value = id;
+            document.getElementById('modalUserName').innerText = name;
+            document.getElementById('modalCurrentBalance').innerText = parseFloat(balance).toFixed(2);
+            $('#balanceModal').modal('show');
+        }
+    </script>
+
+    <%- include('footer') %>

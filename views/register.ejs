@@ -1,0 +1,132 @@
+<%- include('partials/header') %>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css">
+    <style>
+        .iti {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .otp-section {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: var(--radius-md);
+            border: 1px dashed var(--border-color);
+        }
+
+        #sendOtpBtn {
+            margin-top: 5px;
+            width: 100%;
+            border-radius: var(--radius-md);
+        }
+    </style>
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Yeni Hesab</h2>
+                <p>Qeydiyyatdan keçərək üstünlüklərdən yararlanın</p>
+            </div>
+
+            <% if (locals.error) { %>
+                <div class="alert alert-danger" style="margin-bottom: 20px;">
+                    <%= error %>
+                </div>
+                <% } %>
+
+                    <form action="/register" method="POST" id="registerForm">
+                        <div class="form-group">
+                            <label>Tam Adınız</label>
+                            <input type="text" name="full_name" required placeholder="Əli Məmmədov">
+                        </div>
+                        <div class="form-group">
+                            <label>E-poçt</label>
+                            <input type="email" name="email" required placeholder="nümunə@mail.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Şifrə</label>
+                            <input type="password" name="password" required placeholder="••••••••">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Telefon Nömrəsi (Vatsap üçün)</label>
+                            <input type="tel" id="phone" name="phone_input" required>
+                            <input type="hidden" name="phone" id="fullPhone">
+                        </div>
+
+                        <button type="button" id="sendOtpBtn" class="btn btn-outline">WhatsApp ilə Təsdiq Kodu
+                            Göndər</button>
+
+                        <div class="otp-section" id="otpSection" style="text-align: center;">
+                            <label
+                                style="font-size: 13px; font-weight: 600; color: var(--text-dark); display: block;">Təsdiq
+                                Kodu</label>
+                            <input type="text" name="otp" id="otpInput" placeholder="000000" maxlength="6"
+                                class="otp-input">
+                            <p id="otpMsg" style="font-size: 12px; margin-top: 8px;"></p>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px;" disabled>Qeydiyyatı tamamla</button>
+                    </form>
+
+                    <div style="margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        <p style="text-align: center; color: var(--text-muted); font-size: 14px;">Artıq hesabınız var?
+                            <a href="/login" style="color: var(--primary-color); font-weight: 700;">Daxil olun</a>
+                        </p>
+                    </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+    <script>
+        const phoneInput = document.querySelector("#phone");
+        const iti = window.intlTelInput(phoneInput, {
+            onlyCountries: ["az", "tr", "ru"],
+            initialCountry: "az",
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js",
+        });
+
+        const sendOtpBtn = document.querySelector("#sendOtpBtn");
+        const otpSection = document.querySelector("#otpSection");
+        const otpMsg = document.querySelector("#otpMsg");
+        const submitBtn = document.querySelector("#submitBtn");
+        const fullPhoneInput = document.querySelector("#fullPhone");
+
+        sendOtpBtn.addEventListener("click", async () => {
+            const phoneNumber = iti.getNumber();
+            if (!iti.isValidNumber()) {
+                alert("Zəhmət olmasa düzgün nömrə daxil edin.");
+                return;
+            }
+
+            sendOtpBtn.disabled = true;
+            sendOtpBtn.innerText = "Göndərilir...";
+
+            try {
+                const response = await fetch("/register/send-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone: phoneNumber })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    otpSection.style.display = "block";
+                    otpMsg.innerText = "Kod WhatsApp nömrənizə göndərildi.";
+                    otpMsg.style.color = "green";
+                    fullPhoneInput.value = phoneNumber;
+                    submitBtn.disabled = false; // Allow submission, backend will verify code
+                } else {
+                    alert(data.error || "Xəta baş verdi.");
+                    sendOtpBtn.disabled = false;
+                    sendOtpBtn.innerText = "WhatsApp ilə Təsdiq Kodu Göndər";
+                }
+            } catch (e) {
+                alert("Bağlantı xətası.");
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.innerText = "WhatsApp ilə Təsdiq Kodu Göndər";
+            }
+        });
+    </script>
+    <%- include('partials/footer') %>

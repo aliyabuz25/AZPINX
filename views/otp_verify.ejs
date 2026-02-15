@@ -1,0 +1,35 @@
+<%- include('partials/header') %>
+
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fa-solid fa-shield-halved fa-3x mb-3" style="color: var(--primary-color);"></i>
+                <h2>OTP Doğrulama</h2>
+                <p><strong>
+                        <%= phone %>
+                    </strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.</p>
+            </div>
+
+            <% if (locals.error) { %>
+                <div class="alert alert-danger" style="margin-bottom: 20px;">
+                    <%= error %>
+                </div>
+                <% } %>
+
+                    <form action="/verify-otp" method="POST">
+                        <div class="form-group">
+                            <input type="text" name="otp" class="otp-input" placeholder="000000" maxlength="6" required
+                                autocomplete="one-time-code">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Təsdiqlə</button>
+                    </form>
+
+                    <div class="auth-footer"
+                        style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        <p style="font-size: 14px; color: var(--text-muted);">Kod gəlmədi? <a href="/login"
+                                style="color: var(--primary-color); font-weight: 700;">Yenidən cəhd et</a></p>
+                    </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>

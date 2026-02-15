@@ -1,0 +1,284 @@
+<%- include('partials/header') %>
+    <div class="product-page-container">
+        <div class="checkout-grid">
+            <div class="checkout-left">
+                <h3>Sifariş Məlumatları</h3>
+                <div id="checkoutItems" class="p-price-card" style="margin-top: 20px;">
+                    <!-- Items list -->
+                </div>
+
+                <div class="payment-selection-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <div class="pay-tab active" onclick="switchPayment('c2c')" id="tab-c2c">
+                        <i class="fa-solid fa-credit-card"></i>
+                        <span>Kart Köçürməsi</span>
+                    </div>
+                    <div class="pay-tab" onclick="switchPayment('balance')" id="tab-balance">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span>Balansla Ödə</span>
+                    </div>
+                </div>
+
+                <!-- C2C Section -->
+                <div id="section-c2c" class="p-price-card payment-section">
+                    <h4>C2C Kart Köçürməsi (Manual)</h4>
+                    <p style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Ödənişi aşağıdakı karta
+                        etdikdən sonra "Ödəniş etdim" düyməsinə basın.</p>
+                    <div class="bank-card-preview">
+                        <p class="card-label">KART NÖMRƏSİ</p>
+                        <p class="card-num">4127 0000 1111 2222</p>
+                        <div class="card-footer-info">
+                            <span>AZPINX ADMIN</span>
+                            <span>ABB BANK</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Ödəniş edən şəxs (Ad Soyad)</label>
+                        <input type="text" id="senderName" placeholder="Karta yazılan ad..."
+                            style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Ödəniş qəbzi (Dekont - Şəkil)</label>
+                        <input type="file" id="receipt" accept="image/*"
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    </div>
+
+                    <button class="btn btn-primary" onclick="confirmPayment('c2c')"
+                        style="width: 100%; padding: 15px; margin-top: 20px;">
+                        Ödəniş etdim
+                    </button>
+                </div>
+
+                <!-- Balance Section -->
+                <div id="section-balance" class="p-price-card payment-section" style="display: none;">
+                    <h4>Balansla Ödəniş</h4>
+                    <p style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Məbləğ birbaşa balansınızdan
+                        çıxılacaq.</p>
+
+                    <div class="balance-status-card">
+                        <div class="balance-item">
+                            <small>Mövcud Balans</small>
+                            <span id="userBalanceDisplay">
+                                <%= Number(user.balance || 0).toFixed(2) %> AZN
+                            </span>
+                        </div>
+                        <div class="balance-item">
+                            <small>Sifariş Məbləği</small>
+                            <span id="orderTotalDisplay">0.00 AZN</span>
+                        </div>
+                    </div>
+
+                    <div id="balanceError" class="alert alert-danger"
+                        style="display:none; margin-top: 15px; font-size: 13px;">
+                        Kifayət qədər balansınız yoxdur.
+                    </div>
+
+                    <button id="balancePayBtn" class="btn btn-primary" onclick="confirmPayment('balance')"
+                        style="width: 100%; padding: 15px; margin-top: 20px;">
+                        Balansla Təsdiqlə
+                    </button>
+                </div>
+            </div>
+
+            <div class="checkout-right">
+                <div class="p-price-card">
+                    <h3>Xülasə</h3>
+                    <div class="total-row" style="margin-top: 20px;">
+                        <span>Cəmi:</span>
+                        <span id="finalTotal">0.00 AZN</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTotal = 0;
+        let userBalance = parseFloat("<%= user ? user.balance : 0 %>");
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const list = document.getElementById('checkoutItems');
+            const totalEl = document.getElementById('finalTotal');
+            const orderTotalDisplay = document.getElementById('orderTotalDisplay');
+            const cart = JSON.parse(localStorage.getItem('azpin_cart')) || [];
+
+            if (cart.length === 0) {
+                window.location.href = '/';
+                return;
+            }
+
+            cart.forEach(item => {
+                currentTotal += item.price;
+                const div = document.createElement('div');
+                div.className = 'checkout-item-row';
+                let extraInfo = '';
+                if (item.player_id) {
+                    extraInfo = `<br><small class="text-muted">ID: ${item.player_id} - Nick: ${item.player_nickname}</small>`;
+                }
+                div.innerHTML = `<div><span>${item.name}</span>${extraInfo}</div> <b>${item.price.toFixed(2)} AZN</b>`;
+                list.appendChild(div);
+            });
+            totalEl.textContent = currentTotal.toFixed(2) + ' AZN';
+            orderTotalDisplay.textContent = currentTotal.toFixed(2) + ' AZN';
+
+            // Check balance
+            if (userBalance < currentTotal) {
+                document.getElementById('balanceError').style.display = 'block';
+                document.getElementById('balancePayBtn').disabled = true;
+                document.getElementById('balancePayBtn').style.opacity = '0.5';
+            }
+        });
+
+        function switchPayment(method) {
+            document.querySelectorAll('.pay-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.payment-section').forEach(s => s.style.display = 'none');
+
+            document.getElementById('tab-' + method).classList.add('active');
+            document.getElementById('section-' + method).style.display = 'block';
+        }
+
+        async function confirmPayment(method) {
+            const cart = JSON.parse(localStorage.getItem('azpin_cart')) || [];
+            const formData = new FormData();
+            formData.append('cart', JSON.stringify(cart));
+            formData.append('payment_method', method === 'c2c' ? 'C2C Card Transfer' : 'Balance');
+
+            if (method === 'c2c') {
+                const sender = document.getElementById('senderName').value;
+                const receiptFile = document.getElementById('receipt').files[0];
+
+                if (!sender || !receiptFile) {
+                    Toastify({ text: "Zəhmət olmasa bütün sahələri doldurun.", backgroundColor: "#ef4444" }).showToast();
+                    return;
+                }
+                formData.append('sender_name', sender);
+                formData.append('receipt', receiptFile);
+            } else {
+                if (userBalance < currentTotal) {
+                    Toastify({ text: "Kifayət qədər balansınız yoxdur.", backgroundColor: "#ef4444" }).showToast();
+                    return;
+                }
+            }
+
+            const res = await fetch('/process-order', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await res.json().catch(() => ({ success: false, error: 'Serverdən düzgün cavab gəlmədi.' }));
+
+            if (result.success) {
+                localStorage.removeItem('azpin_cart');
+                Toastify({ text: "Sifarişiniz qəbul edildi! Yönləndirilirsiniz...", backgroundColor: "#10b981" }).showToast();
+                setTimeout(() => window.location.href = '/profile', 2000);
+            } else {
+                Toastify({ text: "Xəta: " + (result.error || "Bilinməyən xəta baş verdi."), backgroundColor: "#ef4444" }).showToast();
+            }
+        }
+    </script>
+
+    <style>
+        .checkout-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 40px;
+        }
+
+        .pay-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: #64748b;
+        }
+
+        .pay-tab i {
+            font-size: 20px;
+        }
+
+        .pay-tab.active {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+            color: #38bdf8;
+        }
+
+        .bank-card-preview {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 16px;
+            margin: 20px 0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-label {
+            font-size: 11px;
+            opacity: 0.6;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .card-num {
+            font-size: 22px;
+            letter-spacing: 3px;
+            font-weight: 700;
+            font-family: monospace;
+        }
+
+        .card-footer-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .balance-status-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .balance-item {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .balance-item small {
+            display: block;
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .balance-item span {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .checkout-item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        @media (max-width: 768px) {
+            .checkout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <%- include('partials/footer') %>

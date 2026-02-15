@@ -1,0 +1,119 @@
+{
+    "categories": [
+        {
+            "id": "mobile-games",
+            "name": "Mobil Oyunlar",
+            "icon": "fa-mobile-alt"
+        },
+        {
+            "id": "pc-games",
+            "name": "PC Oyunları",
+            "icon": "fa-desktop"
+        },
+        {
+            "id": "subscriptions",
+            "name": "Abunəliklər",
+            "icon": "fa-crown"
+        },
+        {
+            "id": "gift-cards",
+            "name": "Hədiyyə Kartları",
+            "icon": "fa-gift"
+        }
+    ],
+    "quickActions": [
+        {
+            "name": "PUBG Mobile",
+            "image": "https://img.icons8.com/color/96/pubg.png"
+        },
+        {
+            "name": "Free Fire",
+            "image": "https://img.icons8.com/color/96/free-fire.png"
+        },
+        {
+            "name": "Valorant",
+            "image": "https://img.icons8.com/color/96/valorant.png"
+        },
+        {
+            "name": "Steam",
+            "image": "https://img.icons8.com/color/96/steam.png"
+        },
+        {
+            "name": "Netflix",
+            "image": "https://img.icons8.com/color/96/netflix.png"
+        },
+        {
+            "name": "Spotify",
+            "image": "https://img.icons8.com/color/96/spotify--v1.png"
+        },
+        {
+            "name": "TikTok",
+            "image": "https://img.icons8.com/color/96/tiktok.png"
+        },
+        {
+            "name": "Udemy",
+            "image": "https://img.icons8.com/color/96/udemy.png"
+        }
+    ],
+    "sliders": [
+        {
+            "title": "AZPIN-X UC",
+            "description": "Ən ucuz UC bizdə!",
+            "image": "/images/slider1.jpg",
+            "link": "#"
+        },
+        {
+            "title": "Valorant Points",
+            "description": "Yeni skinlər üçün VP al!",
+            "image": "/images/slider2.jpg",
+            "link": "#"
+        }
+    ],
+    "featuredProducts": [
+        {
+            "id": 1,
+            "name": "60 UC - AZPIN-X",
+            "category": "PUBG Mobile",
+            "price": 1.70,
+            "oldPrice": 2.10,
+            "image": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&q=80",
+            "badge": "Endirim"
+        },
+        {
+            "id": 2,
+            "name": "110 UC - AZPIN-X",
+            "category": "PUBG Mobile",
+            "price": 3.40,
+            "oldPrice": null,
+            "image": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&q=80",
+            "badge": "Bonus"
+        },
+        {
+            "id": 3,
+            "name": "Valorant 1450 VP",
+            "category": "Valorant",
+            "price": 24.50,
+            "oldPrice": 28.00,
+            "image": "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=500&q=80",
+            "badge": "Populyar"
+        },
+        {
+            "id": 4,
+            "name": "Netflix 1 Aylıq",
+            "category": "Abunəlik",
+            "price": 5.00,
+            "oldPrice": 7.00,
+            "image": "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=500&q=80",
+            "badge": null
+        },
+        {
+            "id": 5,
+            "name": "Spotify Premium",
+            "category": "Abunəlik",
+            "price": 3.50,
+            "oldPrice": null,
+            "image": "https://images.unsplash.com/photo-1614680376273-09419b4ea47d?w=500&q=80",
+            "badge": "Yeni"
+        }
+    ]
+}
