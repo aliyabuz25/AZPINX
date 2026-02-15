@@ -29,7 +29,8 @@ CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     api_id VARCHAR(50) UNIQUE NULL, -- Link to external API if applicable
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(100) NOT NULL,
+    category VARCHAR(100),
+    category_id INT NULL,
     price DECIMAL(10, 2) NOT NULL,
     description TEXT,
     image_path VARCHAR(255),
@@ -90,9 +91,10 @@ CREATE TABLE IF NOT EXISTS wishlist (
 CREATE TABLE IF NOT EXISTS home_sections (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
+    category_id INT NULL,
     type ENUM('featured', 'popular', 'new') DEFAULT 'featured',
     product_ids TEXT,
-    sort_order INT DEFAULT 0,
+    order_index INT DEFAULT 0,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -103,7 +105,7 @@ CREATE TABLE IF NOT EXISTS sliders (
     title VARCHAR(255),
     image_path VARCHAR(255) NOT NULL,
     link VARCHAR(255),
-    sort_order INT DEFAULT 0,
+    order_index INT DEFAULT 0,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
