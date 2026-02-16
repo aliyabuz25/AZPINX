@@ -13,21 +13,35 @@ const PORT = process.env.PORT || 3000;
 
 // HubMSG API Config
 const HUBMSG_CONFIG = {
- API_KEY: 'API-KEY-XXXX', // User should replace this
- URL: 'https://hubmsgpanel.octotech.az/api/message'
+ API_KEY: process.env.HUBMSG_API_KEY || process.env.HUBMSG_API_TOKEN || 'API-KEY-XXXX',
+ URL: process.env.HUBMSG_URL || 'https://hubmsgpanel.octotech.az/api/message',
+ TIMEOUT: Number(process.env.HUBMSG_TIMEOUT_MS || 10000)
 };
 
+function normalizePhoneNumber(phone) {
+ const raw = String(phone || '').trim();
+ if (!raw) return '';
+ return raw.replace(/[^\d+]/g, '');
+}
+
 async function sendSMS(phone, message) {
- if (!phone) return false;
+ const recipient = normalizePhoneNumber(phone);
+ if (!recipient) return false;
  try {
+ const headers = {
+ 'Content-Type': 'application/json'
+ };
+ const apiKey = String(HUBMSG_CONFIG.API_KEY || '').trim();
+ if (apiKey && apiKey !== 'API-KEY-XXXX') {
+ headers['x-api-key'] = apiKey;
+ }
+
  await axios.post(HUBMSG_CONFIG.URL, {
- recipient: phone,
+ recipient,
  message: message
  }, {
- headers: {
- 'x-api-key': HUBMSG_CONFIG.API_KEY,
- 'Content-Type': 'application/json'
- }
+ headers,
+ timeout: HUBMSG_CONFIG.TIMEOUT
  });
  return true;
  } catch (e) {
