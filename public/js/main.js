@@ -153,11 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
  if (sliders.length > 1) {
  let current = 0;
  let sliderTimer = null;
+ const sliderContainer = document.querySelector('.slider-container');
+ let pointerGlowRAF = null;
 
  const setSlide = (index) => {
  current = (index + sliders.length) % sliders.length;
  sliders.forEach((slide, i) => {
  slide.classList.toggle('active', i === current);
+ slide.style.transform = i === current ? 'scale(1)' : '';
  });
  sliderDots.forEach((dot, i) => {
  const isActive = i === current;
@@ -195,6 +198,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
  setSlide(0);
  startAuto();
+
+ if (sliderContainer) {
+ sliderContainer.addEventListener('mousemove', (event) => {
+ if (window.innerWidth < 992) return;
+ const rect = sliderContainer.getBoundingClientRect();
+ const x = ((event.clientX - rect.left) / rect.width) - 0.5;
+ const y = ((event.clientY - rect.top) / rect.height) - 0.5;
+ const activeSlide = sliders[current];
+ if (!activeSlide) return;
+
+ if (pointerGlowRAF) cancelAnimationFrame(pointerGlowRAF);
+ pointerGlowRAF = requestAnimationFrame(() => {
+ activeSlide.style.transform = `scale(1.01) translate(${x * 6}px, ${y * 4}px)`;
+ });
+ });
+
+ sliderContainer.addEventListener('mouseleave', () => {
+ const activeSlide = sliders[current];
+ if (activeSlide) activeSlide.style.transform = 'scale(1)';
+ });
+ }
  }
 
  sliders.forEach((slide) => {
