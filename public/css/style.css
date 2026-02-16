@@ -3002,3 +3002,80 @@ body {
         flex: 0 0 auto;
     }
 }
+
+/* Simplified Hero Banner */
+.hero {
+    padding: 14px 0 0;
+}
+
+.slider-container {
+    min-height: 220px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.slider-container::before,
+.slider-container::after,
+.slider-item::after,
+.slider-controls {
+    display: none !important;
+}
+
+.slider-item {
+    min-height: 220px;
+    transform: none !important;
+    transition: none;
+}
+
+.slider-item::before {
+    background: linear-gradient(0deg, rgba(15, 23, 42, 0.32), rgba(15, 23, 42, 0.12));
+}
+
+.slider-item.swiper-slide-active,
+.slider-item.swiper-slide-active::after,
+.slider-item.swiper-slide-active .slider-content h2,
+.slider-item.swiper-slide-active .slider-content p,
+.slider-item.swiper-slide-active .slider-content .btn {
+    animation: none !important;
+}
+
+.slider-content {
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    max-width: 70%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.slider-content h2 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.slider-content p,
+.slider-content .btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .slider-container,
+    .slider-item {
+        min-height: 180px;
+    }
+
+    .slider-content {
+        max-width: 88%;
+    }
+
+    .slider-content h2 {
+        font-size: 16px;
+    }
+}

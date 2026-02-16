@@ -147,54 +147,32 @@ document.addEventListener('DOMContentLoaded', () => {
  // --- Hero Slider (Swiper) ---
  const sliderContainer = document.querySelector('.hero-swiper');
  const sliders = sliderContainer ? sliderContainer.querySelectorAll('.slider-item') : [];
- let pointerGlowRAF = null;
 
  if (sliderContainer && sliders.length > 1 && window.Swiper) {
- const heroSwiper = new Swiper('.hero-swiper', {
+ const hasPrev = !!document.getElementById('sliderPrev');
+ const hasNext = !!document.getElementById('sliderNext');
+ const hasDots = !!document.getElementById('sliderDots');
+ const swiperOptions = {
  loop: true,
- speed: 880,
- effect: 'fade',
- fadeEffect: { crossFade: true },
+ speed: 450,
  autoplay: {
- delay: 5600,
+ delay: 5000,
  disableOnInteraction: false
- },
- navigation: {
- prevEl: '#sliderPrev',
- nextEl: '#sliderNext'
- },
- pagination: {
+ }
+ };
+ if (hasPrev && hasNext) {
+ swiperOptions.navigation = { prevEl: '#sliderPrev', nextEl: '#sliderNext' };
+ }
+ if (hasDots) {
+ swiperOptions.pagination = {
  el: '#sliderDots',
  clickable: true,
  renderBullet: function (index, className) {
  return `<button type="button" class="slider-dot ${className}" aria-label="Banner ${index + 1}"></button>`;
  }
+ };
  }
- });
-
- sliderContainer.addEventListener('mousemove', (event) => {
- if (window.innerWidth < 992) return;
- const activeSlide = sliderContainer.querySelector('.swiper-slide-active');
- if (!activeSlide) return;
- const rect = sliderContainer.getBoundingClientRect();
- const x = ((event.clientX - rect.left) / rect.width) - 0.5;
- const y = ((event.clientY - rect.top) / rect.height) - 0.5;
-
- if (pointerGlowRAF) cancelAnimationFrame(pointerGlowRAF);
- pointerGlowRAF = requestAnimationFrame(() => {
- activeSlide.style.transform = `scale(1.01) translate(${x * 6}px, ${y * 4}px)`;
- });
- });
-
- sliderContainer.addEventListener('mouseleave', () => {
- const activeSlide = sliderContainer.querySelector('.swiper-slide-active');
- if (activeSlide) activeSlide.style.transform = 'scale(1)';
- });
-
- heroSwiper.on('slideChangeTransitionStart', () => {
- const activeSlide = sliderContainer.querySelector('.swiper-slide-active');
- if (activeSlide) activeSlide.style.transform = 'scale(1)';
- });
+ new Swiper('.hero-swiper', swiperOptions);
  }
 
  sliders.forEach((slide) => {
