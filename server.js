@@ -108,6 +108,11 @@ const API_CONFIG = {
  API_KEY: 'ak_803b789e6aed8a50f21fb6b6a9bddaa5_1769965145'
 };
 
+const PUBG_CHECKER_CONFIG = {
+ BASE_URL: (process.env.PUBG_CHECKER_URL || 'http://azpinx-pubg-checker:3000').replace(/\/$/, ''),
+ TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 10000)
+};
+
 // Database Connection
 let db;
 (async () => {
@@ -805,12 +810,14 @@ app.get('/terms', (req, res) => {
 });
 
 app.get('/api/pubg-check', async (req, res) => {
- const { player_id } = req.query;
- if (!player_id) return res.json({ success: false, error: 'ID daxil edin.' });
+ const playerIdRaw = normalizeOptionalString(req.query.player_id);
+ if (!playerIdRaw) return res.json({ success: false, error: 'ID daxil edin.' });
+ const playerId = String(playerIdRaw);
 
  try {
- const response = await axios.get(`http://38.180.208.188:5599/check-player?id=${player_id}`, {
- timeout: 5000
+ const response = await axios.get(`${PUBG_CHECKER_CONFIG.BASE_URL}/check-player`, {
+ params: { id: playerId },
+ timeout: PUBG_CHECKER_CONFIG.TIMEOUT
  });
 
  if (response.data && response.data.success) {
@@ -819,8 +826,8 @@ app.get('/api/pubg-check', async (req, res) => {
  res.json({ success: false, error: 'Oyunçu tapılmadı.' });
  }
  } catch (e) {
- console.error('PUBG API Error:', e.message);
- res.json({ success: false, error: 'API xətası baş verdi.' });
+ console.error('PUBG Checker Error:', e.message);
+ res.json({ success: false, error: 'PUBG checker servisi ilə bağlantı xətası baş verdi.' });
  }
 });
 

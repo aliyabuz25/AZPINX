@@ -7,6 +7,8 @@ services:
     depends_on:
       azpinx-db:
         condition: service_healthy
+      azpinx-pubg-checker:
+        condition: service_started
     environment:
       PORT: "3000"
       HOST: "0.0.0.0"
@@ -14,6 +16,7 @@ services:
       DB_USER: "azpinx"
       DB_PASSWORD: "azpinx_secret_2026"
       DB_NAME: "azpinx_db"
+      PUBG_CHECKER_URL: "http://azpinx-pubg-checker:3000"
       NODE_ENV: "production"
       SESSION_SECRET: "azpinx-session-key-2026-production"
     volumes:
@@ -32,6 +35,17 @@ services:
       # Large Upload Support
       - 'traefik.http.middlewares.azpinx-buf.buffering.maxRequestBodyBytes=104857600'
       - 'traefik.http.routers.azpinx.middlewares=azpinx-buf'
+
+  azpinx-pubg-checker:
+    build:
+      context: ./services/pubg-id-checker-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      NODE_ENV: "production"
+    networks:
+      - internal
 
   azpinx-db:
     image: mysql:8.0

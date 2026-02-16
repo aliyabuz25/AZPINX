@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  pubapi:
+    container_name: pubg-api
+    build: .
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pubapi.rule=Host(`pubg.octotech.az`)"
+      - "traefik.http.routers.pubapi.entrypoints=web"
+      - "traefik.http.services.pubapi.loadbalancer.server.port=3000"
+      # Optional: Add SSL/TLS if Traefik is configured for it
+      # - "traefik.http.routers.pubapi.tls=true"
+      # - "traefik.http.routers.pubapi.tls.certresolver=myresolver"
+    networks:
+      - web-stack
+
+networks:
+  web-stack:
+    external: true
