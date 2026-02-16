@@ -3,62 +3,18 @@
     if (!splash) return;
 
     const splashInner = splash.querySelector('.azpin-splash-inner');
-    const stepsLayer = splash.querySelector('.azpin-steps');
-    const minimumVisibleMs = 260;
+    const minimumVisibleMs = 220;
     const startedAt = Date.now();
-    let stepTimer = null;
-    let stepIndex = 0;
-
-    function createStep() {
-        if (!stepsLayer) return;
-
-        const step = document.createElement('span');
-        const isLeft = stepIndex % 2 === 0;
-        const baseX = 14 + (stepIndex % 12) * 6.4;
-        const jitter = (Math.random() - 0.5) * 1.4;
-
-        step.className = 'azpin-step ' + (isLeft ? 'left' : 'right');
-        step.style.left = 'calc(' + (baseX + jitter) + '% - 10px)';
-        step.style.bottom = (isLeft ? 10 : 2) + 'px';
-
-        stepsLayer.appendChild(step);
-        stepIndex += 1;
-
-        window.setTimeout(() => {
-            step.remove();
-        }, 1300);
-    }
-
-    function startSteps() {
-        if (!stepsLayer) return;
-        stepsLayer.innerHTML = '';
-        stepIndex = 0;
-        createStep();
-        stepTimer = window.setInterval(createStep, 120);
-    }
-
-    function stopSteps() {
-        if (stepTimer) {
-            window.clearInterval(stepTimer);
-            stepTimer = null;
-        }
-        if (stepsLayer) {
-            window.setTimeout(() => {
-                stepsLayer.innerHTML = '';
-            }, 380);
-        }
-    }
 
     function hideSplash() {
         const elapsed = Date.now() - startedAt;
         const wait = Math.max(0, minimumVisibleMs - elapsed);
 
         window.setTimeout(() => {
-            stopSteps();
             if (window.gsap) {
                 gsap.to(splash, {
                     opacity: 0,
-                    duration: 0.32,
+                    duration: 0.26,
                     ease: 'power2.out',
                     onComplete: () => splash.classList.add('is-hidden')
                 });
@@ -66,7 +22,7 @@
                     gsap.fromTo(
                         splashInner,
                         { scale: 1, opacity: 1 },
-                        { scale: 0.92, opacity: 0.88, duration: 0.32, ease: 'power2.out' }
+                        { scale: 0.97, opacity: 0.9, duration: 0.26, ease: 'power2.out' }
                     );
                 }
             } else {
@@ -95,35 +51,31 @@
         splash.classList.remove('is-hidden');
         splash.style.opacity = '1';
         splash.style.visibility = 'visible';
-        startSteps();
 
         if (window.gsap) {
-            gsap.fromTo(splash, { opacity: 0 }, { opacity: 1, duration: 0.26, ease: 'power2.inOut' });
+            gsap.fromTo(splash, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power2.inOut' });
             if (splashInner) {
                 gsap.fromTo(
                     splashInner,
-                    { scale: 0.9, opacity: 0.7 },
-                    { scale: 1, opacity: 1, duration: 0.3, ease: 'power2.out' }
+                    { scale: 0.95, opacity: 0.8 },
+                    { scale: 1, opacity: 1, duration: 0.2, ease: 'power2.out' }
                 );
             }
         }
 
         window.setTimeout(() => {
             window.location.href = nextUrl;
-        }, 260);
+        }, 210);
     }
 
     if (document.readyState === 'complete') {
-        startSteps();
         hideSplash();
     } else {
-        startSteps();
         window.addEventListener('load', hideSplash, { once: true });
     }
 
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
-            stopSteps();
             splash.classList.add('is-hidden');
             document.body.classList.remove('is-page-leaving');
         }

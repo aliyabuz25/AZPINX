@@ -118,6 +118,10 @@ const PUBG_CHECKER_CONFIG = {
 
 const REFERRAL_TARGET = 5;
 const REFERRAL_REWARD_LABEL = '60 UC';
+const VPN_BLOCK_ENABLED = process.env.VPN_BLOCK_ENABLED !== '0';
+const VPN_CHECK_TIMEOUT_MS = Number(process.env.VPN_CHECK_TIMEOUT_MS || 3500);
+const VPN_CACHE_TTL_MS = Number(process.env.VPN_CACHE_TTL_MS || 10 * 60 * 1000);
+const vpnCheckCache = new Map();
 
 // Database Connection
 let db;
@@ -146,6 +150,7 @@ let db;
  otp_expiry DATETIME NULL,
  referral_code VARCHAR(32) UNIQUE NULL,
  referred_by INT NULL,
+ registration_ip VARCHAR(64) NULL,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
  )`,
  `CREATE TABLE IF NOT EXISTS categories (
@@ -268,7 +273,8 @@ let db;
  { table: 'users', column: 'otp_code', definition: 'VARCHAR(10) NULL AFTER two_factor_enabled' },
  { table: 'users', column: 'otp_expiry', definition: 'DATETIME NULL AFTER otp_code' },
  { table: 'users', column: 'referral_code', definition: 'VARCHAR(32) UNIQUE NULL AFTER otp_expiry' },
- { table: 'users', column: 'referred_by', definition: 'INT NULL AFTER referral_code' }
+ { table: 'users', column: 'referred_by', definition: 'INT NULL AFTER referral_code' },
+ { table: 'users', column: 'registration_ip', definition: 'VARCHAR(64) NULL AFTER referred_by' }
  ];
 
  for (const m of migrations) {
@@ -470,6 +476,70 @@ function randomReferralCode() {
  return `AZP${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
 
+function getClientIp(req) {
+ const forwarded = req.headers['x-forwarded-for'];
+ let rawIp = '';
+ if (forwarded && typeof forwarded === 'string') {
+ rawIp = forwarded.split(',')[0].trim();
+ } else {
+ rawIp = req.ip || req.connection?.remoteAddress || '';
+ }
+ if (!rawIp) return null;
+ return String(rawIp).replace('::ffff:', '').trim() || null;
+}
+
+function isPrivateOrLocalIp(ip) {
+ const normalized = String(ip || '').trim().toLowerCase();
+ if (!normalized) return true;
+ if (normalized === '::1' || normalized === '127.0.0.1' || normalized === 'localhost') return true;
+ if (normalized.startsWith('10.')) return true;
+ if (normalized.startsWith('192.168.')) return true;
+ if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized)) return true;
+ if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+ return false;
+}
+
+async function checkVpnProxyStatus(ip) {
+ const now = Date.now();
+ const cached = vpnCheckCache.get(ip);
+ if (cached && now - cached.createdAt < VPN_CACHE_TTL_MS) {
+ return cached.payload;
+ }
+
+ const fallback = { blocked: false, isp: 'Unknown', reason: 'clean', source: 'ipapi.is' };
+ try {
+ const response = await axios.get('https://api.ipapi.is/', {
+ params: { q: ip },
+ timeout: VPN_CHECK_TIMEOUT_MS
+ });
+ const data = response.data || {};
+ const isVpn = Boolean(data.is_vpn);
+ const isProxy = Boolean(data.is_proxy);
+ const isTor = Boolean(data.is_tor);
+ const isDatacenter = Boolean(data.is_datacenter);
+ const blocked = isVpn || isProxy || isTor || isDatacenter;
+
+ let reason = 'clean';
+ if (isVpn) reason = 'vpn';
+ else if (isProxy) reason = 'proxy';
+ else if (isTor) reason = 'tor';
+ else if (isDatacenter) reason = 'datacenter';
+
+ const isp = normalizeOptionalString(data?.asn?.org) ||
+ normalizeOptionalString(data?.company?.name) ||
+ normalizeOptionalString(data?.connection?.isp) ||
+ 'Unknown';
+
+ const payload = { blocked, isp, reason, source: 'ipapi.is' };
+ vpnCheckCache.set(ip, { createdAt: now, payload });
+ return payload;
+ } catch (e) {
+ console.error('VPN check error:', e.message);
+ vpnCheckCache.set(ip, { createdAt: now, payload: fallback });
+ return fallback;
+ }
+}
+
 async function generateUniqueReferralCode() {
  for (let i = 0; i < 20; i += 1) {
  const code = randomReferralCode();
@@ -490,7 +560,19 @@ async function ensureUserReferralCode(userId) {
 }
 
 async function getReferralCountForUser(userId) {
- const [rows] = await db.execute('SELECT COUNT(*) AS total FROM users WHERE referred_by = ?', [userId]);
+ const [rows] = await db.execute(`
+ SELECT COUNT(DISTINCT child.registration_ip) AS total
+ FROM users child
+ JOIN users referrer ON referrer.id = child.referred_by
+ WHERE child.referred_by = ?
+ AND child.registration_ip IS NOT NULL
+ AND child.registration_ip <> ''
+ AND (
+ referrer.registration_ip IS NULL
+ OR referrer.registration_ip = ''
+ OR child.registration_ip <> referrer.registration_ip
+ )
+ `, [userId]);
  return Number(rows[0]?.total || 0);
 }
 
@@ -613,6 +695,36 @@ const isReseller = (req, res, next) => {
  req.session.error = 'Bu səhifə yalnız bayilər üçündür.';
  res.redirect('/');
 };
+
+app.use(async (req, res, next) => {
+ if (!VPN_BLOCK_ENABLED) return next();
+ if (req.path === '/vpn-blocked') return next();
+
+ const clientIp = getClientIp(req);
+ if (!clientIp || isPrivateOrLocalIp(clientIp)) return next();
+
+ const check = await checkVpnProxyStatus(clientIp);
+ if (!check.blocked) return next();
+
+ const rayId = normalizeOptionalString(req.headers['cf-ray']) || 'N/A';
+ const blockInfo = {
+ ip: clientIp,
+ rayId,
+ isp: check.isp,
+ reason: check.reason,
+ source: check.source
+ };
+
+ if ((req.path || '').startsWith('/api/') || req.accepts('json')) {
+ return res.status(403).json({
+ success: false,
+ error: 'VPN və ya proxy bağlantısı bloklandı.',
+ ...blockInfo
+ });
+ }
+
+ return res.status(403).render('vpn_blocked', { title: 'Giriş Bloklandı', blockInfo });
+});
 
 // --- Page Routes ---
 
@@ -960,6 +1072,17 @@ app.get('/terms', (req, res) => {
  res.render('terms', { title: 'İstifadə Şərtləri və Qaydalar' });
 });
 
+app.get('/vpn-blocked', (req, res) => {
+ const blockInfo = {
+ ip: getClientIp(req) || 'N/A',
+ rayId: normalizeOptionalString(req.headers['cf-ray']) || 'N/A',
+ isp: 'Unknown',
+ reason: 'manual',
+ source: 'system'
+ };
+ res.status(403).render('vpn_blocked', { title: 'Giriş Bloklandı', blockInfo });
+});
+
 app.get('/api/pubg-check', async (req, res) => {
  const playerIdRaw = normalizeOptionalString(req.query.player_id);
  if (!playerIdRaw) return res.json({ success: false, error: 'ID daxil edin.' });
@@ -1057,6 +1180,7 @@ app.post('/register/send-otp', async (req, res) => {
 
 app.post('/register', async (req, res) => {
  const { full_name, email, password, phone, otp } = req.body;
+ const registrationIp = getClientIp(req);
 
  // Verify OTP
  if (!req.session.reg_otp || req.session.reg_otp !== otp || new Date(req.session.reg_expiry) < new Date() || req.session.reg_phone !== phone) {
@@ -1075,17 +1199,36 @@ app.post('/register', async (req, res) => {
  const ownReferralCode = await generateUniqueReferralCode();
  let referredBy = null;
  const referralCodeFromSession = sanitizeReferralCode(req.session.reg_referral_code);
+ let referralBlockedByIp = false;
 
  if (referralCodeFromSession) {
- const [referrerRows] = await db.execute('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [referralCodeFromSession]);
+ const [referrerRows] = await db.execute('SELECT id, registration_ip FROM users WHERE referral_code = ? LIMIT 1', [referralCodeFromSession]);
  if (referrerRows.length) {
- referredBy = referrerRows[0].id;
+ const referrer = referrerRows[0];
+ const referrerIp = normalizeOptionalString(referrer.registration_ip);
+ const clientIp = normalizeOptionalString(registrationIp);
+
+ if (!clientIp) {
+ referralBlockedByIp = true;
+ } else if (clientIp && referrerIp && clientIp === referrerIp) {
+ referralBlockedByIp = true;
+ } else {
+ const [sameIpUsed] = await db.execute(
+ 'SELECT id FROM users WHERE referred_by = ? AND registration_ip = ? LIMIT 1',
+ [referrer.id, clientIp]
+ );
+ if (sameIpUsed.length > 0) {
+ referralBlockedByIp = true;
+ } else {
+ referredBy = referrer.id;
+ }
+ }
  }
  }
 
  await db.execute(
- 'INSERT INTO users (full_name, email, password, role, phone, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
- [full_name, email, hashed, role, phone, ownReferralCode, referredBy]
+ 'INSERT INTO users (full_name, email, password, role, phone, referral_code, referred_by, registration_ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+ [full_name, email, hashed, role, phone, ownReferralCode, referredBy, registrationIp]
  );
 
  // Clear registration session
@@ -1094,7 +1237,9 @@ app.post('/register', async (req, res) => {
  delete req.session.reg_expiry;
  delete req.session.reg_referral_code;
 
- req.session.success = 'Uğurla qeydiyyatdan keçdiniz! İndi giriş edin.';
+ req.session.success = referralBlockedByIp
+ ? 'Qeydiyyat tamamlandı. Dəvət bonusu IP qaydasına görə tətbiq edilmədi.'
+ : 'Uğurla qeydiyyatdan keçdiniz! İndi giriş edin.';
  res.redirect('/login');
  } catch (e) {
  res.render('register', {

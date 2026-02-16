@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     z-index: 99999;
-    background: radial-gradient(120% 80% at 50% 8%, #0e2f73 0%, #04153a 55%, #03102d 100%);
+    background: #081b44;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,70 +23,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2;
 }
 
 .azpin-splash-logo {
     width: 86px;
     height: 86px;
-    border-radius: 20px;
+    border-radius: 18px;
     object-fit: cover;
-    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
-}
-
-.azpin-steps {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 17%;
-    height: 130px;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.azpin-step {
-    position: absolute;
-    width: 19px;
-    height: 34px;
-    border-radius: 60% 60% 65% 65%;
-    background:
-        radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.92) 0 16%, transparent 18%),
-        radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.92) 0 16%, transparent 18%),
-        radial-gradient(circle at 76% 18%, rgba(255, 255, 255, 0.92) 0 16%, transparent 18%),
-        radial-gradient(ellipse at 50% 76%, rgba(255, 255, 255, 0.95) 0 58%, rgba(255, 255, 255, 0.55) 74%, transparent 77%);
-    filter: drop-shadow(0 4px 8px rgba(190, 220, 255, 0.28));
-    transform-origin: 50% 100%;
-    opacity: 0;
-    animation: penguin-step 1.2s ease-out forwards;
-}
-
-.azpin-step.left {
-    transform: rotate(-15deg);
-}
-
-.azpin-step.right {
-    transform: rotate(15deg);
-}
-
-@keyframes penguin-step {
-    0% {
-        opacity: 0;
-        transform: translateY(4px) scale(0.82);
-    }
-
-    16% {
-        opacity: 0.95;
-        transform: translateY(0) scale(1);
-    }
-
-    70% {
-        opacity: 0.72;
-    }
-
-    100% {
-        opacity: 0;
-        transform: translateY(-7px) scale(0.95);
-    }
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
 }
 
 body.is-page-leaving {
@@ -97,16 +41,6 @@ body.is-page-leaving {
     .azpin-splash-logo {
         width: 70px;
         height: 70px;
-        border-radius: 16px;
-    }
-
-    .azpin-steps {
-        bottom: 21%;
-        height: 110px;
-    }
-
-    .azpin-step {
-        width: 16px;
-        height: 28px;
+        border-radius: 14px;
     }
 }

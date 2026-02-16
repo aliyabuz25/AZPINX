@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <style>
+    :root {
+      --navy: #0a1638;
+      --navy-soft: #10224f;
+      --text: #e5ecff;
+      --muted: #97a1b8;
+      --line: rgba(255, 255, 255, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--navy);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 560px;
+      text-align: center;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 18px;
+      padding: 28px 20px 18px;
+    }
+    .title {
+      margin: 12px 0 6px;
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .subtitle {
+      margin: 0 0 16px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .meta {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      text-align: left;
+    }
+    .meta b {
+      color: #bac7e6;
+      font-weight: 600;
+      min-width: 70px;
+      display: inline-block;
+    }
+    svg {
+      width: 180px;
+      height: 180px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <svg viewBox="0 0 200 200" role="img" aria-label="Sinirli penguen">
+      <circle cx="100" cy="100" r="90" fill="#0d1f4a"/>
+      <rect x="54" y="76" width="92" height="98" rx="42" fill="#0c1430"/>
+      <ellipse cx="100" cy="122" rx="32" ry="44" fill="#eaf0ff"/>
+      <circle cx="82" cy="96" r="7" fill="#121212"/>
+      <circle cx="118" cy="96" r="7" fill="#121212"/>
+      <path d="M74 85 L89 89" stroke="#081127" stroke-width="5" stroke-linecap="round"/>
+      <path d="M126 85 L111 89" stroke="#081127" stroke-width="5" stroke-linecap="round"/>
+      <path d="M100 104 L88 111 L100 118 L112 111 Z" fill="#f7a80c"/>
+      <rect x="70" y="56" width="60" height="24" rx="10" fill="#273b76"/>
+      <rect x="62" y="62" width="76" height="8" rx="4" fill="#4d64a7"/>
+      <rect x="138" y="112" width="12" height="54" rx="6" fill="#8d6e63" transform="rotate(-28 144 139)"/>
+      <circle cx="147" cy="112" r="10" fill="#c89f7a"/>
+      <ellipse cx="80" cy="176" rx="14" ry="7" fill="#f7a80c"/>
+      <ellipse cx="120" cy="176" rx="14" ry="7" fill="#f7a80c"/>
+    </svg>
+    <h1 class="title">VPN ilə girə bilməzsiniz</h1>
+    <p class="subtitle">Təhlükəsizlik səbəbi ilə VPN/Proxy/Tor bağlantıları bloklanır.</p>
+    <section class="meta">
+      <div><b>Ray ID:</b> <%= blockInfo.rayId %></div>
+      <div><b>ISP:</b> <%= blockInfo.isp %></div>
+      <div><b>IP:</b> <%= blockInfo.ip %></div>
+      <div><b>Səbəb:</b> <%= blockInfo.reason %></div>
+      <div><b>Mənbə:</b> <%= blockInfo.source %></div>
+    </section>
+  </main>
+</body>
+</html>
