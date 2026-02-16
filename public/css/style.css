@@ -3079,3 +3079,106 @@ body {
         font-size: 16px;
     }
 }
+
+/* Clean Top Navbar (User Friendly) */
+header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+}
+
+.top-bar {
+    max-width: 1280px;
+    padding: 10px 20px;
+    gap: 14px;
+    min-height: 72px;
+}
+
+header .logo img {
+    height: 68px !important;
+    filter: none;
+}
+
+.search-container input {
+    min-height: 42px;
+    border-radius: 10px;
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+}
+
+.search-container input:focus {
+    background-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+}
+
+.auth-buttons {
+    gap: 8px;
+}
+
+.nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 18px;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    box-shadow: none;
+    transform: translateY(-1px);
+}
+
+.nav-balance-lite {
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.nav-balance-plus {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 0;
+    background: rgba(255, 255, 255, 0.14);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-balance-plus:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 768px) {
+    .top-bar {
+        padding: 10px 14px 12px;
+        gap: 10px;
+    }
+
+    header .logo img {
+        height: 58px !important;
+    }
+
+    .topbar-actions-wrap.collapse.show {
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        margin-top: 0;
+        padding-top: 10px;
+    }
+
+    .auth-buttons {
+        gap: 8px;
+    }
+}

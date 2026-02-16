@@ -2470,51 +2470,74 @@ app.get('/admin/orders/export', isAdmin, async (req, res) => {
  rows = allRows;
  }
 
+ const statusLabelMap = {
+ pending: 'Gözləyir',
+ completed: 'Tamamlandı',
+ cancelled: 'Ləğv edildi'
+ };
+ const paymentLabelMap = {
+ Balance: 'Balans',
+ 'C2C Card Transfer': 'Kartdan köçürmə (C2C)'
+ };
+
  const escapeCsv = (value) => {
  const normalized = value === null || value === undefined ? '' : String(value);
- if (/[",\n]/.test(normalized)) {
+ if (/[;"\n]/.test(normalized)) {
  return `"${normalized.replace(/"/g, '""')}"`;
  }
  return normalized;
  };
 
  const headers = [
- 'Order ID',
- 'User ID',
- 'User Full Name',
- 'User Email',
- 'User Phone',
- 'Product Name',
- 'Amount',
- 'Payment Method',
- 'Sender Name',
- 'Receipt Path',
- 'Player ID',
- 'Player Nickname',
+ 'Sətir №',
+ 'Sifariş ID',
+ 'Sifariş tarixi',
  'Status',
- 'Created At'
+ 'Məbləğ (AZN)',
+ 'Ödəniş üsulu',
+ 'Məhsul',
+ 'Oyunçu ID',
+ 'Oyunçu Nickname',
+ 'Göndərən',
+ 'İstifadəçi ID',
+ 'İstifadəçi adı',
+ 'İstifadəçi email',
+ 'İstifadəçi telefon',
+ 'Dekont linki'
  ];
 
- const csvLines = [headers.join(',')];
- rows.forEach((row) => {
+ const csvLines = [headers.join(';')];
+ rows.forEach((row, idx) => {
+ const statusLabel = statusLabelMap[String(row.status || '').toLowerCase()] || row.status || '';
+ const paymentLabel = paymentLabelMap[String(row.payment_method || '')] || row.payment_method || '';
+ const createdAtText = row.created_at
+ ? new Date(row.created_at).toLocaleString('az-AZ', { hour12: false })
+ : '';
+
  const lineValues = [
+ idx + 1,
  row.id,
+ createdAtText,
+ statusLabel,
+ Number(row.amount || 0).toFixed(2),
+ paymentLabel,
+ row.product_name,
+ row.player_id,
+ row.player_nickname,
+ row.sender_name,
  row.user_id,
  row.user_full_name,
  row.user_email,
  row.user_phone,
- row.product_name,
- Number(row.amount || 0).toFixed(2),
- row.payment_method,
- row.sender_name,
- row.receipt_path,
- row.player_id,
- row.player_nickname,
- row.status,
- row.created_at ? new Date(row.created_at).toISOString() : ''
+ row.receipt_path
  ];
- csvLines.push(lineValues.map(escapeCsv).join(','));
+ csvLines.push(lineValues.map(escapeCsv).join(';'));
  });
+
+ csvLines.push('');
+ csvLines.push(`Export Scope;${scope === 'selected' ? 'Seçilən sifarişlər' : 'Bütün sifarişlər'}`);
+ csvLines.push(`Sifariş sayı;${rows.length}`);
+ csvLines.push(`Export tarixi;${new Date().toLocaleString('az-AZ', { hour12: false })}`);
 
  const nowStamp = new Date().toISOString().replace(/[:.]/g, '-');
  const fileName = scope === 'selected' ? `orders-selected-${nowStamp}.csv` : `orders-all-${nowStamp}.csv`;

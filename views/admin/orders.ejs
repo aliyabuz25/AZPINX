@@ -9,7 +9,7 @@
  <i class="ri-file-download-line"></i> Bütününü CSV Export
  </a>
  <button type="submit" form="selectedExportForm" id="selectedExportBtn" class="btn btn-sm btn-primary">
- <i class="ri-file-list-3-line"></i> Seçililəri Export
+ <i class="ri-file-list-3-line"></i> Seçililəri Export (<span id="selectedCountText">0</span>)
  </button>
  </div>
  </div>
@@ -120,11 +120,13 @@
  const selectedItems = Array.from(document.querySelectorAll('.order-select-item'));
  const exportForm = document.getElementById('selectedExportForm');
  const exportBtn = document.getElementById('selectedExportBtn');
+ const selectedCountText = document.getElementById('selectedCountText');
 
  function syncSelectedIds() {
  const ids = selectedItems.filter((cb) => cb.checked).map((cb) => cb.value);
  selectedIdsInput.value = ids.join(',');
  if (exportBtn) exportBtn.disabled = ids.length === 0;
+ if (selectedCountText) selectedCountText.textContent = String(ids.length);
  }
 
  if (selectAll) {
