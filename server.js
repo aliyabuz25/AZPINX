@@ -523,6 +523,25 @@ function normalizeOptionalString(value) {
  return trimmed === '' ? null : trimmed;
 }
 
+function resolveSliderLink(body = {}) {
+ const type = normalizeOptionalString(body.destination_type) || 'custom';
+ const value = normalizeOptionalString(body.destination_value);
+ const custom = normalizeOptionalString(body.link) || '#';
+
+ if (type === 'home') return '/';
+ if (type === 'all_products') return '/all-products';
+ if (type === 'faq') return '/faq';
+ if (type === 'terms') return '/terms';
+ if (type === 'tickets') return '/tickets';
+ if (type === 'profile') return '/profile';
+ if (type === 'wishlist') return '/wishlist';
+ if (type === 'checkout') return '/checkout';
+ if (type === 'cart') return '/cart';
+ if (type === 'category' && value) return `/all-products?category=${encodeURIComponent(value)}`;
+ if (type === 'custom') return custom;
+ return custom;
+}
+
 function sanitizeReferralCode(value) {
  const normalized = normalizeOptionalString(value);
  if (!normalized) return null;
@@ -2301,7 +2320,8 @@ app.post('/admin/categories/delete', isAdmin, async (req, res) => {
 // Admin Sliders (List)
 app.get('/admin/sliders', isAdmin, async (req, res) => {
  const [sliders] = await db.execute('SELECT * FROM sliders ORDER BY created_at DESC');
- res.render('admin/sliders', { title: 'Slayder (Banner) İdarəetməsi', sliders });
+ const [categories] = await db.execute('SELECT name FROM categories ORDER BY name ASC');
+ res.render('admin/sliders', { title: 'Slayder (Banner) İdarəetməsi', sliders, categories });
 });
 
 // Admin Slider Create
@@ -2318,8 +2338,8 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
  });
 }, async (req, res) => {
  try {
- const { title, description, link } = req.body;
- console.log('Slider Create Request Body:', { title, description, link });
+ const { title, description } = req.body;
+ console.log('Slider Create Request Body:', req.body);
  console.log('Uploaded File Information:', req.file);
 
  if (!req.file) {
@@ -2330,14 +2350,43 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
  const image_path = '/uploads/sliders/' + req.file.filename;
  console.log('Storing slider with image_path:', image_path);
 
+ const resolvedLink = resolveSliderLink(req.body);
  await db.execute('INSERT INTO sliders (image_path, title, description, link) VALUES (?, ?, ?, ?)',
- [image_path, title || '', description || '', link || '#']);
+ [image_path, title || '', description || '', resolvedLink || '#']);
 
  console.log('Slider successfully inserted into database.');
  res.redirect('/admin/sliders?success=Slayder əlavə edildi');
  } catch (e) {
  console.error('Database Error during slider creation:', e);
  res.redirect('/admin/sliders?error=Bazaya yazılma xətası: ' + encodeURIComponent(e.message));
+ }
+});
+
+// Admin Slider Update
+app.post('/admin/sliders/update', isAdmin, uploadSlider.single('image'), async (req, res) => {
+ try {
+ const id = Number(req.body.id);
+ if (!id) return res.redirect('/admin/sliders?error=Yanlış ID');
+
+ const title = normalizeOptionalString(req.body.title) || '';
+ const description = normalizeOptionalString(req.body.description) || '';
+ const link = resolveSliderLink(req.body) || '#';
+ const imagePath = req.file ? '/uploads/sliders/' + req.file.filename : null;
+
+ let sql = 'UPDATE sliders SET title = ?, description = ?, link = ?';
+ const params = [title, description, link];
+ if (imagePath) {
+ sql += ', image_path = ?';
+ params.push(imagePath);
+ }
+ sql += ' WHERE id = ?';
+ params.push(id);
+
+ await db.execute(sql, params);
+ return res.redirect('/admin/sliders?success=Slayder yeniləndi');
+ } catch (e) {
+ console.error('Slider update error:', e.message);
+ return res.redirect('/admin/sliders?error=' + encodeURIComponent(e.message));
  }
 });
 

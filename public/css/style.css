@@ -2487,42 +2487,38 @@ footer::before {
 }
 
 .lang-current {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 999px;
     background: linear-gradient(145deg, #0f172a, #1e293b);
     color: #f8fafc;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.24);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.6px;
+    font-size: 24px;
+    font-weight: 700;
     cursor: pointer;
 }
 
 .lang-current i {
-    font-size: 17px;
-    line-height: 1;
+    display: none;
 }
 
 .lang-menu {
     position: absolute;
     right: 0;
-    bottom: 66px;
+    bottom: 60px;
     background: #ffffff;
     border: 1px solid rgba(148, 163, 184, 0.35);
     border-radius: 12px;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
-    padding: 6px;
+    padding: 8px;
     display: none;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 56px;
+    flex-direction: row;
+    gap: 6px;
+    min-width: auto;
 }
 
 .lang-menu.open {
@@ -2533,41 +2529,19 @@ footer::before {
     border: none;
     background: transparent;
     border-radius: 8px;
-    padding: 6px 8px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
     color: #0f172a;
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 22px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
     cursor: pointer;
 }
 
 .lang-option:hover {
     background: #f1f5f9;
-}
-
-.goog-te-banner-frame.skiptranslate {
-    display: none !important;
-}
-
-body {
-    top: 0 !important;
-}
-
-/* Translate Compatibility Fixes */
-html.translated-ltr,
-html.translated-rtl {
-    margin-top: 0 !important;
-}
-
-body font,
-body font font {
-    font-family: inherit !important;
-    font-size: inherit !important;
-    font-weight: inherit !important;
-    font-style: inherit !important;
-    line-height: inherit !important;
-    letter-spacing: inherit !important;
-    color: inherit !important;
-    vertical-align: inherit !important;
 }
 
 body {
