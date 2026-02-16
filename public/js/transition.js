@@ -3,14 +3,58 @@
     if (!splash) return;
 
     const splashInner = splash.querySelector('.azpin-splash-inner');
+    const stepsLayer = splash.querySelector('.azpin-steps');
     const minimumVisibleMs = 260;
     const startedAt = Date.now();
+    let stepTimer = null;
+    let stepIndex = 0;
+
+    function createStep() {
+        if (!stepsLayer) return;
+
+        const step = document.createElement('span');
+        const isLeft = stepIndex % 2 === 0;
+        const baseX = 14 + (stepIndex % 12) * 6.4;
+        const jitter = (Math.random() - 0.5) * 1.4;
+
+        step.className = 'azpin-step ' + (isLeft ? 'left' : 'right');
+        step.style.left = 'calc(' + (baseX + jitter) + '% - 10px)';
+        step.style.bottom = (isLeft ? 10 : 2) + 'px';
+
+        stepsLayer.appendChild(step);
+        stepIndex += 1;
+
+        window.setTimeout(() => {
+            step.remove();
+        }, 1300);
+    }
+
+    function startSteps() {
+        if (!stepsLayer) return;
+        stepsLayer.innerHTML = '';
+        stepIndex = 0;
+        createStep();
+        stepTimer = window.setInterval(createStep, 120);
+    }
+
+    function stopSteps() {
+        if (stepTimer) {
+            window.clearInterval(stepTimer);
+            stepTimer = null;
+        }
+        if (stepsLayer) {
+            window.setTimeout(() => {
+                stepsLayer.innerHTML = '';
+            }, 380);
+        }
+    }
 
     function hideSplash() {
         const elapsed = Date.now() - startedAt;
         const wait = Math.max(0, minimumVisibleMs - elapsed);
 
         window.setTimeout(() => {
+            stopSteps();
             if (window.gsap) {
                 gsap.to(splash, {
                     opacity: 0,
@@ -51,6 +95,7 @@
         splash.classList.remove('is-hidden');
         splash.style.opacity = '1';
         splash.style.visibility = 'visible';
+        startSteps();
 
         if (window.gsap) {
             gsap.fromTo(splash, { opacity: 0 }, { opacity: 1, duration: 0.26, ease: 'power2.inOut' });
@@ -69,13 +114,16 @@
     }
 
     if (document.readyState === 'complete') {
+        startSteps();
         hideSplash();
     } else {
+        startSteps();
         window.addEventListener('load', hideSplash, { once: true });
     }
 
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
+            stopSteps();
             splash.classList.add('is-hidden');
             document.body.classList.remove('is-page-leaving');
         }
