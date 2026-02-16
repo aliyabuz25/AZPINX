@@ -194,8 +194,9 @@ let db;
             )`,
             `CREATE TABLE IF NOT EXISTS sliders (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                title VARCHAR(255),
                 image_path VARCHAR(255) NOT NULL,
+                title VARCHAR(255),
+                description TEXT,
                 link VARCHAR(255),
                 order_index INT DEFAULT 0,
                 is_active TINYINT(1) DEFAULT 1,
@@ -208,6 +209,12 @@ let db;
                 type VARCHAR(50) DEFAULT 'info',
                 is_active TINYINT(1) DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(100) UNIQUE NOT NULL,
+                setting_value TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )`
         ];
 
@@ -255,20 +262,38 @@ let db;
                 console.warn(`Migration Warning for ${m.table}.${m.column}:`, err.message);
             }
         }
-
-        // Check if admin user exists, if not create default
-        const [admins] = await db.execute("SELECT * FROM users WHERE role = 'admin'");
-        if (admins.length === 0) {
-            const hashedPw = await bcrypt.hash('admin123', 10);
-            await db.execute("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)",
-                ['Admin User', 'admin@azpinx.com', hashedPw, 'admin']);
-            console.log("Default Admin user created: admin@azpinx.com / admin123");
-        }
-
-    } catch (err) {
-        console.error("Database Error:", err.message);
     }
-})();
+        console.log("Database Migration Complete.");
+
+    // --- Seed Default Settings ---
+    const defaultSettings = [
+        { key: 'bank_card', value: '4127 0000 1111 2222' },
+        { key: 'bank_name', value: 'ABB BANK' },
+        { key: 'bank_holder', value: 'AZPINX ADMIN' }
+    ];
+
+    for (const s of defaultSettings) {
+        const [exists] = await db.execute("SELECT id FROM settings WHERE setting_key = ?", [s.key]);
+        if (exists.length === 0) {
+            console.log(`Seeding setting: ${s.key}`);
+            await db.execute("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)", [s.key, s.value]);
+        }
+    }
+
+
+    // Check if admin user exists, if not create default
+    const [admins] = await db.execute("SELECT * FROM users WHERE role = 'admin'");
+    if (admins.length === 0) {
+        const hashedPw = await bcrypt.hash('admin123', 10);
+        await db.execute("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)",
+            ['Admin User', 'admin@azpinx.com', hashedPw, 'admin']);
+        console.log("Default Admin user created: admin@azpinx.com / admin123");
+    }
+
+} catch (err) {
+    console.error("Database Error:", err.message);
+}
+}) ();
 
 // Helper to fetch products with local overrides
 async function getMappedProducts() {
