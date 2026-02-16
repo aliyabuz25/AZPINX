@@ -109,7 +109,7 @@ const API_CONFIG = {
 };
 
 const PUBG_CHECKER_CONFIG = {
- BASE_URL: (process.env.PUBG_CHECKER_URL || 'http://azpinx-pubg-checker:3000').replace(/\/$/, ''),
+ BASE_URL: (process.env.PUBG_CHECKER_URL || 'http://38.180.208.188:5599').replace(/\/$/, ''),
  TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 10000)
 };
 
