@@ -561,6 +561,25 @@ body.admin-modern {
     border-right: 1px solid #e5eaf6 !important;
     box-shadow: 0 8px 20px rgba(22, 38, 74, 0.06) !important;
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.admin-modern .main-sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.admin-modern .sidebar {
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+}
+
+.admin-modern .sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
 }
 
 .admin-modern .brand-link {
