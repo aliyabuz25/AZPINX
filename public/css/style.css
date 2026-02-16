@@ -306,9 +306,8 @@ header .logo img {
     width: 100%;
     margin: 0;
     padding: 0;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0;
+    display: block;
+    /* Removed grid to simplify full width */
 }
 
 .quick-categories-aside {
