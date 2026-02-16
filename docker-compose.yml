@@ -28,9 +28,6 @@ services:
       - 'traefik.enable=true'
       - 'traefik.docker.network=edge'
       - 'traefik.http.routers.azpinx.rule=Host(`azpinx.com`) || Host(`www.azpinx.com`) || Host(`azpinx.octotech.az`)'
-      - 'traefik.http.routers.azpinx.entrypoints=web,websecure'
-      - 'traefik.http.routers.azpinx.tls=true'
-      - 'traefik.http.routers.azpinx.tls.certresolver=myresolver'
       - 'traefik.http.services.azpinx.loadbalancer.server.port=3000'
       # Large Upload Support
       - 'traefik.http.middlewares.azpinx-buf.buffering.maxRequestBodyBytes=104857600'
