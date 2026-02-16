@@ -14,6 +14,7 @@ services:
       DB_USER: "azpinx"
       DB_PASSWORD: "azpinx_secret_2026"
       DB_NAME: "azpinx_db"
+      PUBG_CHECKER_URLS: "http://38.180.208.188:5599,http://azpinx-pubg-checker:3000"
       NODE_ENV: "production"
       SESSION_SECRET: "azpinx-session-key-2026-production"
     volumes:

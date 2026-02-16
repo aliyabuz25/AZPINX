@@ -109,8 +109,11 @@ const API_CONFIG = {
 };
 
 const PUBG_CHECKER_CONFIG = {
- BASE_URL: (process.env.PUBG_CHECKER_URL || 'http://38.180.208.188:5599').replace(/\/$/, ''),
- TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 10000)
+ URLS: (process.env.PUBG_CHECKER_URLS || process.env.PUBG_CHECKER_URL || 'http://38.180.208.188:5599,http://azpinx-pubg-checker:3000')
+ .split(',')
+ .map((u) => u.trim().replace(/\/$/, ''))
+ .filter(Boolean),
+ TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 12000)
 };
 
 // Database Connection
@@ -876,22 +879,34 @@ app.get('/api/pubg-check', async (req, res) => {
  const playerIdRaw = normalizeOptionalString(req.query.player_id);
  if (!playerIdRaw) return res.json({ success: false, error: 'ID daxil edin.' });
  const playerId = String(playerIdRaw);
+ // Prevent stale cached API responses (304 with old error payload)
+ res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+ res.set('Pragma', 'no-cache');
+ res.set('Expires', '0');
+ res.set('ETag', `"pubg-check-${Date.now()}"`);
 
+ let lastError = null;
+ for (const baseUrl of PUBG_CHECKER_CONFIG.URLS) {
  try {
- const response = await axios.get(`${PUBG_CHECKER_CONFIG.BASE_URL}/check-player`, {
+ const response = await axios.get(`${baseUrl}/check-player`, {
  params: { id: playerId },
  timeout: PUBG_CHECKER_CONFIG.TIMEOUT
  });
+ const data = response.data || {};
 
- if (response.data && response.data.success) {
- res.json({ success: true, nickname: response.data.player_name });
- } else {
- res.json({ success: false, error: 'Oyunçu tapılmadı.' });
+ if (data.success && data.player_name) {
+ return res.json({ success: true, nickname: data.player_name });
  }
+
+ // If checker responded but couldn't find the player, continue other sources first.
+ lastError = data.error || 'Oyunçu tapılmadı.';
  } catch (e) {
- console.error('PUBG Checker Error:', e.message);
- res.json({ success: false, error: 'PUBG checker servisi ilə bağlantı xətası baş verdi.' });
+ lastError = e.message;
+ console.error(`PUBG Checker Error [${baseUrl}]:`, e.message);
  }
+ }
+
+ return res.json({ success: false, error: lastError || 'PUBG checker servisi ilə bağlantı xətası baş verdi.' });
 });
 
 app.get('/product/:id', async (req, res) => {
