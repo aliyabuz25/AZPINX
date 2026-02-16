@@ -56,16 +56,16 @@ body {
 
 .main-sidebar {
     background: #0f1b3d !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 8px 20px rgba(8, 19, 51, 0.3) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: none !important;
 }
 
 .brand-link {
     display: flex !important;
     align-items: center;
     gap: 12px;
-    padding: 16px 14px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    padding: 14px 12px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .brand-image-modern {
@@ -90,52 +90,19 @@ body {
 }
 
 .brand-stack small {
-    color: rgba(235, 241, 255, 0.72);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+    display: none;
 }
 
 .sidebar {
     padding: 0 !important;
 }
 
-.user-panel {
-    margin: 8px 10px 0;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    background: rgba(255, 255, 255, 0.07);
-    border-radius: 12px;
-    padding: 12px !important;
-}
-
-.admin-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #2f66ff 0%, #4f46e5 100%);
-    box-shadow: 0 10px 22px rgba(47, 102, 255, 0.35);
-}
-
-.user-panel .info a {
-    color: #eff4ff !important;
-    font-size: 0.92rem;
-}
-
-.nav-sidebar .nav-header {
-    margin: 18px 14px 6px !important;
-    padding: 0 !important;
-    font-size: 0.7rem !important;
-    color: rgba(182, 199, 235, 0.72) !important;
-    letter-spacing: 1px;
-}
-
 .nav-sidebar .nav-link {
-    margin: 3px 10px !important;
-    border-radius: 10px !important;
-    color: rgba(229, 238, 255, 0.84) !important;
+    margin: 2px 8px !important;
+    border-radius: 8px !important;
+    color: rgba(229, 238, 255, 0.88) !important;
     font-weight: 600;
-    padding: 10px 12px !important;
+    padding: 9px 11px !important;
     transition: 0.2s ease;
 }
 
@@ -147,13 +114,13 @@ body {
 .nav-sidebar .nav-link:hover {
     background: rgba(255, 255, 255, 0.1) !important;
     color: #fff !important;
-    transform: translateX(2px);
+    transform: none;
 }
 
 .nav-sidebar .nav-link.active {
-    background: linear-gradient(135deg, #2f66ff 0%, #4f46e5 100%) !important;
+    background: #2f66ff !important;
     color: #fff !important;
-    box-shadow: 0 10px 22px rgba(48, 99, 255, 0.38);
+    box-shadow: none;
 }
 
 .content-header {

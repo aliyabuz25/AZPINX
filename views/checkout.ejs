@@ -16,6 +16,10 @@
  <i class="ri-wallet-3-line"></i>
  <span>Balansla Ödə</span>
  </div>
+ <div class="pay-tab" onclick="switchPayment('topup')" id="tab-topup">
+ <i class="ri-wallet-2-line"></i>
+ <span>Balans Artır (C2C)</span>
+ </div>
  </div>
 
  <!-- C2C Section -->
@@ -85,6 +89,40 @@
  Balansla Təsdiqlə
  </button>
  </div>
+
+ <div id="section-topup" class="p-price-card payment-section" style="display: none;">
+ <h4>Balans Artırma (C2C)</h4>
+ <p style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Kart köçürməsini etdikdən sonra məbləği daxil edin, ad-soyad və dekont yükləyin. Sorğu admin təsdiqinə düşəcək.</p>
+ <div class="bank-card-preview">
+ <p class="card-label">KART NÖMRƏSİ</p>
+ <p class="card-num"><%= settings.bank_card || '0000 0000 0000 0000' %></p>
+ <div class="card-footer-info">
+ <span><%= settings.bank_holder || 'ADMIN' %></span>
+ <span><%= settings.bank_name || 'BANK' %></span>
+ </div>
+ </div>
+
+ <div class="form-group" style="margin-top: 15px;">
+ <label>Balans Artırma Məbləği (AZN)</label>
+ <input type="number" id="topupAmount" min="0.5" step="0.01" placeholder="10.00"
+ style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
+ </div>
+ <div class="form-group" style="margin-top: 15px;">
+ <label>Ödəniş edən şəxs (Ad Soyad)</label>
+ <input type="text" id="topupSenderName" placeholder="Karta yazılan ad..."
+ style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
+ </div>
+ <div class="form-group" style="margin-top: 15px;">
+ <label>Dekont (Şəkil)</label>
+ <input type="file" id="topupReceipt" accept="image/*"
+ style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">
+ </div>
+
+ <button class="btn btn-primary" onclick="confirmTopupRequest()"
+ style="width: 100%; padding: 15px; margin-top: 20px;">
+ Balans Artırma Sorğusu Göndər
+ </button>
+ </div>
  </div>
 
  <div class="checkout-right">
@@ -109,11 +147,7 @@
  const orderTotalDisplay = document.getElementById('orderTotalDisplay');
  const cart = JSON.parse(localStorage.getItem('azpin_cart')) || [];
 
- if (cart.length === 0) {
- window.location.href = '/';
- return;
- }
-
+ if (cart.length > 0) {
  cart.forEach(item => {
  currentTotal += item.price;
  const div = document.createElement('div');
@@ -125,14 +159,19 @@
  div.innerHTML = `<div><span>${item.name}</span>${extraInfo}</div> <b>${item.price.toFixed(2)} AZN</b>`;
  list.appendChild(div);
  });
+ } else {
+ list.innerHTML = '<p class="text-muted mb-0">Səbət boşdur. Balans artırma bölməsindən istifadə edə bilərsiniz.</p>';
+ }
+
  totalEl.textContent = currentTotal.toFixed(2) + ' AZN';
  orderTotalDisplay.textContent = currentTotal.toFixed(2) + ' AZN';
 
- // Check balance
- if (userBalance < currentTotal) {
+ if (cart.length === 0 || userBalance < currentTotal) {
+ if (currentTotal > 0 && userBalance < currentTotal) {
  document.getElementById('balanceError').style.display = 'block';
- document.getElementById('balancePayBtn').disabled = true;
- document.getElementById('balancePayBtn').style.opacity = '0.5';
+ }
+ document.getElementById('balancePayBtn').disabled = currentTotal <= 0 || userBalance < currentTotal;
+ document.getElementById('balancePayBtn').style.opacity = (currentTotal <= 0 || userBalance < currentTotal) ? '0.5' : '1';
  }
  });
 
@@ -144,8 +183,12 @@
  document.getElementById('section-' + method).style.display = 'block';
  }
 
- async function confirmPayment(method) {
+async function confirmPayment(method) {
  const cart = JSON.parse(localStorage.getItem('azpin_cart')) || [];
+ if (cart.length === 0) {
+ Toastify({ text:"Səbət boşdur.", backgroundColor:"#ef4444" }).showToast();
+ return;
+ }
  const formData = new FormData();
  formData.append('cart', JSON.stringify(cart));
  formData.append('payment_method', method === 'c2c' ? 'C2C Card Transfer' : 'Balance');
@@ -180,6 +223,37 @@
  setTimeout(() => window.location.href = '/profile', 2000);
  } else {
  Toastify({ text:"Xəta:" + (result.error ||"Bilinməyən xəta baş verdi."), backgroundColor:"#ef4444" }).showToast();
+ }
+}
+
+ async function confirmTopupRequest() {
+ const amount = parseFloat(document.getElementById('topupAmount').value || '0');
+ const sender = (document.getElementById('topupSenderName').value || '').trim();
+ const receiptFile = document.getElementById('topupReceipt').files[0];
+
+ if (!amount || amount <= 0 || !sender || !receiptFile) {
+ Toastify({ text:"Məbləğ, Ad Soyad və Dekont mütləqdir.", backgroundColor:"#ef4444" }).showToast();
+ return;
+ }
+
+ const formData = new FormData();
+ formData.append('amount', amount.toFixed(2));
+ formData.append('sender_name', sender);
+ formData.append('receipt', receiptFile);
+
+ const res = await fetch('/balance/topups/request', {
+ method: 'POST',
+ body: formData
+ });
+
+ const result = await res.json().catch(() => ({ success: false, error: 'Server xətası' }));
+ if (result.success) {
+ document.getElementById('topupAmount').value = '';
+ document.getElementById('topupSenderName').value = '';
+ document.getElementById('topupReceipt').value = '';
+ Toastify({ text: result.message || "Balans artırma sorğusu göndərildi.", backgroundColor:"#10b981" }).showToast();
+ } else {
+ Toastify({ text:"Xəta: " + (result.error || "Bilinməyən xəta"), backgroundColor:"#ef4444" }).showToast();
  }
  }
  </script>

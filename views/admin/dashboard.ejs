@@ -1,58 +1,100 @@
 <%- include('header') %>
- <div class="row">
- <div class="col-lg-4 col-6">
- <div class="small-box bg-info">
- <div class="inner">
- <h3>
- <%= stats.totalOrders %>
- </h3>
- <p>Ümumi Sifarişlər</p>
- </div>
- <div class="icon">
- <i class="ri-shopping-cart-2-line"></i>
- </div>
- <a href="/admin/orders" class="small-box-footer">Daha çox <i class="ri-arrow-right-circle-line"></i></a>
- </div>
- </div>
- <div class="col-lg-4 col-6">
- <div class="small-box bg-warning">
- <div class="inner">
- <h3>
- <%= stats.pendingOrders %>
- </h3>
- <p>Gözləyən Sifarişlər</p>
- </div>
- <div class="icon">
- <i class="ri-time-line"></i>
- </div>
- <a href="/admin/orders" class="small-box-footer">Daha çox <i class="ri-arrow-right-circle-line"></i></a>
- </div>
- </div>
- <div class="col-lg-4 col-6">
- <div class="small-box bg-success">
- <div class="inner">
- <h3>
- <%= stats.totalUsers %>
- </h3>
- <p>İstifadəçi Sayı</p>
- </div>
- <div class="icon">
- <i class="ri-group-line"></i>
- </div>
- <a href="/admin/users" class="small-box-footer">Daha çox <i class="ri-arrow-right-circle-line"></i></a>
- </div>
- </div>
- </div>
- <div class="row">
- <div class="col-12">
- <div class="card">
- <div class="card-header border-transparent">
- <h3 class="card-title">Sistem Statusu</h3>
- </div>
- <div class="card-body">
- <p>Admin panelinə xoş gəldiniz. Bütün sistemlər aktivdir və problemsiz işləyir.</p>
- </div>
- </div>
- </div>
- </div>
- <%- include('footer') %>
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-info">
+      <div class="inner">
+        <h3><%= stats.totalOrders %></h3>
+        <p>Ümumi sifariş</p>
+      </div>
+      <div class="icon"><i class="ri-shopping-cart-2-line"></i></div>
+      <a href="/admin/orders" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <h3><%= stats.pendingOrders %></h3>
+        <p>Gözləyən sifariş</p>
+      </div>
+      <div class="icon"><i class="ri-time-line"></i></div>
+      <a href="/admin/orders" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-success">
+      <div class="inner">
+        <h3><%= stats.totalUsers %></h3>
+        <p>Ümumi istifadəçi</p>
+      </div>
+      <div class="icon"><i class="ri-group-line"></i></div>
+      <a href="/admin/users" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-danger">
+      <div class="inner">
+        <h3><%= stats.pendingTopups %></h3>
+        <p>Gözləyən topup</p>
+      </div>
+      <div class="icon"><i class="ri-wallet-3-line"></i></div>
+      <a href="/admin/topups" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-4 col-6">
+    <div class="small-box bg-primary">
+      <div class="inner">
+        <h3><%= stats.activeUsers %></h3>
+        <p>Aktiv istifadəçi (5 dəq)</p>
+      </div>
+      <div class="icon"><i class="ri-user-follow-line"></i></div>
+      <a href="/admin/users" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-4 col-6">
+    <div class="small-box bg-secondary">
+      <div class="inner">
+        <h3><%= stats.dailyAccessVisitors %></h3>
+        <p>Günlük giriş (unikal)</p>
+      </div>
+      <div class="icon"><i class="ri-door-open-line"></i></div>
+      <a href="/admin" class="small-box-footer">Bu gün</a>
+    </div>
+  </div>
+  <div class="col-lg-4 col-6">
+    <div class="small-box bg-dark">
+      <div class="inner">
+        <h3><%= stats.dailyAccessHits %></h3>
+        <p>Günlük erişim (hit)</p>
+      </div>
+      <div class="icon"><i class="ri-line-chart-line"></i></div>
+      <a href="/admin" class="small-box-footer">Bu gün</a>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6 col-12">
+    <div class="small-box bg-teal">
+      <div class="inner">
+        <h3><%= stats.dailyOrders %></h3>
+        <p>Günlük satın alım sayı</p>
+      </div>
+      <div class="icon"><i class="ri-shopping-bag-3-line"></i></div>
+      <a href="/admin/orders" class="small-box-footer">Sifarişlər <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12">
+    <div class="small-box bg-olive">
+      <div class="inner">
+        <h3><%= stats.dailyCompletedOrders %></h3>
+        <p>Günlük təsdiqlənən satın alım</p>
+      </div>
+      <div class="icon"><i class="ri-checkbox-circle-line"></i></div>
+      <a href="/admin/orders" class="small-box-footer">Sifarişlər <i class="ri-arrow-right-circle-line"></i></a>
+    </div>
+  </div>
+</div>
+<%- include('footer') %>

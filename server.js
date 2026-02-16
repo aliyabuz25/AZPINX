@@ -240,6 +240,26 @@ let db;
  is_active TINYINT(1) DEFAULT 1,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
  )`,
+ `CREATE TABLE IF NOT EXISTS balance_topups (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ user_id INT NOT NULL,
+ amount DECIMAL(10, 2) NOT NULL,
+ sender_name VARCHAR(100) NOT NULL,
+ receipt_path VARCHAR(255) NOT NULL,
+ payment_method VARCHAR(50) DEFAULT 'C2C Card Transfer',
+ status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+ admin_note TEXT NULL,
+ reviewed_by INT NULL,
+ reviewed_at DATETIME NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`,
+ `CREATE TABLE IF NOT EXISTS site_access_logs (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ user_id INT NULL,
+ visitor_key VARCHAR(255) NOT NULL,
+ request_path VARCHAR(255) NOT NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`,
  `CREATE TABLE IF NOT EXISTS settings (
  id INT AUTO_INCREMENT PRIMARY KEY,
  setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -274,7 +294,8 @@ let db;
  { table: 'users', column: 'otp_expiry', definition: 'DATETIME NULL AFTER otp_code' },
  { table: 'users', column: 'referral_code', definition: 'VARCHAR(32) UNIQUE NULL AFTER otp_expiry' },
  { table: 'users', column: 'referred_by', definition: 'INT NULL AFTER referral_code' },
- { table: 'users', column: 'registration_ip', definition: 'VARCHAR(64) NULL AFTER referred_by' }
+ { table: 'users', column: 'registration_ip', definition: 'VARCHAR(64) NULL AFTER referred_by' },
+ { table: 'users', column: 'last_seen_at', definition: 'DATETIME NULL AFTER registration_ip' }
  ];
 
  for (const m of migrations) {
@@ -319,6 +340,30 @@ let db;
  } catch (idxErr) {
  if (!String(idxErr.message || '').includes('Duplicate key name')) {
  console.warn('Index Warning idx_referral_reward_requests_user_status:', idxErr.message);
+ }
+
+ try {
+ await db.execute('CREATE INDEX idx_site_access_logs_created_at ON site_access_logs (created_at)');
+ } catch (idxErr) {
+ if (!String(idxErr.message || '').includes('Duplicate key name')) {
+ console.warn('Index Warning idx_site_access_logs_created_at:', idxErr.message);
+ }
+ }
+
+ try {
+ await db.execute('CREATE INDEX idx_site_access_logs_visitor_created ON site_access_logs (visitor_key, created_at)');
+ } catch (idxErr) {
+ if (!String(idxErr.message || '').includes('Duplicate key name')) {
+ console.warn('Index Warning idx_site_access_logs_visitor_created:', idxErr.message);
+ }
+ }
+
+ try {
+ await db.execute('CREATE INDEX idx_balance_topups_status_created ON balance_topups (status, created_at)');
+ } catch (idxErr) {
+ if (!String(idxErr.message || '').includes('Duplicate key name')) {
+ console.warn('Index Warning idx_balance_topups_status_created:', idxErr.message);
+ }
  }
  }
 
@@ -651,6 +696,13 @@ app.use(async (req, res, next) => {
  req.session.user.balance = userData[0].balance; // Update session
  res.locals.user.balance = userData[0].balance;
  }
+
+ const now = Date.now();
+ const shouldTouchLastSeen = !req.session.last_seen_touch_at || (now - req.session.last_seen_touch_at) > 120000;
+ if (shouldTouchLastSeen) {
+ await db.execute('UPDATE users SET last_seen_at = NOW() WHERE id = ?', [req.session.user.id]);
+ req.session.last_seen_touch_at = now;
+ }
  }
 
  // Fetch active announcements (HubMsg)
@@ -666,6 +718,28 @@ app.use(async (req, res, next) => {
  } else {
  res.locals.announcements = [];
  res.locals.settings = {};
+ }
+
+ const isTrackableMethod = req.method === 'GET';
+ const pathValue = String(req.path || '');
+ const skipPathPrefixes = ['/uploads/', '/css/', '/js/', '/images/', '/favicon', '/adminlte', '/cdn-cgi'];
+ const isSkipPath = skipPathPrefixes.some(prefix => pathValue.startsWith(prefix));
+ const shouldTrack = isTrackableMethod && !isSkipPath && db;
+
+ if (shouldTrack) {
+ const now = Date.now();
+ const lastLogAt = Number(req.session.last_access_log_at || 0);
+ if ((now - lastLogAt) > 30000) {
+ const visitorIdentity = req.session.user?.id
+ ? `u:${req.session.user.id}`
+ : `g:${getClientIp(req) || 'unknown'}:${String(req.headers['user-agent'] || '').slice(0, 80)}`;
+
+ await db.execute(
+ 'INSERT INTO site_access_logs (user_id, visitor_key, request_path) VALUES (?, ?, ?)',
+ [req.session.user?.id || null, visitorIdentity, pathValue.slice(0, 255)]
+ );
+ req.session.last_access_log_at = now;
+ }
  }
 
  delete req.session.error;
@@ -1334,6 +1408,15 @@ app.post('/process-order', uploadReceipt.single('receipt'), async (req, res) => 
  const sender_name = req.body.sender_name || (payment_method === 'Balance' ? req.session.user.full_name : '');
  const receipt_path = req.file ? '/uploads/receipts/' + req.file.filename : null;
 
+ if (payment_method === 'C2C Card Transfer') {
+ if (!normalizeOptionalString(sender_name)) {
+ return res.status(400).json({ success: false, error: 'Ödəniş edən şəxsin ad-soyadı tələb olunur.' });
+ }
+ if (!receipt_path) {
+ return res.status(400).json({ success: false, error: 'Dekont yükləmək mütləqdir.' });
+ }
+ }
+
  let productCatalog = await getMappedProducts();
  const resellerDiscountPercent = await getResellerDiscountPercent();
  productCatalog = applyResellerPricing(productCatalog, req.session.user, resellerDiscountPercent)
@@ -1389,6 +1472,39 @@ app.post('/process-order', uploadReceipt.single('receipt'), async (req, res) => 
  } catch (e) {
  console.error("Process Order Error:", e.message);
  res.status(500).json({ success: false, error: e.message });
+ }
+});
+
+app.post('/balance/topups/request', uploadReceipt.single('receipt'), async (req, res) => {
+ if (!req.session.user) return res.status(401).json({ success: false, error: 'Daxil olun.' });
+
+ try {
+ const amount = Number(req.body.amount || 0);
+ const senderName = normalizeOptionalString(req.body.sender_name);
+ const receiptPath = req.file ? '/uploads/receipts/' + req.file.filename : null;
+
+ if (!senderName) {
+ return res.status(400).json({ success: false, error: 'Ad Soyad daxil edin.' });
+ }
+ if (!amount || amount <= 0) {
+ return res.status(400).json({ success: false, error: 'Düzgün məbləğ daxil edin.' });
+ }
+ if (!receiptPath) {
+ return res.status(400).json({ success: false, error: 'Dekont yükləmək mütləqdir.' });
+ }
+
+ const [result] = await db.execute(
+ 'INSERT INTO balance_topups (user_id, amount, sender_name, receipt_path, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)',
+ [req.session.user.id, Number(amount.toFixed(2)), senderName, receiptPath, 'C2C Card Transfer', 'pending']
+ );
+
+ const adminMsg = `AZPINX: Yeni balans artırma!\nİstifadəçi: ${req.session.user.full_name}\nNömrə: ${req.session.user.phone || 'Yoxdur'}\nMəbləğ: ${Number(amount).toFixed(2)} AZN\nTalep ID: #${result.insertId}`;
+ await notifyAllAdmins(adminMsg);
+
+ return res.json({ success: true, message: 'Balans artırma tələbi admin təsdiqinə göndərildi.' });
+ } catch (e) {
+ console.error('Balance topup request error:', e.message);
+ return res.status(500).json({ success: false, error: 'Balans artırma sorğusu yaradılmadı.' });
  }
 });
 
@@ -1772,9 +1888,25 @@ app.get('/admin', isAdmin, async (req, res) => {
  const [orders] = await db.execute('SELECT count(*) as count FROM orders');
  const [pending] = await db.execute("SELECT count(*) as count FROM orders WHERE status = 'pending'");
  const [users] = await db.execute('SELECT count(*) as count FROM users');
+ const [dailyOrders] = await db.execute('SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = CURDATE()');
+ const [dailyCompletedOrders] = await db.execute("SELECT COUNT(*) as count FROM orders WHERE status = 'completed' AND DATE(created_at) = CURDATE()");
+ const [activeUsers] = await db.execute("SELECT COUNT(*) as count FROM users WHERE last_seen_at IS NOT NULL AND last_seen_at >= (NOW() - INTERVAL 5 MINUTE)");
+ const [dailyAccess] = await db.execute('SELECT COUNT(*) as hits, COUNT(DISTINCT visitor_key) as visitors FROM site_access_logs WHERE DATE(created_at) = CURDATE()');
+ const [pendingTopups] = await db.execute("SELECT COUNT(*) as count FROM balance_topups WHERE status = 'pending'");
+
  res.render('admin/dashboard', {
  title: 'Dashboard',
- stats: { totalOrders: orders[0].count, pendingOrders: pending[0].count, totalUsers: users[0].count }
+ stats: {
+ totalOrders: Number(orders[0].count || 0),
+ pendingOrders: Number(pending[0].count || 0),
+ totalUsers: Number(users[0].count || 0),
+ dailyOrders: Number(dailyOrders[0].count || 0),
+ dailyCompletedOrders: Number(dailyCompletedOrders[0].count || 0),
+ activeUsers: Number(activeUsers[0].count || 0),
+ dailyAccessHits: Number(dailyAccess[0].hits || 0),
+ dailyAccessVisitors: Number(dailyAccess[0].visitors || 0),
+ pendingTopups: Number(pendingTopups[0].count || 0)
+ }
  });
 });
 
@@ -1793,6 +1925,83 @@ app.post('/admin/orders/:id/update', isAdmin, async (req, res) => {
  await db.execute('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
  req.session.success ="Sifariş statusu yeniləndi.";
  res.redirect('/admin/orders');
+});
+
+app.get('/admin/topups', isAdmin, async (req, res) => {
+ const status = normalizeOptionalString(req.query.status) || 'all';
+ const [rows] = await db.execute(`
+ SELECT bt.*, u.full_name, u.email, u.phone
+ FROM balance_topups bt
+ JOIN users u ON u.id = bt.user_id
+ ORDER BY FIELD(bt.status, 'pending', 'approved', 'rejected'), bt.created_at DESC
+ `);
+
+ const topups = (status === 'all')
+ ? rows
+ : rows.filter((row) => row.status === status);
+
+ res.render('admin/topups', {
+ title: 'Balans Tələbləri',
+ topups,
+ filters: { status }
+ });
+});
+
+app.post('/admin/topups/:id/update', isAdmin, async (req, res) => {
+ const topupId = Number(req.params.id);
+ const nextStatus = normalizeOptionalString(req.body.status);
+ const adminNote = normalizeOptionalString(req.body.admin_note);
+
+ if (!['approved', 'rejected'].includes(nextStatus)) {
+ req.session.error = 'Yanlış status seçimi.';
+ return res.redirect('/admin/topups');
+ }
+
+ try {
+ await db.beginTransaction();
+ const [rows] = await db.execute('SELECT * FROM balance_topups WHERE id = ? FOR UPDATE', [topupId]);
+ if (!rows.length) {
+ await db.rollback();
+ req.session.error = 'Balans tələbi tapılmadı.';
+ return res.redirect('/admin/topups');
+ }
+
+ const topup = rows[0];
+ if (topup.status !== 'pending') {
+ await db.rollback();
+ req.session.error = 'Bu tələb artıq işlənib.';
+ return res.redirect('/admin/topups');
+ }
+
+ if (nextStatus === 'approved') {
+ await db.execute('UPDATE users SET balance = balance + ? WHERE id = ?', [topup.amount, topup.user_id]);
+ }
+
+ await db.execute(
+ 'UPDATE balance_topups SET status = ?, admin_note = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
+ [nextStatus, adminNote, req.session.user.id, topupId]
+ );
+
+ await db.commit();
+
+ const [users] = await db.execute('SELECT phone FROM users WHERE id = ? LIMIT 1', [topup.user_id]);
+ if (users.length && users[0].phone) {
+ const userMsg = nextStatus === 'approved'
+ ? `AZPINX: Balans artırma təsdiqləndi. Məbləğ: ${Number(topup.amount).toFixed(2)} AZN`
+ : `AZPINX: Balans artırma tələbiniz rədd edildi.`;
+ sendSMS(users[0].phone, userMsg);
+ }
+
+ req.session.success = nextStatus === 'approved'
+ ? 'Balans artırma təsdiqləndi və istifadəçi balansına əlavə olundu.'
+ : 'Balans artırma tələbi rədd edildi.';
+ return res.redirect('/admin/topups');
+ } catch (e) {
+ await db.rollback();
+ console.error('Admin topup update error:', e.message);
+ req.session.error = 'Topup yenilənmə xətası.';
+ return res.redirect('/admin/topups');
+ }
 });
 
 app.get('/admin/users', isAdmin, async (req, res) => {

@@ -1,0 +1,88 @@
+<%- include('header') %>
+<div class="row mb-3">
+  <div class="col-12">
+    <form method="GET" action="/admin/topups" class="d-flex" style="gap:10px;max-width:360px;">
+      <select name="status" class="form-control">
+        <option value="all" <%= filters.status === 'all' ? 'selected' : '' %>>Hamısı</option>
+        <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Gözləyən</option>
+        <option value="approved" <%= filters.status === 'approved' ? 'selected' : '' %>>Təsdiqlənən</option>
+        <option value="rejected" <%= filters.status === 'rejected' ? 'selected' : '' %>>Rədd edilən</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Balans Artırma Tələbləri</h3>
+      </div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>İstifadəçi</th>
+              <th>Məbləğ</th>
+              <th>Ad Soyad</th>
+              <th>Dekont</th>
+              <th>Status</th>
+              <th>Tarix</th>
+              <th>Əməliyyat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% topups.forEach(topup => { %>
+            <tr>
+              <td>#<%= topup.id %></td>
+              <td>
+                <strong><%= topup.full_name %></strong><br>
+                <small class="text-muted"><%= topup.email %> | <%= topup.phone || 'N/A' %></small>
+              </td>
+              <td><strong><%= Number(topup.amount).toFixed(2) %> AZN</strong></td>
+              <td><%= topup.sender_name %></td>
+              <td>
+                <a href="<%= topup.receipt_path %>" target="_blank" class="btn btn-xs btn-info">
+                  <i class="ri-file-list-3-line"></i> Bax
+                </a>
+              </td>
+              <td>
+                <% if (topup.status === 'pending') { %>
+                <span class="badge badge-warning">Gözləyir</span>
+                <% } else if (topup.status === 'approved') { %>
+                <span class="badge badge-success">Təsdiqləndi</span>
+                <% } else { %>
+                <span class="badge badge-danger">Rədd edildi</span>
+                <% } %>
+              </td>
+              <td><%= new Date(topup.created_at).toLocaleString() %></td>
+              <td style="min-width: 280px;">
+                <% if (topup.status === 'pending') { %>
+                <form action="/admin/topups/<%= topup.id %>/update" method="POST" class="d-flex" style="gap:8px;">
+                  <select name="status" class="form-control form-control-sm" style="max-width:120px;">
+                    <option value="approved">Təsdiq et</option>
+                    <option value="rejected">Rədd et</option>
+                  </select>
+                  <input type="text" name="admin_note" class="form-control form-control-sm" placeholder="Qeyd (opsional)">
+                  <button type="submit" class="btn btn-sm btn-primary">Yadda saxla</button>
+                </form>
+                <% } else { %>
+                <small class="text-muted"><%= topup.admin_note || '-' %></small>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+            <% if (!topups.length) { %>
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">Məlumat tapılmadı.</td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('footer') %>
