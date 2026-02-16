@@ -28,22 +28,39 @@ async function sendSMS(phone, message) {
  const recipient = normalizePhoneNumber(phone);
  if (!recipient) return false;
  try {
- const headers = {
- 'Content-Type': 'application/json'
- };
  const apiKey = String(HUBMSG_CONFIG.API_KEY || '').trim();
- if (apiKey && apiKey !== 'API-KEY-XXXX') {
- headers['x-api-key'] = apiKey;
- }
+ const payload = { recipient, message: String(message || '') };
 
- await axios.post(HUBMSG_CONFIG.URL, {
- recipient,
- message: message
- }, {
+ const headerVariants = [];
+ if (apiKey && apiKey !== 'API-KEY-XXXX') {
+ headerVariants.push({ 'Content-Type': 'application/json', 'x-api-key': apiKey });
+ headerVariants.push({ 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` });
+ headerVariants.push({ 'Content-Type': 'application/json', 'api-key': apiKey });
+ headerVariants.push({ 'Content-Type': 'application/json', 'x-api-token': apiKey });
+ }
+ headerVariants.push({ 'Content-Type': 'application/json' });
+
+ let lastError = null;
+ for (const headers of headerVariants) {
+ try {
+ await axios.post(HUBMSG_CONFIG.URL, payload, {
  headers,
  timeout: HUBMSG_CONFIG.TIMEOUT
  });
  return true;
+ } catch (e) {
+ lastError = e;
+ const status = Number(e?.response?.status || 0);
+ if (status && status !== 401 && status !== 403) break;
+ }
+ }
+
+ if (!apiKey || apiKey === 'API-KEY-XXXX') {
+ console.error('HubMSG Error: HUBMSG_API_KEY təyin edilməyib.');
+ } else {
+ console.error('HubMSG Error:', lastError?.message || 'Bilinməyən xəta');
+ }
+ return false;
  } catch (e) {
  console.error('HubMSG Error:', e.message);
  return false;

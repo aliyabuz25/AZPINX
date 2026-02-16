@@ -17,9 +17,9 @@ services:
       PUBG_CHECKER_URLS: "http://38.180.208.188:5599,http://azpinx-pubg-checker:3000"
       NODE_ENV: "production"
       SESSION_SECRET: "azpinx-session-key-2026-production"
-      HUBMSG_URL: "https://hubmsgpanel.octotech.az/api/message"
-      HUBMSG_API_KEY: "API-KEY-XXXX"
-      HUBMSG_TIMEOUT_MS: "10000"
+      HUBMSG_URL: "${HUBMSG_URL:-https://hubmsgpanel.octotech.az/api/message}"
+      HUBMSG_API_KEY: "${HUBMSG_API_KEY:-}"
+      HUBMSG_TIMEOUT_MS: "${HUBMSG_TIMEOUT_MS:-10000}"
     volumes:
       - /datastore/azpinx/uploads/receipts:/app/public/uploads/receipts
       - /datastore/azpinx/uploads/products:/app/public/uploads/products
