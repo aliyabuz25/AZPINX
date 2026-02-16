@@ -659,8 +659,21 @@ app.get('/', async (req, res) => {
  const ingameCandidates = homeCatalogProducts.filter(p => hasAny(p, ingameKeywords));
  const pinCandidates = homeCatalogProducts.filter(p => hasAny(p, pinKeywords));
 
+ const ingamePriorityKeywords = ['pubg', 'valorant', 'free fire', 'mobile legends', 'roblox'];
+ const scoreByPriority = (product) => {
+ const bag = `${normalizeText(product.category)} ${normalizeText(product.name)}`;
+ for (let i = 0; i < ingamePriorityKeywords.length; i++) {
+ if (bag.includes(ingamePriorityKeywords[i])) return i;
+ }
+ return 999;
+ };
+ const prioritizedIngameApi = [...homeCatalogProducts]
+ .filter(p => p.api_id)
+ .filter(p => hasAny(p, ingameKeywords) || hasAny(p, gameKeywords))
+ .sort((a, b) => scoreByPriority(a) - scoreByPriority(b));
+
  const homeAutoSections = [
- { title: 'API-dən Gələn Oyunlar', link: '/all-products?search=oyun', products: pickSectionProducts(apiGamesCandidates, 8) },
+ { title: 'Bayi Məhsulları', link: '/all-products?search=oyun', products: pickSectionProducts(prioritizedIngameApi.length ? prioritizedIngameApi : apiGamesCandidates, 8) },
  { title: 'AI', link: '/all-products?search=ai', products: pickSectionProducts(aiCandidates, 8) },
  { title: 'Yazılımlar', link: '/all-products?search=yaz%C4%B1l%C4%B1m', products: pickSectionProducts(softwareCandidates, 8) },
  { title: 'Oyun İçi Məhsullar', link: '/all-products?search=topup', products: pickSectionProducts(ingameCandidates, 8) },
