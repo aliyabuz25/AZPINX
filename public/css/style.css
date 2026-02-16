@@ -3005,13 +3005,14 @@ body {
 
 /* Simplified Hero Banner */
 .hero {
-    padding: 14px 0 0;
+    padding: 0;
+    margin: 0 0 18px;
 }
 
 .slider-container {
-    min-height: 220px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
+    min-height: 440px;
+    border-radius: 0;
+    border: 0;
     box-shadow: none;
     overflow: hidden;
 }
@@ -3024,13 +3025,14 @@ body {
 }
 
 .slider-item {
-    min-height: 220px;
+    min-height: 440px;
     transform: none !important;
     transition: none;
+    align-items: flex-end;
 }
 
 .slider-item::before {
-    background: linear-gradient(0deg, rgba(15, 23, 42, 0.32), rgba(15, 23, 42, 0.12));
+    background: linear-gradient(180deg, rgba(2, 6, 23, 0.14) 6%, rgba(2, 6, 23, 0.48) 56%, rgba(2, 6, 23, 0.78) 100%);
 }
 
 .slider-item.swiper-slide-active,
@@ -3042,10 +3044,10 @@ body {
 }
 
 .slider-content {
-    left: 14px;
-    right: 14px;
-    bottom: 12px;
-    max-width: 70%;
+    left: 32px;
+    right: 32px;
+    bottom: 28px;
+    max-width: 680px;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -3055,28 +3057,63 @@ body {
 }
 
 .slider-content h2 {
-    margin: 0;
-    font-size: 18px;
-    line-height: 1.3;
+    margin: 0 0 8px;
+    font-size: clamp(1.35rem, 2.4vw, 2.2rem);
+    line-height: 1.2;
+    color: #ffffff;
+    font-weight: 700;
 }
 
-.slider-content p,
+.slider-content p {
+    margin: 0 0 14px;
+    max-width: 620px;
+    color: rgba(241, 245, 249, 0.94);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 .slider-content .btn {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.hero-cta-btn i {
+    font-size: 16px;
 }
 
 @media (max-width: 768px) {
     .slider-container,
     .slider-item {
-        min-height: 180px;
+        min-height: 270px;
     }
 
     .slider-content {
-        max-width: 88%;
+        left: 16px;
+        right: 16px;
+        bottom: 14px;
+        max-width: 92%;
     }
 
     .slider-content h2 {
-        font-size: 16px;
+        font-size: 18px;
+    }
+
+    .slider-content p {
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    .slider-content .btn {
+        min-height: 36px;
+        font-size: 12px;
+        padding: 0 12px;
     }
 }
 

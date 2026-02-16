@@ -650,6 +650,16 @@ function normalizeWishlistProductRef(value) {
  return ref;
 }
 
+async function findUserByLoginIdentifier(identifier) {
+ const normalized = normalizeOptionalString(identifier);
+ if (!normalized) return null;
+ const [rows] = await db.execute(
+ 'SELECT id, full_name, email, phone FROM users WHERE email = ? OR full_name = ? LIMIT 1',
+ [normalized, normalized]
+ );
+ return rows.length ? rows[0] : null;
+}
+
 function resolveSliderLink(body = {}) {
  const type = normalizeOptionalString(body.destination_type) || 'custom';
  const value = normalizeOptionalString(body.destination_value);
@@ -856,7 +866,7 @@ function hasSuspiciousSqlPattern(payload = {}) {
 }
 
 function getRateLimitBucket(pathname) {
- if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/verify-otp')) return 'auth';
+ if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/verify-otp') || pathname.startsWith('/forgot-password')) return 'auth';
  if (pathname.startsWith('/api/')) return 'api';
  return 'default';
 }
@@ -950,7 +960,7 @@ app.use((req, res, next) => {
  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
  res.setHeader('X-XSS-Protection', '1; mode=block');
- const noindexPaths = /^\/(admin|login|register|verify-otp|profile|checkout|cart|tickets|wishlist|api|balance)/i;
+ const noindexPaths = /^\/(admin|login|register|verify-otp|forgot-password|profile|checkout|cart|tickets|wishlist|api|balance)/i;
  if (noindexPaths.test(String(req.path || ''))) {
  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
  }
@@ -986,7 +996,7 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
  const userAgent = String(req.headers['user-agent'] || '').toLowerCase();
  const suspiciousBot = /(sqlmap|nmap|nikto|acunetix|masscan|crawler|scrapy|python-requests|headlesschrome)/i.test(userAgent);
- const sensitivePath = /^\/(admin|login|register|api|checkout|process-order|balance)/i.test(String(req.path || ''));
+ const sensitivePath = /^\/(admin|login|register|verify-otp|forgot-password|api|checkout|process-order|balance)/i.test(String(req.path || ''));
  if (suspiciousBot && sensitivePath) {
  return res.status(403).json({ success: false, error: 'Robot trafik bloklandı.' });
  }
@@ -1781,6 +1791,73 @@ app.post('/login', async (req, res) => {
  }
 });
 
+app.get('/forgot-password', (req, res) => {
+ res.render('forgot_password', { title: 'Şifrəni Sıfırla' });
+});
+
+app.post('/forgot-password/send-otp', async (req, res) => {
+ const identifier = normalizeOptionalString(req.body.identifier);
+ if (!identifier) return res.json({ success: false, error: 'Email və ya username daxil edin.' });
+
+ try {
+ const user = await findUserByLoginIdentifier(identifier);
+ if (!user) return res.json({ success: false, error: 'İstifadəçi tapılmadı.' });
+ if (!normalizeOptionalString(user.phone)) {
+ return res.json({ success: false, error: 'Bu istifadəçi üçün telefon nömrəsi tapılmadı.' });
+ }
+
+ const otp = Math.floor(100000 + Math.random() * 900000).toString();
+ const expiry = new Date(Date.now() + 10 * 60000);
+ req.session.forgot_user_id = user.id;
+ req.session.forgot_otp = otp;
+ req.session.forgot_expiry = expiry;
+
+ const sent = await sendSMS(user.phone, `AZPINX Şifrə Sıfırlama Kodunuz: ${otp}`);
+ if (!sent) return res.json({ success: false, error: 'OTP göndərilmədi. Yenidən cəhd edin.' });
+ return res.json({ success: true, message: 'OTP göndərildi.' });
+ } catch (e) {
+ console.error('Forgot password send otp error:', e.message);
+ return res.json({ success: false, error: 'Server xətası.' });
+ }
+});
+
+app.post('/forgot-password/reset', async (req, res) => {
+ const otp = normalizeOptionalString(req.body.otp);
+ const newPassword = String(req.body.new_password || '');
+ const confirmPassword = String(req.body.new_password_confirm || '');
+
+ if (!req.session.forgot_user_id || !req.session.forgot_otp || !req.session.forgot_expiry) {
+ req.session.error = 'OTP sessiyası tapılmadı. Yenidən OTP istəyin.';
+ return res.redirect('/forgot-password');
+ }
+ if (!otp || otp !== req.session.forgot_otp || new Date(req.session.forgot_expiry) < new Date()) {
+ req.session.error = 'Yanlış və ya vaxtı bitmiş OTP.';
+ return res.redirect('/forgot-password');
+ }
+ if (!newPassword || newPassword.length < 6) {
+ req.session.error = 'Yeni şifrə minimum 6 simvol olmalıdır.';
+ return res.redirect('/forgot-password');
+ }
+ if (newPassword !== confirmPassword) {
+ req.session.error = 'Yeni şifrə təkrar hissəsi uyğun deyil.';
+ return res.redirect('/forgot-password');
+ }
+
+ try {
+ const hashed = await bcrypt.hash(newPassword, 10);
+ await db.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, req.session.forgot_user_id]);
+ delete req.session.forgot_user_id;
+ delete req.session.forgot_otp;
+ delete req.session.forgot_expiry;
+ req.session.success = 'Şifrəniz uğurla yeniləndi. İndi daxil ola bilərsiniz.';
+ return res.redirect('/login');
+ } catch (e) {
+ console.error('Forgot password reset error:', e.message);
+ req.session.error = 'Şifrə yenilənmə xətası.';
+ return res.redirect('/forgot-password');
+ }
+});
+
 app.post('/verify-otp', async (req, res) => {
  const { otp } = req.body;
  const userId = req.session.temp_user_id;
@@ -2555,6 +2632,44 @@ app.post('/admin/orders/:id/update', isAdmin, async (req, res) => {
  await db.execute('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
  req.session.success ="Sifariş statusu yeniləndi.";
  res.redirect('/admin/orders');
+});
+
+app.post('/admin/orders/:id/approve-notify', isAdmin, async (req, res) => {
+ const orderId = Number(req.params.id);
+ const adminMessage = normalizeOptionalString(req.body.admin_message);
+ if (!orderId) {
+ req.session.error = 'Yanlış sifariş ID.';
+ return res.redirect('/admin/orders');
+ }
+
+ try {
+ const [rows] = await db.execute(
+ `SELECT o.*, u.full_name AS user_full_name, u.phone AS user_phone
+ FROM orders o
+ LEFT JOIN users u ON u.id = o.user_id
+ WHERE o.id = ? LIMIT 1`,
+ [orderId]
+ );
+ if (!rows.length) {
+ req.session.error = 'Sifariş tapılmadı.';
+ return res.redirect('/admin/orders');
+ }
+ const order = rows[0];
+ await db.execute('UPDATE orders SET status = ? WHERE id = ?', ['completed', orderId]);
+
+ if (normalizeOptionalString(order.user_phone)) {
+ let msg = `AZPINX: Sifarişiniz təsdiqləndi!\nMəhsul: ${order.product_name}\nMəbləğ: ${Number(order.amount || 0).toFixed(2)} AZN`;
+ if (adminMessage) msg += `\nMesaj: ${adminMessage}`;
+ await sendSMS(order.user_phone, msg);
+ }
+
+ req.session.success = 'Sifariş tamamlandı və istifadəçiyə WhatsApp mesajı göndərildi.';
+ return res.redirect('/admin/orders');
+ } catch (e) {
+ console.error('Admin approve notify error:', e.message);
+ req.session.error = 'Sifariş təsdiqləmə/mesaj xətası.';
+ return res.redirect('/admin/orders');
+ }
 });
 
 app.get('/admin/topups', isAdmin, async (req, res) => {

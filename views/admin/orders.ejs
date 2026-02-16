@@ -103,6 +103,9 @@
  </span>
  </div>
  </form>
+ <button type="button" class="btn btn-sm btn-success mt-2" data-toggle="modal" data-target="#approveNotifyModal_<%= order.id %>">
+ <i class="ri-whatsapp-line"></i> Onayla + Mesaj
+ </button>
  </td>
  </tr>
  <% }) %>
@@ -152,4 +155,35 @@
  syncSelectedIds();
  })();
  </script>
+
+ <% orders.forEach(order => { %>
+ <div class="modal fade" id="approveNotifyModal_<%= order.id %>" tabindex="-1" role="dialog" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+ <div class="modal-content">
+ <form action="/admin/orders/<%= order.id %>/approve-notify" method="POST">
+ <div class="modal-header">
+ <h5 class="modal-title">Sifarişi Təsdiqlə və Mesaj Göndər</h5>
+ <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+ <span aria-hidden="true">&times;</span>
+ </button>
+ </div>
+ <div class="modal-body">
+ <p class="mb-2"><strong>Sifariş:</strong> #<%= order.id %></p>
+ <p class="mb-2"><strong>Məhsul:</strong> <%= order.product_name %></p>
+ <p class="mb-2"><strong>Alan:</strong> <%= order.user_full_name || '-' %></p>
+ <p class="mb-2"><strong>Telefon:</strong> <%= order.user_phone || 'Yoxdur' %></p>
+ <div class="form-group">
+ <label>WhatsApp üçün əl ilə mesaj</label>
+ <textarea name="admin_message" class="form-control" rows="4" placeholder="Məs: Hesabınıza uğurla yükləndi."></textarea>
+ </div>
+ </div>
+ <div class="modal-footer">
+ <button type="button" class="btn btn-secondary" data-dismiss="modal">Bağla</button>
+ <button type="submit" class="btn btn-success">Təsdiqlə və Göndər</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+ <% }) %>
  <%- include('footer') %>

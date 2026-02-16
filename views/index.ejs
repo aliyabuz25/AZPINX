@@ -11,11 +11,19 @@
  data-link="<%= slider.link || '' %>"
  data-has-link="<%= !!(slider.link && slider.link !== '#') %>"
  style="background-image: url('<%= slider.image %>');">
- <% if (slider.title) { %>
+ <% if (slider.title || slider.description || (slider.link && slider.link !== '#')) { %>
  <div class="slider-content">
+ <% if (slider.title) { %>
  <h2>
  <%= slider.title %>
  </h2>
+ <% } %>
+ <% if (slider.description) { %>
+ <p><%= slider.description %></p>
+ <% } %>
+ <% if (slider.link && slider.link !== '#') { %>
+ <a href="<%= slider.link %>" class="btn btn-primary hero-cta-btn">Ətraflı bax <i class="ri-arrow-right-line"></i></a>
+ <% } %>
  </div>
  <% } %>
  </div>
