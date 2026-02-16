@@ -25,10 +25,16 @@
                         etdikdən sonra "Ödəniş etdim" düyməsinə basın.</p>
                     <div class="bank-card-preview">
                         <p class="card-label">KART NÖMRƏSİ</p>
-                        <p class="card-num">4127 0000 1111 2222</p>
+                        <p class="card-num">
+                            <%= settings.bank_card || '0000 0000 0000 0000' %>
+                        </p>
                         <div class="card-footer-info">
-                            <span>AZPINX ADMIN</span>
-                            <span>ABB BANK</span>
+                            <span>
+                                <%= settings.bank_holder || 'ADMIN' %>
+                            </span>
+                            <span>
+                                <%= settings.bank_name || 'BANK' %>
+                            </span>
                         </div>
                     </div>
 

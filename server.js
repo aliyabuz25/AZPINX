@@ -432,8 +432,15 @@ app.use(async (req, res, next) => {
         if (db) {
             const [announcements] = await db.execute('SELECT * FROM announcements WHERE is_active = 1 ORDER BY created_at DESC').catch(() => [[]]);
             res.locals.announcements = announcements;
+
+            // Fetch Bank Settings
+            const [settings] = await db.execute('SELECT * FROM settings');
+            const settingsMap = {};
+            settings.forEach(s => settingsMap[s.setting_key] = s.setting_value);
+            res.locals.settings = settingsMap;
         } else {
             res.locals.announcements = [];
+            res.locals.settings = {};
         }
 
         delete req.session.error;
@@ -1142,14 +1149,44 @@ app.post('/admin/sliders/delete', isAdmin, async (req, res) => {
 
 // Admin Home Sections (List)
 app.get('/admin/home-sections', isAdmin, async (req, res) => {
-    const [sections] = await db.execute(`
+    try {
+        const [sections] = await db.execute(`
         SELECT hs.*, c.name as category_name 
         FROM home_sections hs 
         LEFT JOIN categories c ON hs.category_id = c.id 
         ORDER BY hs.order_index ASC
     `);
-    const [categories] = await db.execute('SELECT * FROM categories ORDER BY name ASC');
-    res.render('admin/home_sections', { title: 'Ana Səhifə Bölmələri', sections, categories });
+        const [categories] = await db.execute('SELECT * FROM categories');
+        res.render('admin/home_sections', { title: 'Ana Səhifə Bölmələri', sections, categories });
+    } catch (e) {
+        res.redirect('/admin?error=' + encodeURIComponent(e.message));
+    }
+});
+
+// Admin Bank Settings
+app.get('/admin/settings', isAdmin, async (req, res) => {
+    const [settings] = await db.execute('SELECT * FROM settings');
+    const settingsMap = {};
+    settings.forEach(s => settingsMap[s.setting_key] = s.setting_value);
+    res.render('admin/settings', { title: 'Banka Məlumatları', settings: settingsMap });
+});
+
+app.post('/admin/settings', isAdmin, async (req, res) => {
+    const { bank_card, bank_name, bank_holder } = req.body;
+    try {
+        const updates = [
+            { key: 'bank_card', value: bank_card },
+            { key: 'bank_name', value: bank_name },
+            { key: 'bank_holder', value: bank_holder }
+        ];
+
+        for (const s of updates) {
+            await db.execute('UPDATE settings SET setting_value = ? WHERE setting_key = ?', [s.value, s.key]);
+        }
+        res.redirect('/admin/settings?success=Məlumatlar yeniləndi');
+    } catch (e) {
+        res.redirect('/admin/settings?error=' + encodeURIComponent(e.message));
+    }
 });
 
 // Admin Home Section Create
