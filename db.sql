@@ -123,3 +123,16 @@ CREATE TABLE IF NOT EXISTS announcements (
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- Settings
+CREATE TABLE IF NOT EXISTS settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO settings (setting_key, setting_value) VALUES 
+('bank_card', '4127 0000 1111 2222'),
+('bank_name', 'ABB BANK'),
+('bank_holder', 'AZPINX ADMIN')
+ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
