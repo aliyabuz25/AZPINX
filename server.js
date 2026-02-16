@@ -1381,11 +1381,22 @@ app.post('/admin/products/add', isAdmin, (req, res, next) => {
  next();
  });
 }, async (req, res) => {
- const { name, category_id, price, description, api_id } = req.body;
+ const { name, category, price, description, api_id, status } = req.body;
  try {
- const image_path = req.file ? req.file.filename : null;
- await db.execute('INSERT INTO local_products (name, category_id, price, description, image_path, api_id) VALUES (?, ?, ?, ?, ?, ?)',
- [name, category_id, price, description, image_path, api_id || null]);
+ const image_path = req.file ? '/uploads/products/' + req.file.filename : null;
+ const params = [
+ name ?? null,
+ category ?? null,
+ price ?? null,
+ description ?? null,
+ image_path ?? null,
+ status ?? 'sale',
+ api_id ?? null
+ ];
+ await db.execute(
+ 'INSERT INTO products (name, category, price, description, image_path, status, api_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+ params
+ );
  res.redirect('/admin/products?success=Məhsul əlavə edildi');
  } catch (e) {
  console.error('Database Error during product creation:', e);
