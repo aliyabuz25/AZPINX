@@ -238,6 +238,7 @@ let db;
         const migrations = [
             { table: 'home_sections', column: 'category_id', definition: 'INT NULL AFTER title' },
             { table: 'home_sections', column: 'order_index', definition: 'INT DEFAULT 0 AFTER product_ids', oldColumn: 'sort_order' },
+            { table: 'sliders', column: 'description', definition: 'TEXT AFTER title' },
             { table: 'sliders', column: 'order_index', definition: 'INT DEFAULT 0 AFTER link', oldColumn: 'sort_order' },
             { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' },
             { table: 'orders', column: 'player_id', definition: 'VARCHAR(100) AFTER payment_method' },
