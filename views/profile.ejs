@@ -13,12 +13,14 @@
  <%= user.email %>
  </p>
  <span class="role-badge">
- <%= user.role==='admin' ? 'Administrator' : 'İstifadəçi' %>
+ <%= user.role==='admin' ? 'Administrator' : (user.role==='reseller' ? 'Bayi' : 'İstifadəçi') %>
  </span>
  </div>
  <div class="profile-actions">
  <% if (user.role==='admin' ) { %>
  <a href="/admin" class="btn btn-primary"><i class="ri-settings-3-line"></i> Admin Panel</a>
+ <% } else if (user.role==='reseller' ) { %>
+ <a href="/reseller" class="btn btn-primary"><i class="ri-store-3-line"></i> Bayi Paneli</a>
  <% } %>
  <a href="/logout" class="btn btn-outline"><i class="ri-logout-box-r-line"></i> Çıxış</a>
  </div>

@@ -1,0 +1,48 @@
+<%- include('../partials/header') %>
+
+<div class="product-page-container">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Bayi Məhsul Siyahısı</h2>
+      <p class="text-muted mb-0">Bütün qiymətlərə <strong><%= Number(discountPercent).toFixed(1) %>%</strong> endirim tətbiq olunub.</p>
+    </div>
+    <a href="/reseller" class="btn btn-outline"><i class="ri-layout-grid-line"></i> Panelə Qayıt</a>
+  </div>
+
+  <form action="/reseller/products" method="GET" class="row mb-4">
+    <div class="col-md-5 mb-2">
+      <input type="text" name="q" value="<%= filters.q %>" class="form-control" placeholder="Məhsul axtar...">
+    </div>
+    <div class="col-md-4 mb-2">
+      <select name="category" class="form-control">
+        <option value="">Bütün Kateqoriyalar</option>
+        <% categories.forEach(function(c){ %>
+          <option value="<%= c %>" <%= filters.category === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-md-3 mb-2">
+      <button type="submit" class="btn btn-primary btn-block">Filter</button>
+    </div>
+  </form>
+
+  <div class="product-grid mb-4">
+    <% products.forEach(function(product){ %>
+      <%- include('../partials/product_card', { product: product }) %>
+    <% }) %>
+  </div>
+
+  <% if (filters.totalPages > 1) { %>
+    <div class="pagination-container">
+      <ul class="pagination">
+        <% for(let i = 1; i <= filters.totalPages; i++) { %>
+          <li class="page-item <%= filters.page === i ? 'active' : '' %>">
+            <a class="page-link" href="/reseller/products?page=<%= i %><%= filters.q ? '&q=' + encodeURIComponent(filters.q) : '' %><%= filters.category ? '&category=' + encodeURIComponent(filters.category) : '' %>"><%= i %></a>
+          </li>
+        <% } %>
+      </ul>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,46 @@
+<%- include('../partials/header') %>
+
+<div class="product-page-container">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Bayi Sifarişləri</h2>
+      <p class="text-muted mb-0">Sizin bütün sifariş tarixçəniz.</p>
+    </div>
+    <a href="/reseller" class="btn btn-outline">Panelə Qayıt</a>
+  </div>
+
+  <div class="p-price-card">
+    <% if (orders.length === 0) { %>
+      <p class="text-muted mb-0">Hələ sifarişiniz yoxdur.</p>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Məhsul</th>
+              <th>Məbləğ</th>
+              <th>Ödəniş</th>
+              <th>Status</th>
+              <th>Tarix</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% orders.forEach(function(order){ %>
+              <tr>
+                <td>#<%= order.id %></td>
+                <td><%= order.product_name %></td>
+                <td><%= Number(order.amount || 0).toFixed(2) %> AZN</td>
+                <td><%= order.payment_method %></td>
+                <td><%= order.status %></td>
+                <td><%= new Date(order.created_at).toLocaleString('az-AZ') %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

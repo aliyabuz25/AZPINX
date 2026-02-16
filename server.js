@@ -281,7 +281,8 @@ let db;
  const defaultSettings = [
  { key: 'bank_card', value: '4127 0000 1111 2222' },
  { key: 'bank_name', value: 'ABB BANK' },
- { key: 'bank_holder', value: 'AZPINX ADMIN' }
+ { key: 'bank_holder', value: 'AZPINX ADMIN' },
+ { key: 'reseller_discount_percent', value: '8' }
  ];
 
  for (const s of defaultSettings) {
@@ -409,6 +410,38 @@ function normalizeOptionalString(value) {
  return trimmed === '' ? null : trimmed;
 }
 
+function clampPercent(value, min = 0, max = 90) {
+ const n = Number(value);
+ if (Number.isNaN(n)) return min;
+ return Math.min(max, Math.max(min, n));
+}
+
+async function getResellerDiscountPercent() {
+ try {
+ const [rows] = await db.execute('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1', ['reseller_discount_percent']);
+ if (!rows.length) return 0;
+ return clampPercent(rows[0].setting_value, 0, 90);
+ } catch (e) {
+ console.error('Reseller discount fetch error:', e.message);
+ return 0;
+ }
+}
+
+function applyResellerPricing(products, user, discountPercent) {
+ if (!user || user.role !== 'reseller') return products;
+ const percent = clampPercent(discountPercent, 0, 90);
+ if (!percent) return products;
+ return products.map((p) => {
+ const basePrice = Number(p.price || 0);
+ const discounted = Number((basePrice * (1 - percent / 100)).toFixed(2));
+ return {
+ ...p,
+ oldPrice: basePrice,
+ price: discounted
+ };
+ });
+}
+
 // Middleware
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -479,6 +512,15 @@ const isAdmin = (req, res, next) => {
  res.redirect('/');
 };
 
+const isReseller = (req, res, next) => {
+ if (!req.body) req.body = {};
+ if (req.session.user && req.session.user.role === 'reseller') {
+ return next();
+ }
+ req.session.error = 'Bu səhifə yalnız bayilər üçündür.';
+ res.redirect('/');
+};
+
 // --- Page Routes ---
 
 app.get('/', async (req, res) => {
@@ -510,6 +552,8 @@ app.get('/', async (req, res) => {
  }));
 
  let allProducts = await getMappedProducts();
+ const resellerDiscountPercent = await getResellerDiscountPercent();
+ allProducts = applyResellerPricing(allProducts, req.session.user, resellerDiscountPercent);
 
  // Filter by Status (Only Sale)
  allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
@@ -696,6 +740,8 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  }));
 
  let allProducts = await getMappedProducts();
+ const resellerDiscountPercent = await getResellerDiscountPercent();
+ allProducts = applyResellerPricing(allProducts, req.session.user, resellerDiscountPercent);
  allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
 
  const selectedCategory = req.query.category;
@@ -779,7 +825,9 @@ app.get('/api/pubg-check', async (req, res) => {
 });
 
 app.get('/product/:id', async (req, res) => {
- const products = await getMappedProducts();
+ let products = await getMappedProducts();
+ const resellerDiscountPercent = await getResellerDiscountPercent();
+ products = applyResellerPricing(products, req.session.user, resellerDiscountPercent);
  const product = products.find(p => p.id == req.params.id);
  if (!product || product.status !== 'sale' || !product.is_active) {
  req.session.error = 'Məhsul tapılmadı.';
@@ -869,6 +917,7 @@ app.post('/login', async (req, res) => {
  req.session.user = user;
  req.session.success = `Xoş gəldin, ${user.full_name}!`;
  if (user.role === 'admin') res.redirect('/admin');
+ else if (user.role === 'reseller') res.redirect('/reseller');
  else res.redirect('/');
  } else {
  res.render('login', { title: 'Daxil ol', error: 'Yanlış email və ya şifrə.' });
@@ -889,6 +938,7 @@ app.post('/verify-otp', async (req, res) => {
  req.session.user = user;
  req.session.success = `Xoş gəldin, ${user.full_name}!`;
  if (user.role === 'admin') res.redirect('/admin');
+ else if (user.role === 'reseller') res.redirect('/reseller');
  else res.redirect('/');
  } else {
  res.render('otp_verify', { title: 'OTP Doğrulama', phone: user.phone, error: 'Yanlış və ya vaxtı keçmiş OTP kodu.' });
@@ -919,13 +969,34 @@ app.post('/process-order', uploadReceipt.single('receipt'), async (req, res) => 
 
  try {
  if (!req.body.cart) throw new Error("Səbət boşdur.");
- const cart = typeof req.body.cart === 'string' ? JSON.parse(req.body.cart) : req.body.cart;
+ const cartRaw = typeof req.body.cart === 'string' ? JSON.parse(req.body.cart) : req.body.cart;
+ if (!Array.isArray(cartRaw) || cartRaw.length === 0) throw new Error("Səbət boşdur.");
  const payment_method = req.body.payment_method || 'C2C Card Transfer';
  const sender_name = req.body.sender_name || (payment_method === 'Balance' ? req.session.user.full_name : '');
  const receipt_path = req.file ? '/uploads/receipts/' + req.file.filename : null;
 
+ let productCatalog = await getMappedProducts();
+ const resellerDiscountPercent = await getResellerDiscountPercent();
+ productCatalog = applyResellerPricing(productCatalog, req.session.user, resellerDiscountPercent)
+ .filter(p => p.status === 'sale' && p.is_active);
+
+ const cart = cartRaw.map((item) => {
+ const matched = productCatalog.find(p => String(p.id) === String(item.id));
+ if (!matched) {
+ throw new Error(`Məhsul tapılmadı və ya satışda deyil: ${item.id}`);
+ }
+ return {
+ id: item.id,
+ name: matched.name,
+ price: Number(matched.price || 0),
+ player_id: normalizeOptionalString(item.player_id),
+ player_nickname: normalizeOptionalString(item.player_nickname)
+ };
+ });
+
  let totalAmount = 0;
- cart.forEach(item => totalAmount += item.price);
+ cart.forEach(item => totalAmount += Number(item.price || 0));
+ totalAmount = Number(totalAmount.toFixed(2));
 
  if (payment_method === 'Balance') {
  const [users] = await db.execute('SELECT balance FROM users WHERE id = ?', [req.session.user.id]);
@@ -971,7 +1042,9 @@ app.get('/wishlist', async (req, res) => {
  if (!req.session.user) return res.redirect('/login');
  const [wishlistItems] = await db.execute(`
  SELECT p.* FROM products p  JOIN wishlist w ON p.id = w.product_id  WHERE w.user_id = ?`, [req.session.user.id]);
- res.render('wishlist', { title: 'İstək Listəm', wishlist: wishlistItems });
+ const resellerDiscountPercent = await getResellerDiscountPercent();
+ const pricedWishlist = applyResellerPricing(wishlistItems, req.session.user, resellerDiscountPercent);
+ res.render('wishlist', { title: 'İstək Listəm', wishlist: pricedWishlist });
 });
 
 app.post('/wishlist/toggle', async (req, res) => {
@@ -1075,6 +1148,102 @@ app.post('/ticket/:id/message', async (req, res) => {
  res.json({ success: true });
  } catch (e) {
  res.status(500).json({ success: false, error: e.message });
+ }
+});
+
+// --- Reseller Panel Routes ---
+app.get('/reseller', isReseller, async (req, res) => {
+ try {
+ const resellerId = req.session.user.id;
+ const discountPercent = await getResellerDiscountPercent();
+
+ let products = await getMappedProducts();
+ products = applyResellerPricing(products, req.session.user, discountPercent)
+ .filter(p => p.status === 'sale' && p.is_active)
+ .slice(0, 8);
+
+ const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 8', [resellerId]);
+ const [ticketRows] = await db.execute('SELECT status, COUNT(*) as total FROM tickets WHERE user_id = ? GROUP BY status', [resellerId]);
+
+ const totalOrders = orders.length;
+ const completedOrders = orders.filter(o => o.status === 'completed').length;
+ const pendingOrders = orders.filter(o => o.status === 'pending').length;
+ const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+
+ const ticketStats = { open: 0, closed: 0 };
+ ticketRows.forEach((row) => { ticketStats[row.status] = Number(row.total || 0); });
+
+ res.render('reseller/dashboard', {
+ title: 'Bayi Paneli',
+ discountPercent,
+ products,
+ orders,
+ stats: {
+ totalOrders,
+ completedOrders,
+ pendingOrders,
+ totalRevenue: Number(totalRevenue.toFixed(2)),
+ openTickets: ticketStats.open || 0,
+ closedTickets: ticketStats.closed || 0
+ }
+ });
+ } catch (e) {
+ console.error('Reseller dashboard error:', e);
+ res.redirect('/?error=' + encodeURIComponent(e.message));
+ }
+});
+
+app.get('/reseller/products', isReseller, async (req, res) => {
+ try {
+ const discountPercent = await getResellerDiscountPercent();
+ const q = normalizeOptionalString(req.query.q) || '';
+ const category = normalizeOptionalString(req.query.category) || '';
+ const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+ const perPage = 24;
+
+ let products = await getMappedProducts();
+ products = applyResellerPricing(products, req.session.user, discountPercent)
+ .filter(p => p.status === 'sale' && p.is_active);
+
+ if (q) {
+ const qLower = q.toLowerCase();
+ products = products.filter((p) =>
+ String(p.name || '').toLowerCase().includes(qLower) ||
+ String(p.category || '').toLowerCase().includes(qLower) ||
+ String(p.description || '').toLowerCase().includes(qLower)
+ );
+ }
+ if (category) {
+ products = products.filter(p => String(p.category || '') === category);
+ }
+
+ const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+ const totalItems = products.length;
+ const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+ const currentPage = Math.min(page, totalPages);
+ const start = (currentPage - 1) * perPage;
+ const pagedProducts = products.slice(start, start + perPage);
+
+ res.render('reseller/products', {
+ title: 'Bayi Məhsul Siyahısı',
+ discountPercent,
+ products: pagedProducts,
+ categories,
+ filters: { q, category, page: currentPage, totalPages, totalItems }
+ });
+ } catch (e) {
+ console.error('Reseller products error:', e);
+ res.redirect('/reseller?error=' + encodeURIComponent(e.message));
+ }
+});
+
+app.get('/reseller/orders', isReseller, async (req, res) => {
+ try {
+ const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
+ res.render('reseller/orders', { title: 'Bayi Sifarişləri', orders });
+ } catch (e) {
+ console.error('Reseller orders error:', e);
+ res.redirect('/reseller?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -1340,12 +1509,13 @@ app.get('/admin/settings', isAdmin, async (req, res) => {
 });
 
 app.post('/admin/settings', isAdmin, async (req, res) => {
- const { bank_card, bank_name, bank_holder } = req.body;
+ const { bank_card, bank_name, bank_holder, reseller_discount_percent } = req.body;
  try {
  const updates = [
  { key: 'bank_card', value: bank_card },
  { key: 'bank_name', value: bank_name },
- { key: 'bank_holder', value: bank_holder }
+ { key: 'bank_holder', value: bank_holder },
+ { key: 'reseller_discount_percent', value: String(clampPercent(reseller_discount_percent, 0, 90)) }
  ];
 
  for (const s of updates) {

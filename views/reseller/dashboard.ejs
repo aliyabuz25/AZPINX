@@ -1,0 +1,93 @@
+<%- include('../partials/header') %>
+
+<div class="product-page-container">
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-1">Bayi Paneli</h2>
+      <p class="text-muted mb-0">Xoş gəldiniz. Sizə tətbiq olunan xüsusi endirim: <strong><%= Number(discountPercent).toFixed(1) %>%</strong></p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="/reseller/products" class="btn btn-primary"><i class="ri-price-tag-3-line"></i> Bayi Qiymətləri</a>
+      <a href="/checkout" class="btn btn-outline"><i class="ri-wallet-3-line"></i> Ödəniş</a>
+      <a href="/tickets" class="btn btn-outline"><i class="ri-customer-service-2-line"></i> Dəstək</a>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3">
+      <div class="p-price-card h-100">
+        <small class="text-muted">Toplam Sifariş</small>
+        <h3 class="mb-0"><%= stats.totalOrders %></h3>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="p-price-card h-100">
+        <small class="text-muted">Gözləyən Sifariş</small>
+        <h3 class="mb-0"><%= stats.pendingOrders %></h3>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="p-price-card h-100">
+        <small class="text-muted">Toplam Dövriyyə</small>
+        <h3 class="mb-0"><%= Number(stats.totalRevenue || 0).toFixed(2) %> AZN</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-7 mb-4">
+      <div class="p-price-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="mb-0">Son Sifarişlər</h4>
+          <a href="/reseller/orders">Hamısı</a>
+        </div>
+        <% if (orders.length === 0) { %>
+          <p class="text-muted mb-0">Hələ sifariş yoxdur.</p>
+        <% } else { %>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Məhsul</th>
+                  <th>Məbləğ</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% orders.forEach(function(o){ %>
+                  <tr>
+                    <td>#<%= o.id %></td>
+                    <td><%= o.product_name %></td>
+                    <td><%= Number(o.amount || 0).toFixed(2) %> AZN</td>
+                    <td><%= o.status %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+    <div class="col-lg-5 mb-4">
+      <div class="p-price-card h-100">
+        <h4 class="mb-3">Dəstək Statusu</h4>
+        <p class="mb-2">Açıq bilet: <strong><%= stats.openTickets %></strong></p>
+        <p class="mb-3">Bağlı bilet: <strong><%= stats.closedTickets %></strong></p>
+        <a href="/tickets" class="btn btn-outline btn-sm">Biletlərə Keç</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-header mb-3">
+    <h3>Top Bayi Məhsulları</h3>
+    <a href="/reseller/products" class="view-all">Hamısına bax <i class="ri-arrow-right-line"></i></a>
+  </div>
+  <div class="product-grid">
+    <% products.forEach(function(product){ %>
+      <%- include('../partials/product_card', { product: product }) %>
+    <% }) %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
