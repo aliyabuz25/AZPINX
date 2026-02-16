@@ -144,15 +144,57 @@ document.addEventListener('DOMContentLoaded', () => {
  // Initial UI load
  updateCartUI();
 
- // --- Slider Logic (Maintain original) ---
+ // --- Slider Logic (Enhanced) ---
  const sliders = document.querySelectorAll('.slider-item');
+ const sliderPrev = document.getElementById('sliderPrev');
+ const sliderNext = document.getElementById('sliderNext');
+ const sliderDots = document.querySelectorAll('.slider-dot');
+
  if (sliders.length > 1) {
  let current = 0;
- setInterval(() => {
- sliders[current].style.display = 'none';
- current = (current + 1) % sliders.length;
- sliders[current].style.display = 'flex';
- }, 5000);
+ let sliderTimer = null;
+
+ const setSlide = (index) => {
+ current = (index + sliders.length) % sliders.length;
+ sliders.forEach((slide, i) => {
+ slide.classList.toggle('active', i === current);
+ });
+ sliderDots.forEach((dot, i) => {
+ const isActive = i === current;
+ dot.classList.toggle('active', isActive);
+ dot.setAttribute('aria-current', isActive ? 'true' : 'false');
+ });
+ };
+
+ const startAuto = () => {
+ if (sliderTimer) clearInterval(sliderTimer);
+ sliderTimer = setInterval(() => {
+ setSlide(current + 1);
+ }, 6000);
+ };
+
+ sliderPrev && sliderPrev.addEventListener('click', () => {
+ setSlide(current - 1);
+ startAuto();
+ });
+
+ sliderNext && sliderNext.addEventListener('click', () => {
+ setSlide(current + 1);
+ startAuto();
+ });
+
+ sliderDots.forEach((dot) => {
+ dot.addEventListener('click', () => {
+ const index = Number(dot.getAttribute('data-slide-index'));
+ if (!Number.isNaN(index)) {
+ setSlide(index);
+ startAuto();
+ }
+ });
+ });
+
+ setSlide(0);
+ startAuto();
  }
 
  // --- Working Hours Popup (only off-hours: 00:00 – 12:00) ---

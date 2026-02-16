@@ -410,10 +410,10 @@ header .logo img {
 /* Hero Section */
 .hero {
     width: 100%;
-    margin: 0;
+    margin: 0 0 20px;
     padding: 0;
     display: block;
-    /* Removed grid to simplify full width */
+    position: relative;
 }
 
 .quick-categories-aside {
@@ -448,33 +448,55 @@ header .logo img {
 }
 
 .slider-container {
-    border-radius: 0;
+    border-radius: 0 0 22px 22px;
     overflow: hidden;
     position: relative;
-    height: 500px;
+    height: 520px;
+    background: #0a1024;
+    box-shadow: 0 26px 56px rgba(10, 16, 36, 0.3);
 }
 
 .slider-item {
-    display: none;
     position: absolute;
     width: 100%;
     height: 100%;
+    inset: 0;
     background-size: cover;
-    background-position: center;
+    background-position: center center;
     background-repeat: no-repeat;
     border-radius: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(1.03);
+    transition: opacity 0.65s ease, transform 7s ease, visibility 0.65s ease;
+}
+
+.slider-item::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(100deg, rgba(2, 10, 28, 0.82) 0%, rgba(2, 10, 28, 0.56) 35%, rgba(2, 10, 28, 0.16) 68%, rgba(2, 10, 28, 0.48) 100%),
+        radial-gradient(90% 75% at 88% 15%, rgba(80, 130, 255, 0.22) 0%, rgba(80, 130, 255, 0) 65%);
+    pointer-events: none;
 }
 
 .slider-item.active {
     display: flex;
     align-items: center;
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+    z-index: 2;
 }
 
 .slider-content {
-    padding: 60px;
-    max-width: 500px;
+    position: relative;
+    z-index: 3;
+    padding: 56px;
+    max-width: 640px;
     color: var(--white);
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(90deg, rgba(7, 15, 38, 0.62) 0%, rgba(7, 15, 38, 0.08) 78%, rgba(7, 15, 38, 0) 100%);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -482,14 +504,92 @@ header .logo img {
 }
 
 .slider-content h2 {
-    font-size: 36px;
-    margin-bottom: 15px;
+    font-size: clamp(2rem, 3.4vw, 3.1rem);
+    line-height: 1.14;
+    letter-spacing: -0.4px;
+    margin-bottom: 12px;
+    font-weight: 800;
+    text-shadow: 0 6px 24px rgba(0, 0, 0, 0.34);
 }
 
 .slider-content p {
-    font-size: 18px;
-    margin-bottom: 25px;
-    opacity: 0.9;
+    font-size: clamp(0.98rem, 1.55vw, 1.14rem);
+    line-height: 1.65;
+    margin-bottom: 28px;
+    opacity: 0.94;
+    max-width: 520px;
+}
+
+.slider-content .btn {
+    min-height: 48px;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 0 24px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    border: none;
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.32);
+}
+
+.slider-content .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(37, 99, 235, 0.36);
+}
+
+.slider-controls {
+    position: absolute;
+    left: 28px;
+    right: 28px;
+    bottom: 22px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.slider-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+}
+
+.slider-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.46);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    padding: 0;
+}
+
+.slider-dot.active {
+    width: 30px;
+    background: #ffffff;
+    box-shadow: 0 6px 14px rgba(255, 255, 255, 0.4);
+}
+
+.slider-nav-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    background: rgba(11, 18, 40, 0.46);
+    color: #fff;
+    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: all 0.25s ease;
+}
+
+.slider-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
 }
 
 /* Quick Icons Row */
@@ -2729,17 +2829,57 @@ body {
 
 @media (max-width: 991px) {
     .slider-container {
-        height: 400px;
+        height: 430px;
+        border-radius: 0 0 16px 16px;
+    }
+
+    .slider-content {
+        padding: 38px;
     }
 }
 
 @media (max-width: 768px) {
     .slider-container {
-        height: 300px;
+        height: 360px;
+    }
+
+    .slider-content {
+        padding: 24px 18px 64px;
+        max-width: 100%;
     }
 
     .slider-content h2 {
-        font-size: 28px;
+        font-size: 24px;
+        margin-bottom: 9px;
+    }
+
+    .slider-content p {
+        font-size: 14px;
+        margin-bottom: 18px;
+        line-height: 1.5;
+    }
+
+    .slider-content .btn {
+        width: fit-content;
+        min-height: 42px;
+        padding: 0 18px;
+        font-size: 14px;
+    }
+
+    .slider-controls {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .slider-nav-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 17px;
+    }
+
+    .slider-dot.active {
+        width: 24px;
     }
 }
 
