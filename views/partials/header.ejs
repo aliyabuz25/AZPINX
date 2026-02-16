@@ -104,6 +104,13 @@
  <div class="collapse d-lg-flex topbar-actions-wrap" id="topbarActions">
  <div class="auth-buttons">
  <% if (locals.user) { %>
+ <div class="nav-balance-lite">
+ <span><%= Number(user.balance || 0).toFixed(2) %> ₼</span>
+ <button type="button" class="nav-balance-plus" id="openTopupModal" title="Balans artır">
+ <i class="ri-add-line"></i>
+ </button>
+ </div>
+
  <!-- Wishlist -->
  <a href="/wishlist" class="nav-btn" title="İstəklər">
  <i class="ri-heart-line"></i>
@@ -158,8 +165,96 @@
  </div>
  </div>
  </header>
+ <% if (locals.user) { %>
+ <div class="topup-modal" id="topupModal">
+ <div class="topup-modal-card">
+ <div class="topup-head">
+ <h4>Balans artır</h4>
+ <button type="button" id="closeTopupModal" class="topup-close"><i class="ri-close-line"></i></button>
+ </div>
+ <p class="topup-sub">Paket seçin, C2C ödənişi edin, dekont yükləyin. Admin təsdiqdən sonra balans artırılacaq.</p>
+
+ <div class="topup-packages" id="topupPackages">
+ <% [20,40,60,80,100,120,140,160].forEach(function(pkg){ %>
+ <button type="button" class="topup-package-btn" data-amount="<%= pkg %>"><%= pkg %> AZN</button>
+ <% }) %>
+ </div>
+
+ <div class="topup-c2c-box">
+ <div class="topup-bank-row"><span>Kart</span><strong><%= settings.bank_card || '0000 0000 0000 0000' %></strong></div>
+ <div class="topup-bank-row"><span>Sahib</span><strong><%= settings.bank_holder || 'AZPINX ADMIN' %></strong></div>
+ <div class="topup-bank-row"><span>Bank</span><strong><%= settings.bank_name || 'BANK' %></strong></div>
+ </div>
+
+ <div class="topup-form">
+ <input type="text" id="topupSenderNameNav" class="topup-input" placeholder="Ad Soyad">
+ <input type="file" id="topupReceiptNav" class="topup-input" accept="image/*">
+ <button type="button" id="submitTopupNav" class="btn btn-primary btn-sm" style="width:100%;">Dekont göndər</button>
+ </div>
+ </div>
+ </div>
+ <% } %>
 
  <script>
+ (function () {
+ const openBtn = document.getElementById('openTopupModal');
+ const closeBtn = document.getElementById('closeTopupModal');
+ const modal = document.getElementById('topupModal');
+ const packageWrap = document.getElementById('topupPackages');
+ const submitBtn = document.getElementById('submitTopupNav');
+ const senderInput = document.getElementById('topupSenderNameNav');
+ const receiptInput = document.getElementById('topupReceiptNav');
+ if (!openBtn || !modal || !packageWrap || !submitBtn || !senderInput || !receiptInput) return;
+
+ let selectedAmount = 20;
+ packageWrap.querySelectorAll('.topup-package-btn').forEach((btn) => {
+ if (Number(btn.dataset.amount) === selectedAmount) btn.classList.add('active');
+ btn.addEventListener('click', () => {
+ selectedAmount = Number(btn.dataset.amount || 0);
+ packageWrap.querySelectorAll('.topup-package-btn').forEach(b => b.classList.remove('active'));
+ btn.classList.add('active');
+ });
+ });
+
+ openBtn.addEventListener('click', () => modal.classList.add('show'));
+ if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+ modal.addEventListener('click', (e) => {
+ if (e.target === modal) modal.classList.remove('show');
+ });
+
+ submitBtn.addEventListener('click', async () => {
+ const sender = (senderInput.value || '').trim();
+ const receipt = receiptInput.files[0];
+ if (!selectedAmount || !sender || !receipt) {
+ Toastify({ text: "Paket, Ad Soyad və dekont mütləqdir.", backgroundColor: "#ef4444" }).showToast();
+ return;
+ }
+
+ const fd = new FormData();
+ fd.append('amount', String(selectedAmount));
+ fd.append('sender_name', sender);
+ fd.append('receipt', receipt);
+
+ submitBtn.disabled = true;
+ try {
+ const res = await fetch('/balance/topups/request', { method: 'POST', body: fd });
+ const data = await res.json().catch(() => ({ success: false, error: 'Server xətası' }));
+ if (data.success) {
+ Toastify({ text: data.message || "Sorğu göndərildi.", backgroundColor: "#10b981" }).showToast();
+ senderInput.value = '';
+ receiptInput.value = '';
+ modal.classList.remove('show');
+ } else {
+ Toastify({ text: "Xəta: " + (data.error || 'Bilinməyən xəta'), backgroundColor: "#ef4444" }).showToast();
+ }
+ } catch (err) {
+ Toastify({ text: "Bağlantı xətası.", backgroundColor: "#ef4444" }).showToast();
+ } finally {
+ submitBtn.disabled = false;
+ }
+ });
+ })();
+
  function createFloatingGlyph() {
  const glyph = document.createElement('i');
  const iconPool = ['ri-gamepad-line', 'ri-rocket-line', 'ri-flashlight-line', 'ri-fire-line'];
@@ -173,3 +268,103 @@
  }
  setInterval(createFloatingGlyph, 900);
  </script>
+ <style>
+ .nav-balance-lite {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ background: #0f172a;
+ border: 1px solid rgba(255, 255, 255, 0.08);
+ border-radius: 12px;
+ height: 44px;
+ padding: 0 10px 0 14px;
+ margin-right: 5px;
+ }
+ .nav-balance-lite span {
+ color: #34d399;
+ font-size: 14px;
+ font-weight: 700;
+ }
+ .nav-balance-plus {
+ width: 28px;
+ height: 28px;
+ border: 0;
+ border-radius: 8px;
+ background: #1e293b;
+ color: #fff;
+ display: grid;
+ place-items: center;
+ cursor: pointer;
+ }
+ .topup-modal {
+ position: fixed;
+ inset: 0;
+ background: rgba(2, 6, 23, 0.62);
+ z-index: 100000;
+ display: none;
+ align-items: center;
+ justify-content: center;
+ padding: 16px;
+ }
+ .topup-modal.show { display: flex; }
+ .topup-modal-card {
+ width: 100%;
+ max-width: 480px;
+ background: #fff;
+ border-radius: 14px;
+ padding: 16px;
+ }
+ .topup-head {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ }
+ .topup-head h4 { margin: 0; font-size: 18px; font-weight: 700; }
+ .topup-close { background: transparent; border: 0; font-size: 22px; }
+ .topup-sub { margin: 8px 0 12px; font-size: 13px; color: #64748b; }
+ .topup-packages {
+ display: grid;
+ grid-template-columns: repeat(4, 1fr);
+ gap: 8px;
+ }
+ .topup-package-btn {
+ border: 1px solid #e2e8f0;
+ background: #f8fafc;
+ border-radius: 10px;
+ padding: 8px 6px;
+ font-size: 13px;
+ font-weight: 600;
+ }
+ .topup-package-btn.active {
+ border-color: #38bdf8;
+ background: #ecfeff;
+ color: #0369a1;
+ }
+ .topup-c2c-box {
+ margin-top: 12px;
+ border: 1px dashed #cbd5e1;
+ border-radius: 12px;
+ padding: 10px 12px;
+ background: #f8fafc;
+ }
+ .topup-bank-row {
+ display: flex;
+ justify-content: space-between;
+ gap: 10px;
+ font-size: 13px;
+ margin: 4px 0;
+ }
+ .topup-bank-row span { color: #64748b; }
+ .topup-bank-row strong { color: #0f172a; }
+ .topup-form { margin-top: 12px; display: grid; gap: 8px; }
+ .topup-input {
+ width: 100%;
+ border: 1px solid #e2e8f0;
+ border-radius: 10px;
+ padding: 10px;
+ font-size: 14px;
+ }
+ @media (max-width: 768px) {
+ .topup-packages { grid-template-columns: repeat(2, 1fr); }
+ }
+ </style>
