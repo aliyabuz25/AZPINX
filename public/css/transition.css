@@ -1,0 +1,57 @@
+#azpin-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #04153a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+#azpin-splash.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.azpin-splash-inner {
+    width: 128px;
+    height: 128px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.42);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+}
+
+.azpin-splash-logo {
+    width: 78px;
+    height: 78px;
+    border-radius: 18px;
+    object-fit: cover;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+body.is-page-leaving {
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .azpin-splash-inner {
+        width: 106px;
+        height: 106px;
+        border-radius: 22px;
+    }
+
+    .azpin-splash-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 14px;
+    }
+}
