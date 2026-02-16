@@ -521,3 +521,95 @@ body {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* Corporate AdminCP Overrides */
+body.admin-modern {
+    font-weight: 400 !important;
+}
+
+.admin-modern .main-header .nav-link,
+.admin-modern .nav-sidebar .nav-link,
+.admin-modern .btn,
+.admin-modern .admin-footer-links a,
+.admin-modern .metric-label,
+.admin-modern .summary-row,
+.admin-modern .admin-link-tile,
+.admin-modern .card-title,
+.admin-modern .admin-subtitle,
+.admin-modern .content-header h1,
+.admin-modern .admin-top-badge {
+    font-weight: 400 !important;
+}
+
+.admin-modern .nav-sidebar .nav-header,
+.admin-modern .summary-row strong,
+.admin-modern .metric-value {
+    font-weight: 500 !important;
+}
+
+.admin-modern .main-sidebar {
+    background: #ffffff !important;
+    border-right: 1px solid #e5eaf6 !important;
+    box-shadow: 0 8px 20px rgba(22, 38, 74, 0.06) !important;
+    overflow-y: auto;
+}
+
+.admin-modern .brand-link {
+    background: #ffffff !important;
+    border-bottom: 1px solid #eef2fb !important;
+}
+
+.admin-modern .nav-sidebar .nav-link {
+    color: #27375f !important;
+    transition: all 0.2s ease;
+}
+
+.admin-modern .nav-sidebar .nav-link i {
+    color: #5a6f9f !important;
+}
+
+.admin-modern .nav-sidebar .nav-link:hover {
+    background: #f3f7ff !important;
+    color: #123a9f !important;
+    transform: translateX(2px);
+}
+
+.admin-modern .nav-sidebar .nav-link.active {
+    color: #ffffff !important;
+}
+
+.admin-modern .nav-sidebar .nav-link.nav-link-danger {
+    color: #c5254a !important;
+}
+
+.admin-modern .nav-sidebar .nav-link.nav-link-danger i {
+    color: #c5254a !important;
+}
+
+.admin-modern .nav-sidebar .nav-link.nav-link-danger:hover {
+    background: #fff1f4 !important;
+    color: #ad1538 !important;
+}
+
+@media (max-width: 768px) {
+    .admin-modern .main-header.navbar {
+        margin: 6px !important;
+    }
+
+    .admin-modern .content-wrapper {
+        margin-left: 0 !important;
+    }
+
+    .admin-modern .content-wrapper,
+    .admin-modern .main-footer {
+        padding-left: 0 !important;
+    }
+
+    .admin-modern .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .admin-modern .admin-quick-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}

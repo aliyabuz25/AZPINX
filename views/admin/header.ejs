@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@1.13.1/css/OverlayScrollbars.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
-  <link rel="stylesheet" href="/css/admin-modern-v2.css?v=20260216-7">
+  <link rel="stylesheet" href="/css/admin-modern-v2.css?v=20260216-8">
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -96,7 +96,7 @@
           <li class="nav-item">
             <a href="/admin/sliders" class="nav-link <%= locals.title === 'Slayder (Banner) İdarəetməsi' ? 'active' : '' %>">
               <i class="nav-icon ri-image-2-line"></i>
-              <p>Slayderlər</p>
+              <p>Banner İdarəetməsi</p>
             </a>
           </li>
           <li class="nav-item">
@@ -107,8 +107,14 @@
           </li>
           <li class="nav-item">
             <a href="/admin/settings" class="nav-link <%= String(locals.title || '').includes('Ayarları') ? 'active' : '' %>">
-              <i class="nav-icon ri-bank-line"></i>
-              <p>Ayarlar</p>
+              <i class="nav-icon ri-seo-line"></i>
+              <p>SEO Ayarları</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/settings" class="nav-link <%= String(locals.title || '').includes('Ayarları') ? 'active' : '' %>">
+              <i class="nav-icon ri-bank-card-line"></i>
+              <p>Ödəniş Ayarları</p>
             </a>
           </li>
           <li class="nav-header">Digər</li>
