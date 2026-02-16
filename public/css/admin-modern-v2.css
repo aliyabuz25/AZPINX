@@ -63,34 +63,17 @@ body {
 .brand-link {
     display: flex !important;
     align-items: center;
-    gap: 12px;
-    padding: 14px 12px !important;
+    justify-content: center;
+    padding: 12px 10px !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .brand-image-modern {
-    width: 42px;
-    height: 42px;
-    border-radius: 11px;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
     object-fit: cover;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-}
-
-.brand-stack {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.12;
-}
-
-.brand-text {
-    font-size: 1.02rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.2px;
-    color: #f6f8ff !important;
-}
-
-.brand-stack small {
-    display: none;
+    box-shadow: none;
 }
 
 .sidebar {

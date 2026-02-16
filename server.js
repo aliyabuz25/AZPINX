@@ -2000,7 +2000,7 @@ app.get('/admin/topups', isAdmin, async (req, res) => {
  SELECT bt.*, u.full_name, u.email, u.phone
  FROM balance_topups bt
  JOIN users u ON u.id = bt.user_id
- ORDER BY FIELD(bt.status, 'pending', 'approved', 'rejected'), bt.created_at DESC
+ ORDER BY FIELD(bt.refund_status, 'pending', 'processed', 'rejected', 'none'), FIELD(bt.status, 'pending', 'approved', 'rejected'), bt.created_at DESC
  `);
 
  const topups = (status === 'all')
@@ -2012,6 +2012,52 @@ app.get('/admin/topups', isAdmin, async (req, res) => {
  topups,
  filters: { status }
  });
+});
+
+app.post('/admin/topups/:id/refund-update', isAdmin, async (req, res) => {
+ const topupId = Number(req.params.id);
+ const nextRefundStatus = normalizeOptionalString(req.body.refund_status);
+ const adminNote = normalizeOptionalString(req.body.admin_note);
+
+ if (!['processed', 'rejected'].includes(nextRefundStatus)) {
+ req.session.error = 'Yanlış iade statusu.';
+ return res.redirect('/admin/topups');
+ }
+
+ try {
+ const [rows] = await db.execute('SELECT id, user_id, refund_status FROM balance_topups WHERE id = ? LIMIT 1', [topupId]);
+ if (!rows.length) {
+ req.session.error = 'Topup tapılmadı.';
+ return res.redirect('/admin/topups');
+ }
+ const topup = rows[0];
+ if ((topup.refund_status || 'none') !== 'pending') {
+ req.session.error = 'Bu iade tələbi artıq işlənib və ya aktiv deyil.';
+ return res.redirect('/admin/topups');
+ }
+
+ await db.execute(
+ 'UPDATE balance_topups SET refund_status = ?, admin_note = ? WHERE id = ?',
+ [nextRefundStatus, adminNote, topupId]
+ );
+
+ const [users] = await db.execute('SELECT phone FROM users WHERE id = ? LIMIT 1', [topup.user_id]);
+ if (users.length && users[0].phone) {
+ const userMsg = nextRefundStatus === 'processed'
+ ? 'AZPINX: İade tələbiniz işləndi. Müştəri dəstəyi sizinlə əlaqə saxlayacaq.'
+ : 'AZPINX: İade tələbiniz rədd edildi.';
+ sendSMS(users[0].phone, userMsg);
+ }
+
+ req.session.success = nextRefundStatus === 'processed'
+ ? 'İade tələbi işləndi olaraq qeyd edildi.'
+ : 'İade tələbi rədd edildi.';
+ return res.redirect('/admin/topups');
+ } catch (e) {
+ console.error('Admin refund update error:', e.message);
+ req.session.error = 'İade statusu yenilənmədi.';
+ return res.redirect('/admin/topups');
+ }
 });
 
 app.post('/admin/topups/:id/update', isAdmin, async (req, res) => {
