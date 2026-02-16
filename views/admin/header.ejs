@@ -1,186 +1,153 @@
 <!DOCTYPE html>
 <html lang="az">
-
 <head>
- <meta charset="utf-8">
- <meta name="viewport" content="width=device-width, initial-scale=1">
- <title>
- <%= (locals.title ? locals.title + ' | ' : '' ) %>AZPINX Admin
- </title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= (locals.title ? locals.title + ' | ' : '' ) %>AZPINX Admin</title>
 
- <!-- Google Font -->
- <link rel="stylesheet"
- href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
- <!-- Remix Icons -->
- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
- <!-- OverlayScrollbars -->
- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@1.13.1/css/OverlayScrollbars.min.css">
- <!-- Theme style -->
- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
- <link rel="stylesheet" href="/css/admin-modern-v2.css?v=20260216-2">
- <!-- Toastify -->
- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
- <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@1.13.1/css/OverlayScrollbars.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </head>
-
 <body class="hold-transition sidebar-mini layout-fixed">
- <div class="wrapper">
+<div class="wrapper">
 
- <!-- Navbar -->
- <nav class="main-header navbar navbar-expand navbar-white navbar-light border-bottom-0 shadow-sm">
- <!-- Left navbar links -->
- <ul class="navbar-nav">
- <li class="nav-item">
- <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="ri-menu-line"></i></a>
- </li>
- <li class="nav-item d-none d-sm-inline-block">
- <a href="/" class="nav-link nav-link-site"><i
- class="ri-external-link-line mr-1"></i> Sayta Keç</a>
- </li>
- </ul>
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="ri-menu-line"></i></a>
+      </li>
+      <li class="nav-item d-none d-sm-inline-block">
+        <a href="/" class="nav-link">Sayta Keç</a>
+      </li>
+    </ul>
 
- <!-- Right navbar links -->
- <ul class="navbar-nav ml-auto">
- <li class="nav-item">
- <a class="nav-link nav-link-logout" href="/logout" role="button">
- <i class="ri-logout-box-r-line"></i> Çıxış
- </a>
- </li>
- </ul>
- </nav>
- <!-- /.navbar -->
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item">
+        <a class="nav-link text-danger" href="/logout"><i class="ri-logout-box-r-line"></i> Çıxış</a>
+      </li>
+    </ul>
+  </nav>
 
- <!-- Main Sidebar Container -->
- <aside class="main-sidebar elevation-0">
- <!-- Brand Logo -->
- <a href="/admin" class="brand-link border-0">
- <img src="/images/logo-new.jpeg" alt="AZPINX" class="brand-image-modern">
- <div class="brand-stack">
- <span class="brand-text">AZPINX</span>
- </div>
- </a>
+  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <a href="/admin" class="brand-link">
+      <img src="/images/logo-new.jpeg" alt="AZPINX" class="brand-image img-circle elevation-3" style="opacity: .9">
+      <span class="brand-text font-weight-light">AZPINX Admin</span>
+    </a>
 
- <!-- Sidebar -->
- <div class="sidebar">
- <!-- Sidebar Menu -->
- <nav class="mt-3">
- <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
- data-accordion="false">
- <li class="nav-item">
- <a href="/admin" class="nav-link <%= locals.title === 'Dashboard' ? 'active' : '' %>">
- <i class="nav-icon ri-pie-chart-2-line"></i>
- <p>Dashboard</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/orders"
- class="nav-link <%= locals.title === 'Sifariş İdarəetməsi' ? 'active' : '' %>">
- <i class="nav-icon ri-shopping-bag-3-line"></i>
- <p>Sifarişlər</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/topups"
- class="nav-link <%= locals.title === 'Balans Tələbləri' ? 'active' : '' %>">
- <i class="nav-icon ri-wallet-3-line"></i>
- <p>Balans Tələbləri</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/products"
- class="nav-link <%= locals.title === 'Məhsul Kataloqu' || locals.title === 'Yeni Məhsul' ? 'active' : '' %>">
- <i class="nav-icon ri-stack-line"></i>
- <p>Məhsullar</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/categories"
- class="nav-link <%= locals.title === 'Kateqoriya İdarəetməsi' ? 'active' : '' %>">
- <i class="nav-icon ri-price-tag-3-line"></i>
- <p>Kateqoriyalar</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/users"
- class="nav-link <%= locals.title === 'İstifadəçi İdarəetməsi' ? 'active' : '' %>">
- <i class="nav-icon ri-shield-user-line"></i>
- <p>İstifadəçilər</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/tickets"
- class="nav-link <%= locals.title === 'Dəstək İdarəetməsi' ? 'active' : '' %>">
- <i class="nav-icon ri-customer-service-2-line"></i>
- <p>Dəstək Biletləri</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/hubmsg"
- class="nav-link <%= locals.title === 'HubMsg Bildirişlər' ? 'active' : '' %>">
- <i class="nav-icon ri-megaphone-line"></i>
- <p>HubMsg Bildirişlər</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/sliders"
- class="nav-link <%= locals.title === 'Slayder (Banner) İdarəetməsi' ? 'active' : '' %>">
- <i class="nav-icon ri-image-2-line"></i>
- <p>Slayder (Banner)</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/home-sections"
- class="nav-link <%= locals.title === 'Ana Səhifə Bölmələri' ? 'active' : '' %>">
- <i class="nav-icon ri-list-check-2-line"></i>
- <p>Ana Səhifə Bölmələri</p>
- </a>
- </li>
- <li class="nav-item">
- <a href="/admin/settings"
- class="nav-link <%= locals.title === 'Banka Məlumatları' ? 'active' : '' %>">
- <i class="nav-icon ri-bank-line"></i>
- <p>Banka Məlumatları</p>
- </a>
- </li>
- </ul>
- </nav>
- <!-- /.sidebar-menu -->
- </div>
- <!-- /.sidebar -->
- </aside>
+    <div class="sidebar">
+      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+        <div class="image">
+          <img src="/images/logo-new.jpeg" class="img-circle elevation-2" alt="User Image">
+        </div>
+        <div class="info">
+          <a href="#" class="d-block"><%= user.full_name %></a>
+        </div>
+      </div>
 
- <!-- Content Wrapper. Contains page content -->
- <div class="content-wrapper">
- <!-- Content Header (Page header) -->
- <div class="content-header">
- <div class="container-fluid">
- <div class="row mb-2">
- <div class="col-sm-6">
- <h1 class="m-0 text-dark">
- <%= locals.title || 'Admin Panel' %>
- </h1>
- <small class="admin-subtitle">AZPINX idarəetmə mərkəzi</small>
- </div>
- </div>
- </div>
- </div>
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+          <li class="nav-item">
+            <a href="/admin" class="nav-link <%= locals.title === 'Dashboard' ? 'active' : '' %>">
+              <i class="nav-icon ri-pie-chart-2-line"></i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/orders" class="nav-link <%= locals.title === 'Sifariş İdarəetməsi' ? 'active' : '' %>">
+              <i class="nav-icon ri-shopping-bag-3-line"></i>
+              <p>Sifarişlər</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/topups" class="nav-link <%= locals.title === 'Balans Tələbləri' ? 'active' : '' %>">
+              <i class="nav-icon ri-wallet-3-line"></i>
+              <p>Balans Tələbləri</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/products" class="nav-link <%= locals.title === 'Məhsul Kataloqu' || locals.title === 'Yeni Məhsul' ? 'active' : '' %>">
+              <i class="nav-icon ri-stack-line"></i>
+              <p>Məhsullar</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/categories" class="nav-link <%= locals.title === 'Kateqoriya İdarəetməsi' ? 'active' : '' %>">
+              <i class="nav-icon ri-price-tag-3-line"></i>
+              <p>Kateqoriyalar</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/users" class="nav-link <%= locals.title === 'İstifadəçi İdarəetməsi' ? 'active' : '' %>">
+              <i class="nav-icon ri-shield-user-line"></i>
+              <p>İstifadəçilər</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/tickets" class="nav-link <%= locals.title === 'Dəstək İdarəetməsi' ? 'active' : '' %>">
+              <i class="nav-icon ri-customer-service-2-line"></i>
+              <p>Dəstək Biletləri</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/hubmsg" class="nav-link <%= locals.title === 'HubMsg Bildirişlər' ? 'active' : '' %>">
+              <i class="nav-icon ri-megaphone-line"></i>
+              <p>HubMsg</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/sliders" class="nav-link <%= locals.title === 'Slayder (Banner) İdarəetməsi' ? 'active' : '' %>">
+              <i class="nav-icon ri-image-2-line"></i>
+              <p>Slayderlər</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/home-sections" class="nav-link <%= locals.title === 'Ana Səhifə Bölmələri' ? 'active' : '' %>">
+              <i class="nav-icon ri-list-check-2-line"></i>
+              <p>Ana Səhifə Bölmələri</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/settings" class="nav-link <%= locals.title === 'Banka Məlumatları' ? 'active' : '' %>">
+              <i class="nav-icon ri-bank-line"></i>
+              <p>Banka Məlumatları</p>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
 
- <!-- Main content -->
- <section class="content">
- <div class="container-fluid">
+  <div class="content-wrapper">
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0"><%= locals.title || 'Admin Panel' %></h1>
+          </div>
+        </div>
+      </div>
+    </div>
 
- <% if (locals.error) { %>
- <script>
- window.addEventListener('load', () => {
- Toastify({ text:"<%= error %>", duration: 3000, gravity:"top", position:"right", backgroundColor:"#ef4444" }).showToast();
- });
- </script>
- <% } %>
- <% if (locals.success) { %>
- <script>
- window.addEventListener('load', () => {
- Toastify({ text:"<%= success %>", duration: 3000, gravity:"top", position:"right", backgroundColor:"#10b981" }).showToast();
- });
- </script>
- <% } %>
+    <section class="content">
+      <div class="container-fluid">
+
+      <% if (locals.error) { %>
+      <script>
+        window.addEventListener('load', () => {
+          Toastify({ text: "<%= error %>", duration: 3000, gravity: "top", position: "right", backgroundColor: "#ef4444" }).showToast();
+        });
+      </script>
+      <% } %>
+      <% if (locals.success) { %>
+      <script>
+        window.addEventListener('load', () => {
+          Toastify({ text: "<%= success %>", duration: 3000, gravity: "top", position: "right", backgroundColor: "#10b981" }).showToast();
+        });
+      </script>
+      <% } %>
