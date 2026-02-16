@@ -236,6 +236,72 @@
  </div>
  </div>
 
+ <%
+ const selectedWhatsappAdminIds = String(settings.admin_whatsapp_admin_ids || '')
+ .split(',')
+ .map(function(v){ return String(v || '').trim(); })
+ .filter(Boolean);
+ const selectedWhatsappEvents = String(settings.admin_whatsapp_events || 'order,ticket,refund,topup')
+ .split(',')
+ .map(function(v){ return String(v || '').trim().toLowerCase(); })
+ .filter(Boolean);
+ %>
+
+ <div class="row mt-3">
+ <div class="col-12">
+ <div class="card card-primary">
+ <div class="card-header">
+ <h3 class="card-title">Admin WhatsApp Bildirişləri</h3>
+ </div>
+ <form action="/admin/settings" method="POST">
+ <div class="card-body">
+ <div class="form-group">
+ <div class="custom-control custom-switch">
+ <input type="checkbox" class="custom-control-input" id="admin_whatsapp_enabled" name="admin_whatsapp_enabled" <%= String(settings.admin_whatsapp_enabled || '1') === '1' ? 'checked' : '' %>>
+ <label class="custom-control-label" for="admin_whatsapp_enabled">WhatsApp admin bildirişlərini aktiv et</label>
+ </div>
+ </div>
+
+ <div class="form-group">
+ <label for="admin_whatsapp_admin_ids">Bildiriş alacaq adminlər (çoxlu seçim)</label>
+ <select name="admin_whatsapp_admin_ids" id="admin_whatsapp_admin_ids" class="form-control" multiple size="6">
+ <% (admins || []).forEach(function(admin){ %>
+ <option value="<%= admin.id %>" <%= selectedWhatsappAdminIds.includes(String(admin.id)) ? 'selected' : '' %>>
+ <%= admin.full_name %> <% if (admin.phone) { %> - <%= admin.phone %> <% } %>
+ </option>
+ <% }) %>
+ </select>
+ <small class="text-muted">Boş qalsa bütün adminlərə göndərilir.</small>
+ </div>
+
+ <div class="form-group">
+ <label>Bildiriş növləri</label>
+ <div class="form-check">
+ <input class="form-check-input" type="checkbox" id="wa_event_order" name="admin_whatsapp_events" value="order" <%= selectedWhatsappEvents.includes('order') ? 'checked' : '' %>>
+ <label class="form-check-label" for="wa_event_order">Sifariş məlumatı</label>
+ </div>
+ <div class="form-check">
+ <input class="form-check-input" type="checkbox" id="wa_event_ticket" name="admin_whatsapp_events" value="ticket" <%= selectedWhatsappEvents.includes('ticket') ? 'checked' : '' %>>
+ <label class="form-check-label" for="wa_event_ticket">Dəstək talebi / ticket mesajı</label>
+ </div>
+ <div class="form-check">
+ <input class="form-check-input" type="checkbox" id="wa_event_refund" name="admin_whatsapp_events" value="refund" <%= selectedWhatsappEvents.includes('refund') ? 'checked' : '' %>>
+ <label class="form-check-label" for="wa_event_refund">İade tələbləri</label>
+ </div>
+ <div class="form-check">
+ <input class="form-check-input" type="checkbox" id="wa_event_topup" name="admin_whatsapp_events" value="topup" <%= selectedWhatsappEvents.includes('topup') ? 'checked' : '' %>>
+ <label class="form-check-label" for="wa_event_topup">Balans artırma tələbləri</label>
+ </div>
+ </div>
+ </div>
+ <div class="card-footer">
+ <button type="submit" class="btn btn-primary">WhatsApp Ayarlarını Yadda Saxla</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+
  <style>
  .bank-card-preview-admin {
  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);

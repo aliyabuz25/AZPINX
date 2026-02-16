@@ -4,15 +4,31 @@
  <div class="card">
  <div class="card-header">
  <h3 class="card-title">Bütün Sifarişlər</h3>
+ <div class="card-tools d-flex" style="gap:8px;">
+ <a href="/admin/orders/export?scope=all" class="btn btn-sm btn-success">
+ <i class="ri-file-download-line"></i> Bütününü CSV Export
+ </a>
+ <button type="submit" form="selectedExportForm" id="selectedExportBtn" class="btn btn-sm btn-primary">
+ <i class="ri-file-list-3-line"></i> Seçililəri Export
+ </button>
  </div>
+ </div>
+ <form id="selectedExportForm" action="/admin/orders/export" method="GET">
+ <input type="hidden" name="scope" value="selected">
+ <input type="hidden" name="ids" id="selectedOrderIds">
+ </form>
  <div class="card-body table-responsive p-0">
  <table class="table table-hover text-nowrap">
  <thead>
  <tr>
+ <th style="width: 42px;">
+ <input type="checkbox" id="selectAllOrders">
+ </th>
  <th>ID</th>
  <th>Məhsul</th>
  <th>Oyunçu Məlumatı</th>
  <th>Məbləğ</th>
+ <th>İstifadəçi</th>
  <th>Göndərən</th>
  <th>Dekont</th>
  <th>Tarix</th>
@@ -23,6 +39,9 @@
  <tbody>
  <% orders.forEach(order=> { %>
  <tr>
+ <td>
+ <input type="checkbox" class="order-select-item" value="<%= order.id %>">
+ </td>
  <td>#<%= order.id %>
  </td>
  <td>
@@ -40,6 +59,10 @@
  </td>
  <td>
  <%= order.amount %> AZN
+ </td>
+ <td>
+ <strong><%= order.user_full_name || '-' %></strong><br>
+ <small class="text-muted"><%= order.email || '-' %> <% if (order.user_phone) { %> | <%= order.user_phone %> <% } %></small>
  </td>
  <td>
  <%= order.sender_name %>
@@ -89,4 +112,42 @@
  </div>
  </div>
  </div>
+
+ <script>
+ (function () {
+ const selectAll = document.getElementById('selectAllOrders');
+ const selectedIdsInput = document.getElementById('selectedOrderIds');
+ const selectedItems = Array.from(document.querySelectorAll('.order-select-item'));
+ const exportForm = document.getElementById('selectedExportForm');
+ const exportBtn = document.getElementById('selectedExportBtn');
+
+ function syncSelectedIds() {
+ const ids = selectedItems.filter((cb) => cb.checked).map((cb) => cb.value);
+ selectedIdsInput.value = ids.join(',');
+ if (exportBtn) exportBtn.disabled = ids.length === 0;
+ }
+
+ if (selectAll) {
+ selectAll.addEventListener('change', function () {
+ selectedItems.forEach((cb) => { cb.checked = !!selectAll.checked; });
+ syncSelectedIds();
+ });
+ }
+
+ selectedItems.forEach((cb) => {
+ cb.addEventListener('change', syncSelectedIds);
+ });
+
+ if (exportForm) {
+ exportForm.addEventListener('submit', function (e) {
+ syncSelectedIds();
+ if (!selectedIdsInput.value) {
+ e.preventDefault();
+ alert('Ən az bir sifariş seçin.');
+ }
+ });
+ }
+ syncSelectedIds();
+ })();
+ </script>
  <%- include('footer') %>

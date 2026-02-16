@@ -36,6 +36,10 @@ async function sendSMS(phone, message) {
  }
 }
 
+async function sendWhatsApp(phone, message) {
+ return sendSMS(phone, message);
+}
+
 // Multer Config
 // Multer setup for receipts
 const receiptStorage = multer.diskStorage({
@@ -462,7 +466,10 @@ let db;
  { key: 'footer_email_label', value: 'E-poçt' },
  { key: 'footer_email_value', value: 'destek@azpinx.com' },
  { key: 'footer_bottom_text', value: '© 2026 AZPINX - Bütün hüquqlar qorunur.' },
- { key: 'footer_payment_text', value: 'M10 / MilliÖN / eManat' }
+ { key: 'footer_payment_text', value: 'M10 / MilliÖN / eManat' },
+ { key: 'admin_whatsapp_enabled', value: '1' },
+ { key: 'admin_whatsapp_admin_ids', value: '' },
+ { key: 'admin_whatsapp_events', value: 'order,ticket,refund,topup' }
  ];
 
  for (const s of defaultSettings) {
@@ -742,10 +749,37 @@ async function getReferralCountForUser(userId) {
  return Number(rows[0]?.total || 0);
 }
 
-async function notifyAllAdmins(message) {
+async function notifyAllAdmins(message, eventType = '') {
  try {
- const [admins] = await db.execute('SELECT phone FROM users WHERE role = "admin" AND phone IS NOT NULL AND phone <> ""');
- admins.forEach((admin) => sendSMS(admin.phone, message));
+ const [settingsRows] = await db.execute(
+ 'SELECT setting_key, setting_value FROM settings WHERE setting_key IN (?, ?, ?)',
+ ['admin_whatsapp_enabled', 'admin_whatsapp_admin_ids', 'admin_whatsapp_events']
+ );
+ const settingsMap = {};
+ settingsRows.forEach((row) => { settingsMap[row.setting_key] = row.setting_value; });
+
+ const enabled = String(settingsMap.admin_whatsapp_enabled ?? '1') !== '0';
+ if (!enabled) return;
+
+ const selectedIds = String(settingsMap.admin_whatsapp_admin_ids || '')
+ .split(',')
+ .map((v) => Number(String(v || '').trim()))
+ .filter((v) => Number.isInteger(v) && v > 0);
+
+ const events = String(settingsMap.admin_whatsapp_events || 'order,ticket,refund,topup')
+ .split(',')
+ .map((v) => String(v || '').trim().toLowerCase())
+ .filter(Boolean);
+
+ const eventTypeRaw = String(eventType || '').trim().toLowerCase();
+ if (eventTypeRaw && !events.includes(eventTypeRaw) && !events.includes('all')) return;
+
+ const [admins] = await db.execute('SELECT id, phone FROM users WHERE role = "admin" AND phone IS NOT NULL AND phone <> ""');
+ const recipients = selectedIds.length
+ ? admins.filter((admin) => selectedIds.includes(Number(admin.id)))
+ : admins;
+
+ recipients.forEach((admin) => sendWhatsApp(admin.phone, message));
  } catch (e) {
  console.error('Admin notification error:', e.message);
  }
@@ -1825,7 +1859,7 @@ app.post('/process-order', uploadReceipt.single('receipt'), async (req, res) => 
 
  // Notify Admins
  const adminMsg = `AZPINX: Yeni sifariş!\nİstifadəçi: ${req.session.user.full_name}\nNömrə: ${req.session.user.phone || 'Yoxdur'}\nMəhsul: ${productList}\nMəbləğ: ${totalAmount} AZN\nSaat: ${timeNow}`;
- await notifyAllAdmins(adminMsg);
+ await notifyAllAdmins(adminMsg, 'order');
 
  res.json({ success: true });
  } catch (e) {
@@ -1858,7 +1892,7 @@ app.post('/balance/topups/request', uploadReceipt.single('receipt'), async (req,
  );
 
  const adminMsg = `AZPINX: Yeni balans artırma!\nİstifadəçi: ${req.session.user.full_name}\nNömrə: ${req.session.user.phone || 'Yoxdur'}\nMəbləğ: ${Number(amount).toFixed(2)} AZN\nTalep ID: #${result.insertId}`;
- await notifyAllAdmins(adminMsg);
+ await notifyAllAdmins(adminMsg, 'topup');
 
  return res.json({ success: true, message: 'Balans artırma tələbi admin təsdiqinə göndərildi.' });
  } catch (e) {
@@ -2002,7 +2036,7 @@ app.post('/profile/topups/:id/refund-request', async (req, res) => {
 
  const [users] = await db.execute('SELECT full_name, phone FROM users WHERE id = ? LIMIT 1', [req.session.user.id]);
  const user = users[0] || { full_name: 'İstifadəçi', phone: 'Yoxdur' };
- await notifyAllAdmins(`AZPINX: Yeni iade tələbi!\nİstifadəçi: ${user.full_name}\nNömrə: ${user.phone || 'Yoxdur'}\nTopup ID: #${topupId}\nMəbləğ: ${Number(topup.amount || 0).toFixed(2)} AZN`);
+ await notifyAllAdmins(`AZPINX: Yeni iade tələbi!\nİstifadəçi: ${user.full_name}\nNömrə: ${user.phone || 'Yoxdur'}\nTopup ID: #${topupId}\nMəbləğ: ${Number(topup.amount || 0).toFixed(2)} AZN`, 'refund');
 
  req.session.success = 'İadeniz işleme alınmıştır. Sizə müştəri dəstəyi geri dönüş yapacaktır.';
  return res.redirect('/profile');
@@ -2095,9 +2129,8 @@ app.post('/tickets/create', async (req, res) => {
  const ticketId = result.insertId;
 
  // Notify Admins
- const [admins] = await db.execute('SELECT phone FROM users WHERE role ="admin" AND phone IS NOT NULL');
  const notifyMsg = `AZPINX: Yeni Dəstək Bileti!\nİstifadəçi: ${req.session.user.full_name}\nMövzu: ${subject}`;
- admins.forEach(admin => sendSMS(admin.phone, notifyMsg));
+ await notifyAllAdmins(notifyMsg, 'ticket');
 
  res.json({ success: true, ticketId });
  } catch (e) {
@@ -2129,9 +2162,8 @@ app.post('/ticket/:id/message', async (req, res) => {
  await db.execute('UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [ticketId]);
 
  // Notify Admins
- const [admins] = await db.execute('SELECT phone FROM users WHERE role ="admin" AND phone IS NOT NULL');
  const notifyMsg = `AZPINX: Yeni Ticket Mesajı!\nİstifadəçi: ${req.session.user.full_name}\nBilet: ${tickets[0].subject}`;
- admins.forEach(admin => sendSMS(admin.phone, notifyMsg));
+ await notifyAllAdmins(notifyMsg, 'ticket');
 
  res.json({ success: true });
  } catch (e) {
@@ -2362,12 +2394,106 @@ app.get('/admin', isAdmin, async (req, res) => {
 
 app.get('/admin/orders', isAdmin, async (req, res) => {
  const [orders] = await db.execute(`
- SELECT orders.*, users.email
+ SELECT orders.*, users.email, users.full_name AS user_full_name, users.phone AS user_phone
  FROM orders
  JOIN users ON orders.user_id = users.id
  ORDER BY created_at DESC
  `);
  res.render('admin/orders', { title: 'Sifariş İdarəetməsi', orders });
+});
+
+app.get('/admin/orders/export', isAdmin, async (req, res) => {
+ try {
+ const scope = String(req.query.scope || 'all').toLowerCase();
+ const selectedIds = String(req.query.ids || '')
+ .split(',')
+ .map((v) => Number(String(v || '').trim()))
+ .filter((v) => Number.isInteger(v) && v > 0);
+
+ let rows = [];
+ if (scope === 'selected') {
+ if (!selectedIds.length) {
+ return res.redirect('/admin/orders?error=Export üçün sipariş seçilməyib');
+ }
+ const placeholders = selectedIds.map(() => '?').join(',');
+ const [selectedRows] = await db.execute(
+ `SELECT o.id, o.user_id, u.full_name AS user_full_name, u.email AS user_email, u.phone AS user_phone,
+ o.product_name, o.amount, o.payment_method, o.sender_name, o.receipt_path, o.player_id, o.player_nickname,
+ o.status, o.created_at
+ FROM orders o
+ LEFT JOIN users u ON u.id = o.user_id
+ WHERE o.id IN (${placeholders})
+ ORDER BY o.created_at DESC`,
+ selectedIds
+ );
+ rows = selectedRows;
+ } else {
+ const [allRows] = await db.execute(
+ `SELECT o.id, o.user_id, u.full_name AS user_full_name, u.email AS user_email, u.phone AS user_phone,
+ o.product_name, o.amount, o.payment_method, o.sender_name, o.receipt_path, o.player_id, o.player_nickname,
+ o.status, o.created_at
+ FROM orders o
+ LEFT JOIN users u ON u.id = o.user_id
+ ORDER BY o.created_at DESC`
+ );
+ rows = allRows;
+ }
+
+ const escapeCsv = (value) => {
+ const normalized = value === null || value === undefined ? '' : String(value);
+ if (/[",\n]/.test(normalized)) {
+ return `"${normalized.replace(/"/g, '""')}"`;
+ }
+ return normalized;
+ };
+
+ const headers = [
+ 'Order ID',
+ 'User ID',
+ 'User Full Name',
+ 'User Email',
+ 'User Phone',
+ 'Product Name',
+ 'Amount',
+ 'Payment Method',
+ 'Sender Name',
+ 'Receipt Path',
+ 'Player ID',
+ 'Player Nickname',
+ 'Status',
+ 'Created At'
+ ];
+
+ const csvLines = [headers.join(',')];
+ rows.forEach((row) => {
+ const lineValues = [
+ row.id,
+ row.user_id,
+ row.user_full_name,
+ row.user_email,
+ row.user_phone,
+ row.product_name,
+ Number(row.amount || 0).toFixed(2),
+ row.payment_method,
+ row.sender_name,
+ row.receipt_path,
+ row.player_id,
+ row.player_nickname,
+ row.status,
+ row.created_at ? new Date(row.created_at).toISOString() : ''
+ ];
+ csvLines.push(lineValues.map(escapeCsv).join(','));
+ });
+
+ const nowStamp = new Date().toISOString().replace(/[:.]/g, '-');
+ const fileName = scope === 'selected' ? `orders-selected-${nowStamp}.csv` : `orders-all-${nowStamp}.csv`;
+ res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+ res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+ return res.send('\uFEFF' + csvLines.join('\n'));
+ } catch (e) {
+ console.error('Orders export error:', e.message);
+ return res.redirect('/admin/orders?error=' + encodeURIComponent('CSV export xətası: ' + e.message));
+ }
 });
 
 app.post('/admin/orders/:id/update', isAdmin, async (req, res) => {
@@ -2707,9 +2833,10 @@ app.get('/admin/home-sections', isAdmin, async (req, res) => {
 // Admin Bank Settings
 app.get('/admin/settings', isAdmin, async (req, res) => {
  const [settings] = await db.execute('SELECT * FROM settings');
+ const [admins] = await db.execute('SELECT id, full_name, phone FROM users WHERE role = "admin" ORDER BY full_name ASC');
  const settingsMap = {};
  settings.forEach(s => settingsMap[s.setting_key] = s.setting_value);
- res.render('admin/settings', { title: 'Banka, SEO və Footer Ayarları', settings: settingsMap });
+ res.render('admin/settings', { title: 'Banka, SEO, Footer və WhatsApp Ayarları', settings: settingsMap, admins });
 });
 
 app.post('/admin/settings', isAdmin, async (req, res) => {
@@ -2745,7 +2872,10 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  footer_email_label,
  footer_email_value,
  footer_bottom_text,
- footer_payment_text
+ footer_payment_text,
+ admin_whatsapp_enabled,
+ admin_whatsapp_admin_ids,
+ admin_whatsapp_events
  } = req.body;
  try {
  const [existingSettingsRows] = await db.execute('SELECT setting_key, setting_value FROM settings');
@@ -2756,6 +2886,25 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  if (incoming === undefined || incoming === null || incoming === '') return existingSettings[key] ?? fallback;
  return incoming;
  };
+
+ const hasAdminIdsInput = admin_whatsapp_admin_ids !== undefined;
+ const hasEventsInput = admin_whatsapp_events !== undefined;
+ const hasEnabledInput = admin_whatsapp_enabled !== undefined;
+
+ const selectedAdminIds = Array.isArray(admin_whatsapp_admin_ids)
+ ? admin_whatsapp_admin_ids
+ : (admin_whatsapp_admin_ids ? [admin_whatsapp_admin_ids] : []);
+ const normalizedAdminIds = [...new Set(selectedAdminIds
+ .map((value) => Number(String(value || '').trim()))
+ .filter((value) => Number.isInteger(value) && value > 0))];
+
+ const selectedEvents = Array.isArray(admin_whatsapp_events)
+ ? admin_whatsapp_events
+ : (admin_whatsapp_events ? [admin_whatsapp_events] : []);
+ const allowedEventKeys = ['order', 'ticket', 'refund', 'topup', 'all'];
+ const normalizedEvents = [...new Set(selectedEvents
+ .map((value) => String(value || '').trim().toLowerCase())
+ .filter((value) => allowedEventKeys.includes(value)))];
 
  const updates = [
  { key: 'bank_card', value: keep('bank_card', bank_card, '') },
@@ -2789,7 +2938,10 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  { key: 'footer_email_label', value: keep('footer_email_label', normalizeOptionalString(footer_email_label), '') },
  { key: 'footer_email_value', value: keep('footer_email_value', normalizeOptionalString(footer_email_value), '') },
  { key: 'footer_bottom_text', value: keep('footer_bottom_text', normalizeOptionalString(footer_bottom_text), '') },
- { key: 'footer_payment_text', value: keep('footer_payment_text', normalizeOptionalString(footer_payment_text), '') }
+ { key: 'footer_payment_text', value: keep('footer_payment_text', normalizeOptionalString(footer_payment_text), '') },
+ { key: 'admin_whatsapp_enabled', value: keep('admin_whatsapp_enabled', hasEnabledInput ? (admin_whatsapp_enabled ? '1' : '0') : undefined, '1') },
+ { key: 'admin_whatsapp_admin_ids', value: keep('admin_whatsapp_admin_ids', hasAdminIdsInput ? normalizedAdminIds.join(',') : undefined, '') },
+ { key: 'admin_whatsapp_events', value: keep('admin_whatsapp_events', hasEventsInput ? normalizedEvents.join(',') : undefined, 'order,ticket,refund,topup') }
  ];
 
  for (const s of updates) {
