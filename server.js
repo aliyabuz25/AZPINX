@@ -125,6 +125,14 @@ const TRANSLATE_CONFIG = {
  SUPPORTED: ['az', 'tr', 'ru']
 };
 
+const SECURITY_CONFIG = {
+ RATE_LIMIT_WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 1000),
+ RATE_LIMIT_MAX_AUTH: Number(process.env.RATE_LIMIT_MAX_AUTH || 25),
+ RATE_LIMIT_MAX_API: Number(process.env.RATE_LIMIT_MAX_API || 80),
+ RATE_LIMIT_MAX_DEFAULT: Number(process.env.RATE_LIMIT_MAX_DEFAULT || 220)
+};
+const requestGuardStore = new Map();
+
 const REFERRAL_TARGET = 5;
 const REFERRAL_REWARD_LABEL = '60 UC';
 const VPN_BLOCK_ENABLED = process.env.VPN_BLOCK_ENABLED !== '0';
@@ -395,7 +403,35 @@ let db;
  { key: 'bank_card', value: '4127 0000 1111 2222' },
  { key: 'bank_name', value: 'ABB BANK' },
  { key: 'bank_holder', value: 'AZPINX ADMIN' },
- { key: 'reseller_discount_percent', value: '8' }
+ { key: 'reseller_discount_percent', value: '8' },
+ { key: 'seo_meta_title', value: 'AZPINX - Oyun İçi Məhsullar və Pin Satışı' },
+ { key: 'seo_meta_description', value: 'AZPINX üzərindən oyun içi məhsullar, UC, VP, pin və rəqəmsal kodları təhlükəsiz və sürətli alın.' },
+ { key: 'seo_meta_keywords', value: 'azpinx, pubg uc, valorant vp, oyun içi məhsullar, pin satışı, rəqəmsal kod' },
+ { key: 'seo_robots', value: 'index,follow' },
+ { key: 'footer_about_text', value: 'AZPINX - Azərbaycanda bütün oyunlar üçün ən ucuz e-pinlərin rəsmi satış platformasıdır. Biz 7/24 xidmətinizdəyik.' },
+ { key: 'footer_trust_1', value: 'SSL Təhlükəsiz' },
+ { key: 'footer_trust_2', value: 'Lisenziyalı' },
+ { key: 'footer_quick_title', value: 'Sürətli Keçidlər' },
+ { key: 'footer_quick_1_label', value: 'Ana Səhifə' },
+ { key: 'footer_quick_1_url', value: '/' },
+ { key: 'footer_quick_2_label', value: 'FAQ' },
+ { key: 'footer_quick_2_url', value: '/faq' },
+ { key: 'footer_quick_3_label', value: 'Qaydalar və Şərtlər' },
+ { key: 'footer_quick_3_url', value: '/terms' },
+ { key: 'footer_account_title', value: 'Hesabım' },
+ { key: 'footer_account_1_label', value: 'Profil' },
+ { key: 'footer_account_1_url', value: '/profile' },
+ { key: 'footer_account_2_label', value: 'Texniki Dəstək' },
+ { key: 'footer_account_2_url', value: '/tickets' },
+ { key: 'footer_account_3_label', value: 'İstək Siyahısı' },
+ { key: 'footer_account_3_url', value: '/wishlist' },
+ { key: 'footer_contact_title', value: 'Bizimlə Əlaqə' },
+ { key: 'footer_whatsapp_label', value: 'WhatsApp' },
+ { key: 'footer_whatsapp_value', value: '0107292236' },
+ { key: 'footer_email_label', value: 'E-poçt' },
+ { key: 'footer_email_value', value: 'destek@azpinx.com' },
+ { key: 'footer_bottom_text', value: '© 2026 AZPINX - Bütün hüquqlar qorunur.' },
+ { key: 'footer_payment_text', value: 'M10 / MilliÖN / eManat' }
  ];
 
  for (const s of defaultSettings) {
@@ -521,6 +557,15 @@ function normalizeOptionalString(value) {
  if (typeof value !== 'string') return value;
  const trimmed = value.trim();
  return trimmed === '' ? null : trimmed;
+}
+
+function normalizeFooterLink(value, fallback = '#') {
+ const normalized = normalizeOptionalString(value);
+ if (!normalized) return fallback;
+ const raw = String(normalized).trim();
+ if (raw.startsWith('/')) return raw;
+ if (/^https?:\/\//i.test(raw)) return raw;
+ return fallback;
 }
 
 function resolveSliderLink(body = {}) {
@@ -662,6 +707,51 @@ async function notifyAllAdmins(message) {
  }
 }
 
+function extractPayloadStrings(value, maxDepth = 4, depth = 0, bucket = []) {
+ if (depth > maxDepth || value === null || value === undefined) return bucket;
+ if (typeof value === 'string') {
+ bucket.push(value);
+ return bucket;
+ }
+ if (typeof value === 'number' || typeof value === 'boolean') {
+ bucket.push(String(value));
+ return bucket;
+ }
+ if (Array.isArray(value)) {
+ value.forEach((item) => extractPayloadStrings(item, maxDepth, depth + 1, bucket));
+ return bucket;
+ }
+ if (typeof value === 'object') {
+ Object.values(value).forEach((v) => extractPayloadStrings(v, maxDepth, depth + 1, bucket));
+ }
+ return bucket;
+}
+
+function hasSuspiciousSqlPattern(payload = {}) {
+ const joined = extractPayloadStrings(payload).join(' ').toLowerCase();
+ if (!joined) return false;
+ const patterns = [
+ /\bunion\s+select\b/i,
+ /\bunion\s+all\s+select\b/i,
+ /\binformation_schema\b/i,
+ /\b(?:sleep|benchmark)\s*\(/i,
+ /\b(?:load_file|into\s+outfile)\b/i,
+ /(?:;|\s)\s*(?:drop|truncate|alter|create)\s+(?:table|database)\b/i,
+ /(?:')\s*(?:or|and)\s*(?:'[^']*'|\d+)/i,
+ /\bor\s+1\s*=\s*1\b/i,
+ /\band\s+1\s*=\s*1\b/i,
+ /\/\*![0-9]{0,5}/i,
+ /(?:--|#)\s*[^\r\n]*/
+ ];
+ return patterns.some((pattern) => pattern.test(joined));
+}
+
+function getRateLimitBucket(pathname) {
+ if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/verify-otp')) return 'auth';
+ if (pathname.startsWith('/api/')) return 'api';
+ return 'default';
+}
+
 async function translateText(text, targetLang) {
  const raw = String(text || '').trim();
  if (!raw) return '';
@@ -744,6 +834,76 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(express.json({ limit: '100mb' }));
 app.set('trust proxy', 1);
+
+app.use((req, res, next) => {
+ res.setHeader('X-Content-Type-Options', 'nosniff');
+ res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+ res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+ res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+ res.setHeader('X-XSS-Protection', '1; mode=block');
+ const noindexPaths = /^\/(admin|login|register|verify-otp|profile|checkout|cart|tickets|wishlist|api|balance)/i;
+ if (noindexPaths.test(String(req.path || ''))) {
+ res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+ }
+ next();
+});
+
+app.use((req, res, next) => {
+ const pathValue = String(req.path || '');
+ const skipPrefixes = ['/css/', '/js/', '/images/', '/uploads/', '/favicon'];
+ if (skipPrefixes.some((prefix) => pathValue.startsWith(prefix))) return next();
+
+ const ip = getClientIp(req) || 'unknown';
+ const bucket = getRateLimitBucket(pathValue);
+ const now = Date.now();
+ const key = `${ip}:${bucket}`;
+ const current = requestGuardStore.get(key) || { startAt: now, hits: 0 };
+ if (now - current.startAt > SECURITY_CONFIG.RATE_LIMIT_WINDOW_MS) {
+ current.startAt = now;
+ current.hits = 0;
+ }
+ current.hits += 1;
+ requestGuardStore.set(key, current);
+
+ const maxHits = bucket === 'auth'
+ ? SECURITY_CONFIG.RATE_LIMIT_MAX_AUTH
+ : (bucket === 'api' ? SECURITY_CONFIG.RATE_LIMIT_MAX_API : SECURITY_CONFIG.RATE_LIMIT_MAX_DEFAULT);
+ if (current.hits > maxHits) {
+ return res.status(429).json({ success: false, error: 'Çox sayda sorğu göndərildi. Zəhmət olmasa bir az sonra yenidən cəhd edin.' });
+ }
+ next();
+});
+
+app.use((req, res, next) => {
+ const userAgent = String(req.headers['user-agent'] || '').toLowerCase();
+ const suspiciousBot = /(sqlmap|nmap|nikto|acunetix|masscan|crawler|scrapy|python-requests|headlesschrome)/i.test(userAgent);
+ const sensitivePath = /^\/(admin|login|register|api|checkout|process-order|balance)/i.test(String(req.path || ''));
+ if (suspiciousBot && sensitivePath) {
+ return res.status(403).json({ success: false, error: 'Robot trafik bloklandı.' });
+ }
+ next();
+});
+
+app.use((req, res, next) => {
+ const scanPayload = { query: req.query, params: req.params };
+ if (hasSuspiciousSqlPattern(scanPayload)) {
+ return res.status(400).json({ success: false, error: 'Şübhəli sorğu aşkarlandı və bloklandı.' });
+ }
+ next();
+});
+
+app.use((req, res, next) => {
+ const method = String(req.method || 'GET').toUpperCase();
+ const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+ if (!isMutating) return next();
+
+ const payload = { query: req.query, params: req.params, body: req.body };
+ if (hasSuspiciousSqlPattern(payload)) {
+ return res.status(400).json({ success: false, error: 'Şübhəli sorğu aşkarlandı və bloklandı.' });
+ }
+ next();
+});
+
 app.use(session({
  secret: process.env.SESSION_SECRET || 'azpinx_secret_key',
  resave: false,
@@ -823,6 +983,30 @@ app.use(async (req, res, next) => {
  res.locals.announcements = [];
  }
  next();
+});
+
+app.get('/robots.txt', async (req, res) => {
+ try {
+ const [rows] = await db.execute('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1', ['seo_robots']);
+ const robotsSetting = rows.length ? String(rows[0].setting_value || '').trim().toLowerCase() : 'index,follow';
+ const disallowAll = robotsSetting === 'noindex,nofollow';
+ const lines = [
+ 'User-agent: *',
+ disallowAll ? 'Disallow: /' : 'Disallow: /admin',
+ disallowAll ? '' : 'Disallow: /login',
+ disallowAll ? '' : 'Disallow: /register',
+ disallowAll ? '' : 'Disallow: /profile',
+ disallowAll ? '' : 'Disallow: /checkout',
+ disallowAll ? '' : 'Disallow: /cart',
+ disallowAll ? '' : 'Disallow: /tickets',
+ disallowAll ? '' : 'Disallow: /wishlist',
+ disallowAll ? '' : 'Disallow: /api'
+ ].filter(Boolean);
+
+ return res.type('text/plain').send(lines.join('\n'));
+ } catch (e) {
+ return res.type('text/plain').send('User-agent: *\nDisallow: /admin\nDisallow: /api');
+ }
 });
 
 // Admin Middleware
@@ -2419,21 +2603,94 @@ app.get('/admin/settings', isAdmin, async (req, res) => {
  const [settings] = await db.execute('SELECT * FROM settings');
  const settingsMap = {};
  settings.forEach(s => settingsMap[s.setting_key] = s.setting_value);
- res.render('admin/settings', { title: 'Banka Məlumatları', settings: settingsMap });
+ res.render('admin/settings', { title: 'Banka, SEO və Footer Ayarları', settings: settingsMap });
 });
 
 app.post('/admin/settings', isAdmin, async (req, res) => {
- const { bank_card, bank_name, bank_holder, reseller_discount_percent } = req.body;
+ const {
+ bank_card,
+ bank_name,
+ bank_holder,
+ reseller_discount_percent,
+ seo_meta_title,
+ seo_meta_description,
+ seo_meta_keywords,
+ seo_robots,
+ footer_about_text,
+ footer_trust_1,
+ footer_trust_2,
+ footer_quick_title,
+ footer_quick_1_label,
+ footer_quick_1_url,
+ footer_quick_2_label,
+ footer_quick_2_url,
+ footer_quick_3_label,
+ footer_quick_3_url,
+ footer_account_title,
+ footer_account_1_label,
+ footer_account_1_url,
+ footer_account_2_label,
+ footer_account_2_url,
+ footer_account_3_label,
+ footer_account_3_url,
+ footer_contact_title,
+ footer_whatsapp_label,
+ footer_whatsapp_value,
+ footer_email_label,
+ footer_email_value,
+ footer_bottom_text,
+ footer_payment_text
+ } = req.body;
  try {
+ const [existingSettingsRows] = await db.execute('SELECT setting_key, setting_value FROM settings');
+ const existingSettings = {};
+ existingSettingsRows.forEach((row) => { existingSettings[row.setting_key] = row.setting_value; });
+
+ const keep = (key, incoming, fallback = '') => {
+ if (incoming === undefined || incoming === null || incoming === '') return existingSettings[key] ?? fallback;
+ return incoming;
+ };
+
  const updates = [
- { key: 'bank_card', value: bank_card },
- { key: 'bank_name', value: bank_name },
- { key: 'bank_holder', value: bank_holder },
- { key: 'reseller_discount_percent', value: String(clampPercent(reseller_discount_percent, 0, 90)) }
+ { key: 'bank_card', value: keep('bank_card', bank_card, '') },
+ { key: 'bank_name', value: keep('bank_name', bank_name, '') },
+ { key: 'bank_holder', value: keep('bank_holder', bank_holder, '') },
+ { key: 'reseller_discount_percent', value: String(clampPercent(keep('reseller_discount_percent', reseller_discount_percent, '8'), 0, 90)) },
+ { key: 'seo_meta_title', value: keep('seo_meta_title', normalizeOptionalString(seo_meta_title), '') },
+ { key: 'seo_meta_description', value: keep('seo_meta_description', normalizeOptionalString(seo_meta_description), '') },
+ { key: 'seo_meta_keywords', value: keep('seo_meta_keywords', normalizeOptionalString(seo_meta_keywords), '') },
+ { key: 'seo_robots', value: ['index,follow', 'noindex,nofollow'].includes(String(keep('seo_robots', seo_robots, 'index,follow'))) ? String(keep('seo_robots', seo_robots, 'index,follow')) : 'index,follow' },
+ { key: 'footer_about_text', value: keep('footer_about_text', normalizeOptionalString(footer_about_text), '') },
+ { key: 'footer_trust_1', value: keep('footer_trust_1', normalizeOptionalString(footer_trust_1), '') },
+ { key: 'footer_trust_2', value: keep('footer_trust_2', normalizeOptionalString(footer_trust_2), '') },
+ { key: 'footer_quick_title', value: keep('footer_quick_title', normalizeOptionalString(footer_quick_title), '') },
+ { key: 'footer_quick_1_label', value: keep('footer_quick_1_label', normalizeOptionalString(footer_quick_1_label), '') },
+ { key: 'footer_quick_1_url', value: keep('footer_quick_1_url', normalizeFooterLink(footer_quick_1_url, '/'), '/') },
+ { key: 'footer_quick_2_label', value: keep('footer_quick_2_label', normalizeOptionalString(footer_quick_2_label), '') },
+ { key: 'footer_quick_2_url', value: keep('footer_quick_2_url', normalizeFooterLink(footer_quick_2_url, '/faq'), '/faq') },
+ { key: 'footer_quick_3_label', value: keep('footer_quick_3_label', normalizeOptionalString(footer_quick_3_label), '') },
+ { key: 'footer_quick_3_url', value: keep('footer_quick_3_url', normalizeFooterLink(footer_quick_3_url, '/terms'), '/terms') },
+ { key: 'footer_account_title', value: keep('footer_account_title', normalizeOptionalString(footer_account_title), '') },
+ { key: 'footer_account_1_label', value: keep('footer_account_1_label', normalizeOptionalString(footer_account_1_label), '') },
+ { key: 'footer_account_1_url', value: keep('footer_account_1_url', normalizeFooterLink(footer_account_1_url, '/profile'), '/profile') },
+ { key: 'footer_account_2_label', value: keep('footer_account_2_label', normalizeOptionalString(footer_account_2_label), '') },
+ { key: 'footer_account_2_url', value: keep('footer_account_2_url', normalizeFooterLink(footer_account_2_url, '/tickets'), '/tickets') },
+ { key: 'footer_account_3_label', value: keep('footer_account_3_label', normalizeOptionalString(footer_account_3_label), '') },
+ { key: 'footer_account_3_url', value: keep('footer_account_3_url', normalizeFooterLink(footer_account_3_url, '/wishlist'), '/wishlist') },
+ { key: 'footer_contact_title', value: keep('footer_contact_title', normalizeOptionalString(footer_contact_title), '') },
+ { key: 'footer_whatsapp_label', value: keep('footer_whatsapp_label', normalizeOptionalString(footer_whatsapp_label), '') },
+ { key: 'footer_whatsapp_value', value: keep('footer_whatsapp_value', normalizeOptionalString(footer_whatsapp_value), '') },
+ { key: 'footer_email_label', value: keep('footer_email_label', normalizeOptionalString(footer_email_label), '') },
+ { key: 'footer_email_value', value: keep('footer_email_value', normalizeOptionalString(footer_email_value), '') },
+ { key: 'footer_bottom_text', value: keep('footer_bottom_text', normalizeOptionalString(footer_bottom_text), '') },
+ { key: 'footer_payment_text', value: keep('footer_payment_text', normalizeOptionalString(footer_payment_text), '') }
  ];
 
  for (const s of updates) {
- await db.execute('UPDATE settings SET setting_value = ? WHERE setting_key = ?', [s.value, s.key]);
+ await db.execute(
+ 'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+ [s.key, s.value]
+ );
  }
  res.redirect('/admin/settings?success=Məlumatlar yeniləndi');
  } catch (e) {

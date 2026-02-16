@@ -144,69 +144,41 @@ document.addEventListener('DOMContentLoaded', () => {
  // Initial UI load
  updateCartUI();
 
- // --- Slider Logic (Enhanced) ---
- const sliders = document.querySelectorAll('.slider-item');
- const sliderPrev = document.getElementById('sliderPrev');
- const sliderNext = document.getElementById('sliderNext');
- const sliderDots = document.querySelectorAll('.slider-dot');
-
- if (sliders.length > 1) {
- let current = 0;
- let sliderTimer = null;
- const sliderContainer = document.querySelector('.slider-container');
+ // --- Hero Slider (Swiper) ---
+ const sliderContainer = document.querySelector('.hero-swiper');
+ const sliders = sliderContainer ? sliderContainer.querySelectorAll('.slider-item') : [];
  let pointerGlowRAF = null;
 
- const setSlide = (index) => {
- current = (index + sliders.length) % sliders.length;
- sliders.forEach((slide, i) => {
- slide.classList.toggle('active', i === current);
- slide.style.transform = i === current ? 'scale(1)' : '';
- });
- sliderDots.forEach((dot, i) => {
- const isActive = i === current;
- dot.classList.toggle('active', isActive);
- dot.setAttribute('aria-current', isActive ? 'true' : 'false');
- });
- };
-
- const startAuto = () => {
- if (sliderTimer) clearInterval(sliderTimer);
- sliderTimer = setInterval(() => {
- setSlide(current + 1);
- }, 6000);
- };
-
- sliderPrev && sliderPrev.addEventListener('click', () => {
- setSlide(current - 1);
- startAuto();
- });
-
- sliderNext && sliderNext.addEventListener('click', () => {
- setSlide(current + 1);
- startAuto();
- });
-
- sliderDots.forEach((dot) => {
- dot.addEventListener('click', () => {
- const index = Number(dot.getAttribute('data-slide-index'));
- if (!Number.isNaN(index)) {
- setSlide(index);
- startAuto();
+ if (sliderContainer && sliders.length > 1 && window.Swiper) {
+ const heroSwiper = new Swiper('.hero-swiper', {
+ loop: true,
+ speed: 880,
+ effect: 'fade',
+ fadeEffect: { crossFade: true },
+ autoplay: {
+ delay: 5600,
+ disableOnInteraction: false
+ },
+ navigation: {
+ prevEl: '#sliderPrev',
+ nextEl: '#sliderNext'
+ },
+ pagination: {
+ el: '#sliderDots',
+ clickable: true,
+ renderBullet: function (index, className) {
+ return `<button type="button" class="slider-dot ${className}" aria-label="Banner ${index + 1}"></button>`;
+ }
  }
  });
- });
 
- setSlide(0);
- startAuto();
-
- if (sliderContainer) {
  sliderContainer.addEventListener('mousemove', (event) => {
  if (window.innerWidth < 992) return;
+ const activeSlide = sliderContainer.querySelector('.swiper-slide-active');
+ if (!activeSlide) return;
  const rect = sliderContainer.getBoundingClientRect();
  const x = ((event.clientX - rect.left) / rect.width) - 0.5;
  const y = ((event.clientY - rect.top) / rect.height) - 0.5;
- const activeSlide = sliders[current];
- if (!activeSlide) return;
 
  if (pointerGlowRAF) cancelAnimationFrame(pointerGlowRAF);
  pointerGlowRAF = requestAnimationFrame(() => {
@@ -215,10 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
  });
 
  sliderContainer.addEventListener('mouseleave', () => {
- const activeSlide = sliders[current];
+ const activeSlide = sliderContainer.querySelector('.swiper-slide-active');
  if (activeSlide) activeSlide.style.transform = 'scale(1)';
  });
- }
+
+ heroSwiper.on('slideChangeTransitionStart', () => {
+ const activeSlide = sliderContainer.querySelector('.swiper-slide-active');
+ if (activeSlide) activeSlide.style.transform = 'scale(1)';
+ });
  }
 
  sliders.forEach((slide) => {
@@ -227,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
  if (!hasLink) return;
 
  slide.addEventListener('click', (event) => {
- // Don't hijack slider controls or the explicit CTA button.
  if (event.target.closest('.slider-controls') || event.target.closest('a')) return;
  window.location.href = link;
  });

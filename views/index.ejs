@@ -4,9 +4,10 @@
  <!-- Hero Section -->
  <section class="hero">
 
- <div class="slider-container">
- <% sliders.forEach(function(slider, index) { %>
- <div class="slider-item <%= index === 0 ? 'active' : '' %>"
+ <div class="slider-container swiper hero-swiper">
+ <div class="swiper-wrapper">
+ <% sliders.forEach(function(slider) { %>
+ <div class="slider-item swiper-slide"
  data-link="<%= slider.link || '' %>"
  data-has-link="<%= !!(slider.link && slider.link !== '#') %>"
  style="background-image: url('<%= slider.image %>');">
@@ -23,26 +24,19 @@
  </p>
  <% } %>
  <% if (slider.link && slider.link !== '#') { %>
- <a href="<%= slider.link %>" class="btn btn-primary hero-cta-btn">Ətraflı bax</a>
+ <a href="<%= slider.link %>" class="btn btn-primary hero-cta-btn">İndi bax <i class="ri-arrow-right-line"></i></a>
  <% } %>
  </div>
  <% } %>
  </div>
  <% }) %>
+ </div>
  <% if (sliders.length > 1) { %>
  <div class="slider-controls">
  <button type="button" class="slider-nav-btn" id="sliderPrev" aria-label="Əvvəlki banner">
  <i class="ri-arrow-left-s-line"></i>
  </button>
- <div class="slider-dots" id="sliderDots">
- <% sliders.forEach(function(_, idx) { %>
- <button
- type="button"
- class="slider-dot <%= idx === 0 ? 'active' : '' %>"
- data-slide-index="<%= idx %>"
- aria-label="Banner <%= idx + 1 %>"></button>
- <% }) %>
- </div>
+ <div class="slider-dots" id="sliderDots"></div>
  <button type="button" class="slider-nav-btn" id="sliderNext" aria-label="Növbəti banner">
  <i class="ri-arrow-right-s-line"></i>
  </button>

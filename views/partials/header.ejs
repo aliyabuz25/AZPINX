@@ -7,6 +7,17 @@
  <title>
  <%= title %>
  </title>
+ <% const seoTitle = (settings && settings.seo_meta_title) ? settings.seo_meta_title : 'AZPINX'; %>
+ <% const seoDescription = (settings && settings.seo_meta_description) ? settings.seo_meta_description : 'AZPINX rəqəmsal məhsul platforması'; %>
+ <% const seoKeywords = (settings && settings.seo_meta_keywords) ? settings.seo_meta_keywords : 'azpinx, oyun, pin'; %>
+ <% const seoRobots = (settings && settings.seo_robots) ? settings.seo_robots : 'index,follow'; %>
+ <meta name="description" content="<%= seoDescription %>">
+ <meta name="keywords" content="<%= seoKeywords %>">
+ <meta name="robots" content="<%= seoRobots %>">
+ <meta property="og:site_name" content="AZPINX">
+ <meta property="og:title" content="<%= seoTitle %>">
+ <meta property="og:description" content="<%= seoDescription %>">
+ <meta property="og:type" content="website">
  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
  rel="stylesheet">
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
@@ -15,8 +26,9 @@
  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+ <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
  <link rel="stylesheet" href="/css/transition.css?v=20260216-4">
- <link rel="stylesheet" href="/css/style.css?v=20260216-3">
+ <link rel="stylesheet" href="/css/style.css?v=20260216-4">
  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 </head>
 

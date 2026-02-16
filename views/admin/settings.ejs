@@ -54,6 +54,186 @@
  </form>
  </div>
  </div>
+
+ <div class="col-md-6">
+ <div class="card card-primary">
+ <div class="card-header">
+ <h3 class="card-title">SEO Ayarları</h3>
+ </div>
+ <form action="/admin/settings" method="POST">
+ <div class="card-body">
+ <input type="hidden" name="bank_card" value="<%= settings.bank_card || '' %>">
+ <input type="hidden" name="bank_holder" value="<%= settings.bank_holder || '' %>">
+ <input type="hidden" name="bank_name" value="<%= settings.bank_name || '' %>">
+ <input type="hidden" name="reseller_discount_percent" value="<%= settings.reseller_discount_percent || '8' %>">
+
+ <div class="form-group">
+ <label for="seo_meta_title">Meta Title</label>
+ <input type="text" name="seo_meta_title" id="seo_meta_title" class="form-control" value="<%= settings.seo_meta_title || '' %>" maxlength="70">
+ </div>
+ <div class="form-group">
+ <label for="seo_meta_description">Meta Description</label>
+ <textarea name="seo_meta_description" id="seo_meta_description" class="form-control" rows="4" maxlength="170"><%= settings.seo_meta_description || '' %></textarea>
+ </div>
+ <div class="form-group">
+ <label for="seo_meta_keywords">Meta Keywords</label>
+ <input type="text" name="seo_meta_keywords" id="seo_meta_keywords" class="form-control" value="<%= settings.seo_meta_keywords || '' %>" placeholder="azpinx, pubg uc, valorant vp">
+ </div>
+ <div class="form-group">
+ <label for="seo_robots">Robots</label>
+ <select name="seo_robots" id="seo_robots" class="form-control">
+ <option value="index,follow" <%= (settings.seo_robots || 'index,follow') === 'index,follow' ? 'selected' : '' %>>index,follow</option>
+ <option value="noindex,nofollow" <%= (settings.seo_robots || '') === 'noindex,nofollow' ? 'selected' : '' %>>noindex,nofollow</option>
+ </select>
+ </div>
+ </div>
+ <div class="card-footer">
+ <button type="submit" class="btn btn-primary">SEO Yadda Saxla</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+
+ <div class="row mt-3">
+ <div class="col-12">
+ <div class="card card-primary">
+ <div class="card-header">
+ <h3 class="card-title">Footer Məzmunu (Tam İdarəetmə)</h3>
+ </div>
+ <form action="/admin/settings" method="POST">
+ <div class="card-body">
+ <div class="form-group">
+ <label for="footer_about_text">Haqqımızda mətni</label>
+ <textarea name="footer_about_text" id="footer_about_text" class="form-control" rows="3"><%= settings.footer_about_text || '' %></textarea>
+ </div>
+
+ <div class="form-row">
+ <div class="form-group col-md-6">
+ <label for="footer_trust_1">Güvən nişanı 1</label>
+ <input type="text" name="footer_trust_1" id="footer_trust_1" class="form-control" value="<%= settings.footer_trust_1 || '' %>">
+ </div>
+ <div class="form-group col-md-6">
+ <label for="footer_trust_2">Güvən nişanı 2</label>
+ <input type="text" name="footer_trust_2" id="footer_trust_2" class="form-control" value="<%= settings.footer_trust_2 || '' %>">
+ </div>
+ </div>
+
+ <hr>
+ <h6>Sürətli Keçidlər</h6>
+ <div class="form-row">
+ <div class="form-group col-md-4">
+ <label for="footer_quick_title">Bölmə başlığı</label>
+ <input type="text" name="footer_quick_title" id="footer_quick_title" class="form-control" value="<%= settings.footer_quick_title || '' %>">
+ </div>
+ <div class="form-group col-md-4">
+ <label for="footer_quick_1_label">Link 1 Mətn</label>
+ <input type="text" name="footer_quick_1_label" id="footer_quick_1_label" class="form-control" value="<%= settings.footer_quick_1_label || '' %>">
+ </div>
+ <div class="form-group col-md-4">
+ <label for="footer_quick_1_url">Link 1 URL</label>
+ <input type="text" name="footer_quick_1_url" id="footer_quick_1_url" class="form-control" value="<%= settings.footer_quick_1_url || '' %>">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group col-md-6">
+ <label for="footer_quick_2_label">Link 2 Mətn</label>
+ <input type="text" name="footer_quick_2_label" id="footer_quick_2_label" class="form-control" value="<%= settings.footer_quick_2_label || '' %>">
+ </div>
+ <div class="form-group col-md-6">
+ <label for="footer_quick_2_url">Link 2 URL</label>
+ <input type="text" name="footer_quick_2_url" id="footer_quick_2_url" class="form-control" value="<%= settings.footer_quick_2_url || '' %>">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group col-md-6">
+ <label for="footer_quick_3_label">Link 3 Mətn</label>
+ <input type="text" name="footer_quick_3_label" id="footer_quick_3_label" class="form-control" value="<%= settings.footer_quick_3_label || '' %>">
+ </div>
+ <div class="form-group col-md-6">
+ <label for="footer_quick_3_url">Link 3 URL</label>
+ <input type="text" name="footer_quick_3_url" id="footer_quick_3_url" class="form-control" value="<%= settings.footer_quick_3_url || '' %>">
+ </div>
+ </div>
+
+ <hr>
+ <h6>Hesabım Bölməsi</h6>
+ <div class="form-row">
+ <div class="form-group col-md-4">
+ <label for="footer_account_title">Bölmə başlığı</label>
+ <input type="text" name="footer_account_title" id="footer_account_title" class="form-control" value="<%= settings.footer_account_title || '' %>">
+ </div>
+ <div class="form-group col-md-4">
+ <label for="footer_account_1_label">Link 1 Mətn</label>
+ <input type="text" name="footer_account_1_label" id="footer_account_1_label" class="form-control" value="<%= settings.footer_account_1_label || '' %>">
+ </div>
+ <div class="form-group col-md-4">
+ <label for="footer_account_1_url">Link 1 URL</label>
+ <input type="text" name="footer_account_1_url" id="footer_account_1_url" class="form-control" value="<%= settings.footer_account_1_url || '' %>">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group col-md-6">
+ <label for="footer_account_2_label">Link 2 Mətn</label>
+ <input type="text" name="footer_account_2_label" id="footer_account_2_label" class="form-control" value="<%= settings.footer_account_2_label || '' %>">
+ </div>
+ <div class="form-group col-md-6">
+ <label for="footer_account_2_url">Link 2 URL</label>
+ <input type="text" name="footer_account_2_url" id="footer_account_2_url" class="form-control" value="<%= settings.footer_account_2_url || '' %>">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group col-md-6">
+ <label for="footer_account_3_label">Link 3 Mətn</label>
+ <input type="text" name="footer_account_3_label" id="footer_account_3_label" class="form-control" value="<%= settings.footer_account_3_label || '' %>">
+ </div>
+ <div class="form-group col-md-6">
+ <label for="footer_account_3_url">Link 3 URL</label>
+ <input type="text" name="footer_account_3_url" id="footer_account_3_url" class="form-control" value="<%= settings.footer_account_3_url || '' %>">
+ </div>
+ </div>
+
+ <hr>
+ <h6>Əlaqə və Alt Sətir</h6>
+ <div class="form-row">
+ <div class="form-group col-md-4">
+ <label for="footer_contact_title">Əlaqə başlığı</label>
+ <input type="text" name="footer_contact_title" id="footer_contact_title" class="form-control" value="<%= settings.footer_contact_title || '' %>">
+ </div>
+ <div class="form-group col-md-4">
+ <label for="footer_whatsapp_label">WhatsApp label</label>
+ <input type="text" name="footer_whatsapp_label" id="footer_whatsapp_label" class="form-control" value="<%= settings.footer_whatsapp_label || '' %>">
+ </div>
+ <div class="form-group col-md-4">
+ <label for="footer_whatsapp_value">WhatsApp dəyəri</label>
+ <input type="text" name="footer_whatsapp_value" id="footer_whatsapp_value" class="form-control" value="<%= settings.footer_whatsapp_value || '' %>">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group col-md-6">
+ <label for="footer_email_label">E-poçt label</label>
+ <input type="text" name="footer_email_label" id="footer_email_label" class="form-control" value="<%= settings.footer_email_label || '' %>">
+ </div>
+ <div class="form-group col-md-6">
+ <label for="footer_email_value">E-poçt dəyəri</label>
+ <input type="text" name="footer_email_value" id="footer_email_value" class="form-control" value="<%= settings.footer_email_value || '' %>">
+ </div>
+ </div>
+ <div class="form-group">
+ <label for="footer_bottom_text">Alt footer mətni</label>
+ <input type="text" name="footer_bottom_text" id="footer_bottom_text" class="form-control" value="<%= settings.footer_bottom_text || '' %>">
+ </div>
+ <div class="form-group">
+ <label for="footer_payment_text">Ödəniş ikonları yanında mətn</label>
+ <input type="text" name="footer_payment_text" id="footer_payment_text" class="form-control" value="<%= settings.footer_payment_text || '' %>">
+ </div>
+ </div>
+ <div class="card-footer">
+ <button type="submit" class="btn btn-primary">Footer Yadda Saxla</button>
+ </div>
+ </form>
+ </div>
+ </div>
  </div>
 
  <style>

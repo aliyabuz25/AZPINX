@@ -1,54 +1,77 @@
 <footer>
+ <% const footerAboutText = (settings && settings.footer_about_text) ? settings.footer_about_text : 'AZPINX - Azərbaycanda bütün oyunlar üçün ən ucuz e-pinlərin rəsmi satış platformasıdır. Biz 7/24 xidmətinizdəyik.'; %>
+ <% const footerTrust1 = (settings && settings.footer_trust_1) ? settings.footer_trust_1 : 'SSL Təhlükəsiz'; %>
+ <% const footerTrust2 = (settings && settings.footer_trust_2) ? settings.footer_trust_2 : 'Lisenziyalı'; %>
+ <% const footerQuickTitle = (settings && settings.footer_quick_title) ? settings.footer_quick_title : 'Sürətli Keçidlər'; %>
+ <% const footerQuick1Label = (settings && settings.footer_quick_1_label) ? settings.footer_quick_1_label : 'Ana Səhifə'; %>
+ <% const footerQuick1Url = (settings && settings.footer_quick_1_url) ? settings.footer_quick_1_url : '/'; %>
+ <% const footerQuick2Label = (settings && settings.footer_quick_2_label) ? settings.footer_quick_2_label : 'FAQ'; %>
+ <% const footerQuick2Url = (settings && settings.footer_quick_2_url) ? settings.footer_quick_2_url : '/faq'; %>
+ <% const footerQuick3Label = (settings && settings.footer_quick_3_label) ? settings.footer_quick_3_label : 'Qaydalar və Şərtlər'; %>
+ <% const footerQuick3Url = (settings && settings.footer_quick_3_url) ? settings.footer_quick_3_url : '/terms'; %>
+ <% const footerAccountTitle = (settings && settings.footer_account_title) ? settings.footer_account_title : 'Hesabım'; %>
+ <% const footerAccount1Label = (settings && settings.footer_account_1_label) ? settings.footer_account_1_label : 'Profil'; %>
+ <% const footerAccount1Url = (settings && settings.footer_account_1_url) ? settings.footer_account_1_url : '/profile'; %>
+ <% const footerAccount2Label = (settings && settings.footer_account_2_label) ? settings.footer_account_2_label : 'Texniki Dəstək'; %>
+ <% const footerAccount2Url = (settings && settings.footer_account_2_url) ? settings.footer_account_2_url : '/tickets'; %>
+ <% const footerAccount3Label = (settings && settings.footer_account_3_label) ? settings.footer_account_3_label : 'İstək Siyahısı'; %>
+ <% const footerAccount3Url = (settings && settings.footer_account_3_url) ? settings.footer_account_3_url : '/wishlist'; %>
+ <% const footerContactTitle = (settings && settings.footer_contact_title) ? settings.footer_contact_title : 'Bizimlə Əlaqə'; %>
+ <% const footerWhatsappLabel = (settings && settings.footer_whatsapp_label) ? settings.footer_whatsapp_label : 'WhatsApp'; %>
+ <% const footerWhatsappValue = (settings && settings.footer_whatsapp_value) ? settings.footer_whatsapp_value : '0107292236'; %>
+ <% const footerEmailLabel = (settings && settings.footer_email_label) ? settings.footer_email_label : 'E-poçt'; %>
+ <% const footerEmailValue = (settings && settings.footer_email_value) ? settings.footer_email_value : 'destek@azpinx.com'; %>
+ <% const footerBottomText = (settings && settings.footer_bottom_text) ? settings.footer_bottom_text : '© 2026 AZPINX - Bütün hüquqlar qorunur.'; %>
+ <% const footerPaymentText = (settings && settings.footer_payment_text) ? settings.footer_payment_text : 'M10 / MilliÖN / eManat'; %>
  <div class="footer-grid">
  <div class="footer-brand">
  <img src="/images/comp-1_00000.png" alt="AZPINX Logo" style="height: 50px; margin-bottom: 25px;">
- <p>AZPINX - Azərbaycanda bütün oyunlar üçün ən ucuz e-pinlərin rəsmi satış platformasıdır. Biz 7/24
- xidmətinizdəyik.</p>
+ <p><%= footerAboutText %></p>
  <div class="trust-badges">
- <span class="trust-badge"><i class="ri-shield-star-line"></i> SSL Təhlükəsiz</span>
- <span class="trust-badge"><i class="ri-award-line"></i> Lisenziyalı</span>
+ <span class="trust-badge"><i class="ri-shield-star-line"></i> <%= footerTrust1 %></span>
+ <span class="trust-badge"><i class="ri-award-line"></i> <%= footerTrust2 %></span>
  </div>
  </div>
  <div class="footer-links">
- <h5>Sürətli Keçidlər</h5>
+ <h5><%= footerQuickTitle %></h5>
  <ul>
- <li><a href="/">Ana Səhifə</a></li>
- <li><a href="/faq">FAQ</a></li>
- <li><a href="/terms">Qaydalar və Şərtlər</a></li>
+ <li><a href="<%= footerQuick1Url %>"><%= footerQuick1Label %></a></li>
+ <li><a href="<%= footerQuick2Url %>"><%= footerQuick2Label %></a></li>
+ <li><a href="<%= footerQuick3Url %>"><%= footerQuick3Label %></a></li>
  </ul>
  </div>
  <div class="footer-links">
- <h5>Hesabım</h5>
+ <h5><%= footerAccountTitle %></h5>
  <ul>
- <li><a href="/profile">Profil</a></li>
- <li><a href="/tickets">Texniki Dəstək</a></li>
- <li><a href="/wishlist">İstək Siyahısı</a></li>
+ <li><a href="<%= footerAccount1Url %>"><%= footerAccount1Label %></a></li>
+ <li><a href="<%= footerAccount2Url %>"><%= footerAccount2Label %></a></li>
+ <li><a href="<%= footerAccount3Url %>"><%= footerAccount3Label %></a></li>
  </ul>
  </div>
  <div class="footer-contact">
- <h5>Bizimlə Əlaqə</h5>
+ <h5><%= footerContactTitle %></h5>
  <div class="contact-item">
  <i class="ri-whatsapp-line"></i>
  <div class="contact-info">
- <p>WhatsApp</p>
- <span>0107292236</span>
+ <p><%= footerWhatsappLabel %></p>
+ <span><%= footerWhatsappValue %></span>
  </div>
  </div>
  <div class="contact-item">
  <i class="ri-mail-line"></i>
  <div class="contact-info">
- <p>E-poçt</p>
- <span>destek@azpinx.com</span>
+ <p><%= footerEmailLabel %></p>
+ <span><%= footerEmailValue %></span>
  </div>
  </div>
  </div>
  </div>
  <div class="footer-bottom">
- <p>&copy; 2024 AZPINX - Bütün hüquqlar qorunur.</p>
+ <p><%= footerBottomText %></p>
  <div class="payment-icons">
  <i class="ri-visa-line"></i>
  <i class="ri-mastercard-line"></i>
- <span>M10 / MilliÖN / eManat</span>
+ <span><%= footerPaymentText %></span>
  </div>
  </div>
 </footer>
@@ -202,8 +225,9 @@
 <!-- <div class="penguin-sprite"></div> -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script src="/js/transition.js?v=20260216-4"></script>
-<script src="/js/main.js?v=20260216-3"></script>
+<script src="/js/main.js?v=20260216-5"></script>
 </body>
 
 </html>

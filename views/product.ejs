@@ -39,8 +39,8 @@
  </h1>
 
  <div class="p-meta">
- <span><i class="ri-checkbox-circle-line"></i> Stokdadır</span>
- <span><i class="ri-flashlight-line"></i> Anında teslimat</span>
+ <span>Stokda</span>
+ <span>Ani teslimat</span>
  </div>
 
  <div class="p-price-card">
@@ -67,50 +67,58 @@
  </div>
 
  <script>
- document.getElementById('btnCheckID').addEventListener('click', async function () {
- const id = document.getElementById('player_id').value;
+ const btnCheckId = document.getElementById('btnCheckID');
+ const idInput = document.getElementById('player_id');
+ const hiddenNickname = document.getElementById('player_nickname');
  const statusDiv = document.getElementById('idStatus');
+
+ async function checkPlayerId() {
+ const id = (idInput.value || '').trim();
  if (!id) {
  statusDiv.textContent = 'Player ID daxil edin.';
  statusDiv.className = 'small mt-2 text-danger';
  return;
  }
 
- const btn = this;
- const hiddenNickname = document.getElementById('player_nickname');
- const fallbackNote = 'ID: ' + id;
-
- btn.disabled = true;
- btn.textContent = '...';
+ btnCheckId.disabled = true;
+ btnCheckId.textContent = '...';
  statusDiv.textContent = 'Yoxlanılır...';
  statusDiv.className = 'small mt-2 text-muted';
 
+ const fallbackNote = 'ID: ' + id;
  try {
  const res = await fetch('/api/pubg-check?player_id=' + id);
  const data = await res.json();
-
  if (data.success) {
  statusDiv.textContent = data.nickname;
  statusDiv.className = 'small mt-2 text-success';
  hiddenNickname.value = data.nickname || fallbackNote;
  } else {
- statusDiv.textContent = 'ID tapılmadı, ID ilə qəbul ediləcək.';
+ statusDiv.textContent = 'ID təsdiqlənmədi, ID ilə davam ediləcək.';
  statusDiv.className = 'small mt-2 text-warning';
  hiddenNickname.value = fallbackNote;
  }
  } catch (e) {
- statusDiv.textContent = 'Bağlantı xətası, ID ilə qəbul ediləcək.';
+ statusDiv.textContent = 'Xəta oldu, ID ilə davam ediləcək.';
  statusDiv.className = 'small mt-2 text-warning';
  hiddenNickname.value = fallbackNote;
  }
 
- btn.disabled = false;
- btn.textContent = 'Yoxla';
- });
+ btnCheckId.disabled = false;
+ btnCheckId.textContent = 'Yoxla';
+ }
 
- document.getElementById('player_id').addEventListener('input', function () {
+ btnCheckId.addEventListener('click', checkPlayerId);
+ idInput.addEventListener('keydown', (e) => {
+ if (e.key === 'Enter') {
+ e.preventDefault();
+ checkPlayerId();
+ }
+ });
+ idInput.addEventListener('input', function () {
  const id = this.value.trim();
- document.getElementById('player_nickname').value = id ? ('ID: ' + id) : '';
+ hiddenNickname.value = id ? ('ID: ' + id) : '';
+ statusDiv.textContent = '';
  });
  </script>
  <% } %>
@@ -118,10 +126,10 @@
  <div class="p-actions">
  <button class="btn btn-primary btn-large" id="btnAddToCart" onclick="handleAddToCart()"
  >
- <i class="ri-shopping-cart-2-line"></i> Səbətə əlavə et
+ Səbətə əlavə et
  </button>
  <button class="btn btn-outline wishlist-btn"
- onclick="toggleWishlist('<%= product.id %>', this)" style="min-width: 50px;">
+ onclick="toggleWishlist('<%= product.id %>', this)">
  <i class="ri-heart-line"></i>
  </button>
  </div>
@@ -153,10 +161,10 @@
  </div>
 
  <div class="p-features">
- <div class="f-item"><i class="ri-check-line"></i> 100% Orijinal Məhsul</div>
- <div class="f-item"><i class="ri-check-line"></i> 7/24 Dəstək</div>
- <div class="f-item"><i class="ri-check-line"></i> Anında Teslimat</div>
- <div class="f-item"><i class="ri-check-line"></i> Təhlükəsiz Ödəniş</div>
+ <div class="f-item">100% Orijinal Məhsul</div>
+ <div class="f-item">7/24 Dəstək</div>
+ <div class="f-item">Ani Teslimat</div>
+ <div class="f-item">Təhlükəsiz Ödəniş</div>
  </div>
 
  <div class="p-description-box">
