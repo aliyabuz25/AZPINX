@@ -134,6 +134,28 @@
  <% } %>
  </section>
 
+ <% } else if (locals.homeAutoSections && homeAutoSections.length> 0) { %>
+ <!-- Auto Home Sections -->
+ <% homeAutoSections.forEach(section=> { %>
+ <% if (section.products && section.products.length> 0) { %>
+ <section class="section-container">
+ <div class="section-header">
+ <h3>
+ <%= section.title %>
+ </h3>
+ <% if (section.link) { %>
+ <a href="<%= section.link %>" class="view-all">Hamısına bax <i class="ri-arrow-right-line"></i></a>
+ <% } %>
+ </div>
+ <div class="product-grid">
+ <% section.products.forEach(function(product) { %>
+ <%- include('partials/product_card', { product: product }) %>
+ <% }) %>
+ </div>
+ </section>
+ <% } %>
+ <% }) %>
+
  <% } else if (locals.homeSections && homeSections.length> 0) { %>
  <!-- Dynamic Home Sections -->
  <% homeSections.forEach(section=> { %>

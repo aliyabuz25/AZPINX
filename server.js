@@ -562,6 +562,7 @@ app.get('/', async (req, res) => {
 
  // Filter by Status (Only Sale)
  allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
+ const homeCatalogProducts = [...allProducts];
  const saleProductCount = allProducts.length;
 
  // Filter by Category if provided
@@ -617,6 +618,54 @@ app.get('/', async (req, res) => {
  if (bPriority !== -1) return 1;
  return 0;
  });
+
+ homeCatalogProducts.sort((a, b) => {
+ const aPriority = gamePriority.indexOf(a.category);
+ const bPriority = gamePriority.indexOf(b.category);
+
+ if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+ if (aPriority !== -1) return -1;
+ if (bPriority !== -1) return 1;
+ return 0;
+ });
+
+ const normalizeText = (val) => String(val || '').toLowerCase();
+ const hasAny = (product, keywords) => {
+ const bag = `${normalizeText(product.category)} ${normalizeText(product.name)} ${normalizeText(product.description)}`;
+ return keywords.some(k => bag.includes(k));
+ };
+ const gameKeywords = ['pubg', 'free fire', 'valorant', 'mobile legends', 'steam', 'roblox', 'xbox', 'playstation', 'google play', 'itunes', 'razer', 'oyun', 'game'];
+ const aiKeywords = [' ai', 'ai ', 'chatgpt', 'gpt', 'midjourney', 'claude', 'gemini', 'copilot', 'openai'];
+ const softwareKeywords = ['yazılım', 'yazilim', 'software', 'windows', 'office', 'vpn', 'antivirus', 'license', 'lisenziya'];
+ const ingameKeywords = ['oyun içi', 'oyun ici', 'topup', 'top-up', 'uc', 'cp', 'vp', 'diamond', 'token', 'coins'];
+ const pinKeywords = ['pin', 'e-pin', 'epin', 'gift card', 'giftcard'];
+
+ const usedProductIds = new Set();
+ const pickSectionProducts = (candidates, limit = 8) => {
+ const picked = [];
+ for (const p of candidates) {
+ const uniqueId = String(p.id);
+ if (usedProductIds.has(uniqueId)) continue;
+ usedProductIds.add(uniqueId);
+ picked.push(p);
+ if (picked.length >= limit) break;
+ }
+ return picked;
+ };
+
+ const apiGamesCandidates = homeCatalogProducts.filter(p => p.api_id && hasAny(p, gameKeywords));
+ const aiCandidates = homeCatalogProducts.filter(p => hasAny(p, aiKeywords));
+ const softwareCandidates = homeCatalogProducts.filter(p => hasAny(p, softwareKeywords));
+ const ingameCandidates = homeCatalogProducts.filter(p => hasAny(p, ingameKeywords));
+ const pinCandidates = homeCatalogProducts.filter(p => hasAny(p, pinKeywords));
+
+ const homeAutoSections = [
+ { title: 'API-dən Gələn Oyunlar', link: '/all-products?search=oyun', products: pickSectionProducts(apiGamesCandidates, 8) },
+ { title: 'AI', link: '/all-products?search=ai', products: pickSectionProducts(aiCandidates, 8) },
+ { title: 'Yazılımlar', link: '/all-products?search=yaz%C4%B1l%C4%B1m', products: pickSectionProducts(softwareCandidates, 8) },
+ { title: 'Oyun İçi Məhsullar', link: '/all-products?search=topup', products: pickSectionProducts(ingameCandidates, 8) },
+ { title: 'Pinlər', link: '/all-products?search=pin', products: pickSectionProducts(pinCandidates, 8) }
+ ].filter(section => section.products.length > 0);
 
  // Pagination Logic
  const page = parseInt(req.query.page) || 1;
@@ -703,8 +752,9 @@ app.get('/', async (req, res) => {
  categories,
  sliders,
  quickActions: categories, // Using dynamic categories here
- featuredProducts: products,
- homeSections: sectionsWithProducts, // Pass dynamic sections to view
+	 featuredProducts: products,
+	 homeAutoSections,
+	 homeSections: sectionsWithProducts, // Pass dynamic sections to view
  currentPage: page,
  totalPages,
  selectedCategory,
