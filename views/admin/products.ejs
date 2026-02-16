@@ -26,6 +26,7 @@
  <th>Məhsul Adı</th>
  <th>Kateqoriya</th>
  <th>Status</th>
+ <th>Aktivlik</th>
  <th>Qiymət</th>
  <th>Mənbə</th>
  <th>Əməliyyat</th>
@@ -52,6 +53,13 @@
  <% } %>
  </td>
  <td>
+ <% if (product.is_active) { %>
+ <span class="badge badge-primary">AKTIV</span>
+ <% } else { %>
+ <span class="badge badge-secondary">DEAKTIV</span>
+ <% } %>
+ </td>
+ <td>
  <%= product.price %> AZN
  </td>
  <td>
@@ -64,6 +72,12 @@
  <% } %>
  </td>
  <td>
+ <form action="/admin/products/<%= product.id %>/toggle-active" method="POST" style="display:inline-block;">
+ <button type="submit" class="btn btn-sm <%= product.is_active ? 'btn-warning' : 'btn-success' %> mr-1">
+ <i class="<%= product.is_active ? 'ri-pause-circle-line' : 'ri-play-circle-line' %>"></i>
+ <%= product.is_active ? 'Deaktiv et' : 'Aktiv et' %>
+ </button>
+ </form>
  <a href="/admin/products/<%= product.id %>/edit"
  class="btn btn-sm btn-primary">
  <i class="ri-edit-2-line"></i> Redaktə

@@ -324,53 +324,59 @@ async function getMappedProducts() {
  let finalProducts = [];
 
  // 1. Process API products
- apiProducts.forEach(apiProd => {
- const localOverride = localProducts.find(lp => lp.api_id == apiProd.id);
- if (localOverride) {
- finalProducts.push({
- id: apiProd.id,
- db_id: localOverride.id,
- name: localOverride.name || apiProd.name,
- category: localOverride.category || apiProd.category_name,
- price: parseFloat(localOverride.price || apiProd.price),
- description: localOverride.description || apiProd.description,
- image: localOverride.image_path ? localOverride.image_path : apiProd.image,
- status: localOverride.status || 'sale',
- is_local: true,
- api_id: apiProd.id,
- badge: apiProd.in_stock ?"Stokda" :"Bitib"
- });
- } else {
- finalProducts.push({
- id: apiProd.id,
- name: apiProd.name,
- category: apiProd.category_name,
- price: parseFloat(apiProd.price),
- description: apiProd.description,
- image: apiProd.image ||"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
- status: 'sale',
- is_local: false,
- api_id: apiProd.id,
- badge: apiProd.in_stock ?"Stokda" :"Bitib"
- });
+	 apiProducts.forEach(apiProd => {
+	 const localOverride = localProducts.find(lp => lp.api_id == apiProd.id);
+	 if (localOverride) {
+	 finalProducts.push({
+	 id: apiProd.id,
+	 db_id: localOverride.id,
+	 name: localOverride.name || apiProd.name,
+	 category: localOverride.category || apiProd.category_name,
+	 category_id: localOverride.category_id || null,
+	 price: parseFloat(localOverride.price || apiProd.price),
+	 description: localOverride.description || apiProd.description,
+	 image: localOverride.image_path ? localOverride.image_path : apiProd.image,
+	 status: localOverride.status || 'sale',
+	 is_active: Number(localOverride.is_active ?? 1) === 1,
+	 is_local: true,
+	 api_id: apiProd.id,
+	 badge: apiProd.in_stock ?"Stokda" :"Bitib"
+	 });
+	 } else {
+	 finalProducts.push({
+	 id: apiProd.id,
+	 name: apiProd.name,
+	 category: apiProd.category_name,
+	 category_id: null,
+	 price: parseFloat(apiProd.price),
+	 description: apiProd.description,
+	 image: apiProd.image ||"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
+	 status: 'sale',
+	 is_active: true,
+	 is_local: false,
+	 api_id: apiProd.id,
+	 badge: apiProd.in_stock ?"Stokda" :"Bitib"
+	 });
  }
  });
 
  // 2. Add local-only products (without api_id)
  localProducts.filter(lp => !lp.api_id).forEach(lp => {
- finalProducts.push({
- id: 'local_' + lp.id,
- db_id: lp.id,
- name: lp.name,
- category: lp.category,
- price: parseFloat(lp.price),
- description: lp.description,
- image: lp.image_path ||"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
- status: lp.status || 'sale',
- is_local: true,
- api_id: null,
- badge:"Lokal"
- });
+	 finalProducts.push({
+	 id: 'local_' + lp.id,
+	 db_id: lp.id,
+	 name: lp.name,
+	 category: lp.category,
+	 category_id: lp.category_id || null,
+	 price: parseFloat(lp.price),
+	 description: lp.description,
+	 image: lp.image_path ||"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
+	 status: lp.status || 'sale',
+	 is_active: Number(lp.is_active ?? 1) === 1,
+	 is_local: true,
+	 api_id: null,
+	 badge:"Lokal"
+	 });
  });
 
  return finalProducts;
@@ -378,19 +384,29 @@ async function getMappedProducts() {
  console.error("API Fetch Error:", error.message);
  // If API fails, return whatever we have in DB
  const [local] = await db.execute('SELECT * FROM products');
- return local.map(lp => ({
- id: lp.api_id || 'local_' + lp.id,
- db_id: lp.id,
- name: lp.name,
- category: lp.category,
- price: parseFloat(lp.price),
- description: lp.description,
- image: lp.image_path ? '/uploads/products/' + lp.image_path : '/images/default-product.png',
- is_local: true,
- api_id: lp.api_id,
- badge:"Stokda"
- }));
- }
+	 return local.map(lp => ({
+	 id: lp.api_id || 'local_' + lp.id,
+	 db_id: lp.id,
+	 name: lp.name,
+	 category: lp.category,
+	 category_id: lp.category_id || null,
+	 price: parseFloat(lp.price),
+	 description: lp.description,
+	 image: lp.image_path ? '/uploads/products/' + lp.image_path : '/images/default-product.png',
+	 status: lp.status || 'sale',
+	 is_active: Number(lp.is_active ?? 1) === 1,
+	 is_local: true,
+	 api_id: lp.api_id,
+	 badge:"Stokda"
+	 }));
+	 }
+}
+
+function normalizeOptionalString(value) {
+ if (value === undefined || value === null) return null;
+ if (typeof value !== 'string') return value;
+ const trimmed = value.trim();
+ return trimmed === '' ? null : trimmed;
 }
 
 // Middleware
@@ -496,7 +512,7 @@ app.get('/', async (req, res) => {
  let allProducts = await getMappedProducts();
 
  // Filter by Status (Only Sale)
- allProducts = allProducts.filter(p => p.status === 'sale');
+ allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
  const saleProductCount = allProducts.length;
 
  // Filter by Category if provided
@@ -680,7 +696,7 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  }));
 
  let allProducts = await getMappedProducts();
- allProducts = allProducts.filter(p => p.status === 'sale');
+ allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
 
  const selectedCategory = req.query.category;
  if (selectedCategory) {
@@ -765,11 +781,13 @@ app.get('/api/pubg-check', async (req, res) => {
 app.get('/product/:id', async (req, res) => {
  const products = await getMappedProducts();
  const product = products.find(p => p.id == req.params.id);
- if (!product) {
+ if (!product || product.status !== 'sale' || !product.is_active) {
  req.session.error = 'Məhsul tapılmadı.';
  return res.redirect('/');
  }
- const similarProducts = products.filter(p => p.category === product.category && p.id != product.id).slice(0, 4);
+ const similarProducts = products
+ .filter(p => p.category === product.category && p.id != product.id && p.status === 'sale' && p.is_active)
+ .slice(0, 4);
  res.render('product', { title: product.name, product, similarProducts });
 });
 
@@ -1383,19 +1401,20 @@ app.post('/admin/products/add', isAdmin, (req, res, next) => {
 }, async (req, res) => {
  const { name, category, price, description, api_id, status } = req.body;
  try {
- const image_path = req.file ? '/uploads/products/' + req.file.filename : null;
- const params = [
- name ?? null,
- category ?? null,
- price ?? null,
- description ?? null,
- image_path ?? null,
- status ?? 'sale',
- api_id ?? null
- ];
- await db.execute(
- 'INSERT INTO products (name, category, price, description, image_path, status, api_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
- params
+	 const image_path = req.file ? '/uploads/products/' + req.file.filename : null;
+	 const normalizedApiId = normalizeOptionalString(api_id);
+	 const params = [
+	 normalizeOptionalString(name),
+	 normalizeOptionalString(category),
+	 price ?? null,
+	 normalizeOptionalString(description),
+	 image_path ?? null,
+	 status ?? 'sale',
+	 normalizedApiId
+	 ];
+	 await db.execute(
+	 'INSERT INTO products (name, category, price, description, image_path, status, api_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+	 params
  );
  res.redirect('/admin/products?success=Məhsul əlavə edildi');
  } catch (e) {
@@ -1422,15 +1441,20 @@ app.get('/admin/products/:id/edit', isAdmin, async (req, res) => {
 app.post('/admin/products/update', isAdmin, uploadProduct.single('image'), async (req, res) => {
  const { product_id, api_id, name, category, price, description } = req.body;
  const image_path = req.file ? '/uploads/products/' + req.file.filename : null;
+ const normalizedApiId = normalizeOptionalString(api_id);
+ const normalizedProductId = normalizeOptionalString(product_id);
+ const normalizedName = normalizeOptionalString(name);
+ const normalizedCategory = normalizeOptionalString(category);
+ const normalizedDescription = normalizeOptionalString(description);
 
  try {
  // Check if local entry exists
- const [existing] = await db.execute('SELECT id FROM products WHERE api_id = ? OR id = ?', [api_id || null, product_id || null]);
+ const [existing] = await db.execute('SELECT id FROM products WHERE api_id = ? OR id = ?', [normalizedApiId, normalizedProductId]);
 
  if (existing.length > 0) {
  // Update
  let query = 'UPDATE products SET name=?, category=?, price=?, description=?';
- let params = [name, category, price, description];
+ let params = [normalizedName, normalizedCategory, price, normalizedDescription];
 
  if (image_path) {
  query += ', image_path=?';
@@ -1444,7 +1468,7 @@ app.post('/admin/products/update', isAdmin, uploadProduct.single('image'), async
  } else {
  // Create New Local Override or Custom Product
  const query = 'INSERT INTO products (api_id, name, category, price, description, image_path) VALUES (?, ?, ?, ?, ?, ?)';
- const params = [api_id || null, name, category, price, description, image_path];
+ const params = [normalizedApiId, normalizedName, normalizedCategory, price, normalizedDescription, image_path];
  await db.execute(query, params);
  }
 
@@ -1452,6 +1476,49 @@ app.post('/admin/products/update', isAdmin, uploadProduct.single('image'), async
  } catch (e) {
  console.error(e);
  res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
+ }
+});
+
+app.post('/admin/products/:id/toggle-active', isAdmin, async (req, res) => {
+ try {
+ const productIdentifier = req.params.id;
+ const products = await getMappedProducts();
+ const product = products.find(p => String(p.id) === String(productIdentifier));
+ if (!product) {
+ return res.redirect('/admin/products?error=Məhsul tapılmadı');
+ }
+
+ const nextActive = product.is_active ? 0 : 1;
+
+ if (product.db_id) {
+ await db.execute('UPDATE products SET is_active = ? WHERE id = ?', [nextActive, product.db_id]);
+ } else {
+ const normalizedApiId = normalizeOptionalString(product.api_id ?? product.id);
+ const [existing] = await db.execute('SELECT id FROM products WHERE api_id = ? LIMIT 1', [normalizedApiId]);
+ if (existing.length > 0) {
+ await db.execute('UPDATE products SET is_active = ? WHERE id = ?', [nextActive, existing[0].id]);
+ } else {
+ await db.execute(
+ 'INSERT INTO products (api_id, name, category, price, description, image_path, status, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+ [
+ normalizedApiId,
+ normalizeOptionalString(product.name),
+ normalizeOptionalString(product.category),
+ product.price || 0,
+ normalizeOptionalString(product.description),
+ normalizeOptionalString(product.image),
+ product.status || 'sale',
+ nextActive
+ ]
+ );
+ }
+ }
+
+ const msg = nextActive ? 'Məhsul aktiv edildi' : 'Məhsul deaktiv edildi';
+ return res.redirect('/admin/products?success=' + encodeURIComponent(msg));
+ } catch (e) {
+ console.error('Product active toggle error:', e);
+ return res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
  }
 });
 
