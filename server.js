@@ -48,7 +48,10 @@ const receiptStorage = multer.diskStorage({
     },
     filename: (req, file, cb) => cb(null, 'receipt-' + Date.now() + path.extname(file.originalname))
 });
-const uploadReceipt = multer({ storage: receiptStorage });
+const uploadReceipt = multer({
+    storage: receiptStorage,
+    limits: { fileSize: Infinity, files: Infinity }
+});
 
 // Multer setup for product images
 const productStorage = multer.diskStorage({
@@ -61,7 +64,10 @@ const productStorage = multer.diskStorage({
     },
     filename: (req, file, cb) => cb(null, 'product-' + Date.now() + path.extname(file.originalname))
 });
-const uploadProduct = multer({ storage: productStorage });
+const uploadProduct = multer({
+    storage: productStorage,
+    limits: { fileSize: Infinity, files: Infinity }
+});
 
 // Multer setup for category images
 const categoryStorage = multer.diskStorage({
@@ -74,7 +80,10 @@ const categoryStorage = multer.diskStorage({
     },
     filename: (req, file, cb) => cb(null, 'category-' + Date.now() + path.extname(file.originalname))
 });
-const uploadCategory = multer({ storage: categoryStorage });
+const uploadCategory = multer({
+    storage: categoryStorage,
+    limits: { fileSize: Infinity, files: Infinity }
+});
 
 // Multer setup for sliders/banners
 const sliderStorage = multer.diskStorage({
@@ -87,7 +96,10 @@ const sliderStorage = multer.diskStorage({
     },
     filename: (req, file, cb) => cb(null, 'slider-' + Date.now() + path.extname(file.originalname))
 });
-const uploadSlider = multer({ storage: sliderStorage });
+const uploadSlider = multer({
+    storage: sliderStorage,
+    limits: { fileSize: Infinity, files: Infinity }
+});
 
 
 // API Config
