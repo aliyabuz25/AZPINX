@@ -1,19 +1,40 @@
 <%- include('header') %>
- <div class="content-wrapper">
- <div class="content-header">
- <div class="container-fluid">
- <h1 class="m-0">Dəstək İdarəetməsi</h1>
+
+<div class="row">
+ <div class="col-12">
+ <div class="card admin-toolbar-card mb-3">
+ <div class="card-body py-3">
+ <form action="/admin/tickets" method="GET" class="admin-toolbar-form">
+ <div class="admin-toolbar-main">
+ <input
+ type="text"
+ name="q"
+ class="form-control"
+ placeholder="ID, istifadəçi, mövzu və ya sifariş üzrə axtar..."
+ value="<%= filters && filters.q ? filters.q : '' %>">
+ </div>
+ <div class="admin-toolbar-filters">
+ <select name="status" class="form-control">
+ <option value="all" <%= !filters || filters.status === 'all' ? 'selected' : '' %>>Bütün statuslar</option>
+ <option value="open" <%= filters && filters.status === 'open' ? 'selected' : '' %>>Açıq</option>
+ <option value="closed" <%= filters && filters.status === 'closed' ? 'selected' : '' %>>Bağlı</option>
+ </select>
+ <button type="submit" class="btn btn-primary">Axtar</button>
+ <a href="/admin/tickets" class="btn btn-outline-secondary">Sıfırla</a>
+ </div>
+ </form>
+ <small class="text-muted d-block mt-2">
+ Toplam: <%= pagination ? pagination.totalItems : tickets.length %> bilet
+ </small>
  </div>
  </div>
 
- <section class="content">
- <div class="container-fluid">
  <div class="card">
  <div class="card-header border-0">
  <h3 class="card-title">Bütün Biletlər</h3>
  </div>
  <div class="card-body table-responsive p-0">
- <table class="table table-striped table-valign-middle">
+ <table class="table table-hover mb-0">
  <thead>
  <tr>
  <th>ID</th>
@@ -21,22 +42,19 @@
  <th>Mövzu</th>
  <th>Status</th>
  <th>Son Yenilənmə</th>
- <th></th>
+ <th class="text-right">Əməliyyat</th>
  </tr>
  </thead>
  <tbody>
+ <% if (tickets && tickets.length > 0) { %>
  <% tickets.forEach(t=> { %>
  <tr>
- <td>#<%= t.id %>
- </td>
+ <td>#<%= t.id %></td>
+ <td><%= t.user_name %></td>
  <td>
- <%= t.user_name %>
- </td>
- <td>
- <%= t.subject %>
+ <div class="font-weight-600"><%= t.subject %></div>
  <% if (t.order_id) { %>
- <span class="badge badge-secondary ml-1">Sifariş #<%= t.order_id %>
- </span>
+ <span class="badge badge-secondary mt-1">Sifariş #<%= t.order_id %></span>
  <% } %>
  </td>
  <td>
@@ -46,20 +64,39 @@
  <span class="badge badge-secondary">BAĞLI</span>
  <% } %>
  </td>
- <td>
- <%= new Date(t.updated_at).toLocaleString('az-AZ') %>
- </td>
+ <td><%= new Date(t.updated_at).toLocaleString('az-AZ') %></td>
  <td class="text-right">
- <a href="/admin/ticket/<%= t.id %>"
- class="btn btn-sm btn-outline-primary">İdarə et</a>
+ <a href="/admin/ticket/<%= t.id %>" class="btn btn-sm btn-outline-primary">İdarə et</a>
  </td>
  </tr>
  <% }) %>
+ <% } else { %>
+ <tr>
+ <td colspan="6" class="text-center py-4 text-muted">Axtarış və filtrə uyğun bilet tapılmadı.</td>
+ </tr>
+ <% } %>
  </tbody>
  </table>
  </div>
+ <% if (pagination && pagination.totalPages > 1) { %>
+ <div class="card-footer border-top">
+ <ul class="pagination pagination-sm m-0 justify-content-end">
+ <li class="page-item <%= pagination.currentPage <= 1 ? 'disabled' : '' %>">
+ <a class="page-link" href="/admin/tickets?page=<%= pagination.currentPage - 1 %><%= pagination.baseQuery ? '&' + pagination.baseQuery : '' %>">&laquo;</a>
+ </li>
+ <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+ <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+ <a class="page-link" href="/admin/tickets?page=<%= i %><%= pagination.baseQuery ? '&' + pagination.baseQuery : '' %>"><%= i %></a>
+ </li>
+ <% } %>
+ <li class="page-item <%= pagination.currentPage >= pagination.totalPages ? 'disabled' : '' %>">
+ <a class="page-link" href="/admin/tickets?page=<%= pagination.currentPage + 1 %><%= pagination.baseQuery ? '&' + pagination.baseQuery : '' %>">&raquo;</a>
+ </li>
+ </ul>
+ </div>
+ <% } %>
  </div>
  </div>
- </section>
- </div>
- <%- include('footer') %>
+</div>
+
+<%- include('footer') %>

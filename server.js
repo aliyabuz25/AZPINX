@@ -1250,10 +1250,51 @@ app.get('/reseller/orders', isReseller, async (req, res) => {
 // --- Admin Panel Routes ---
 
 app.get('/admin/tickets', isAdmin, async (req, res) => {
- const [tickets] = await db.execute(`
- SELECT t.*, u.full_name as user_name  FROM tickets t  JOIN users u ON t.user_id = u.id  ORDER BY t.status ASC, t.updated_at DESC
+ const q = normalizeOptionalString(req.query.q) || '';
+ const status = normalizeOptionalString(req.query.status) || 'all';
+ const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+ const perPage = 20;
+
+ const [rows] = await db.execute(`
+ SELECT t.*, u.full_name as user_name
+ FROM tickets t
+ JOIN users u ON t.user_id = u.id
+ ORDER BY t.status ASC, t.updated_at DESC
  `);
- res.render('admin/tickets', { title: 'Dəstək İdarəetməsi', tickets });
+
+ let tickets = rows;
+
+ if (q) {
+ const query = q.toLowerCase();
+ tickets = tickets.filter((t) =>
+ String(t.id).includes(query) ||
+ String(t.user_name || '').toLowerCase().includes(query) ||
+ String(t.subject || '').toLowerCase().includes(query) ||
+ String(t.order_id || '').toLowerCase().includes(query)
+ );
+ }
+
+ if (status === 'open' || status === 'closed') {
+ tickets = tickets.filter(t => t.status === status);
+ }
+
+ const totalItems = tickets.length;
+ const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+ const currentPage = Math.min(page, totalPages);
+ const startIndex = (currentPage - 1) * perPage;
+ const paginatedTickets = tickets.slice(startIndex, startIndex + perPage);
+
+ const params = new URLSearchParams();
+ if (q) params.set('q', q);
+ if (status !== 'all') params.set('status', status);
+ const baseQuery = params.toString();
+
+ res.render('admin/tickets', {
+ title: 'Dəstək İdarəetməsi',
+ tickets: paginatedTickets,
+ filters: { q, status },
+ pagination: { currentPage, totalPages, totalItems, baseQuery }
+ });
 });
 
 app.get('/admin/ticket/:id', isAdmin, async (req, res) => {
