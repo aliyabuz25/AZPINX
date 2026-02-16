@@ -186,10 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
  });
  });
 
- // --- Working Hours Popup (only off-hours: 00:00 – 12:00) ---
+ // --- Working Hours Popup (only off-hours: 00:00 – 07:00) ---
  (function showWorkingHoursPopup() {
  const hour = new Date().getHours();
- const isOffHours = (hour >= 0 && hour < 12);
+ const isOffHours = (hour >= 0 && hour < 7);
 
  // Only show popup during off-hours
  if (!isOffHours) return;
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
  <div class="hours-popup-schedule">
  <div class="schedule-row">
  <i class="ri-time-line"></i>
- <span>İş saatları: <strong>12:00 – 00:00</strong></span>
+ <span>İş saatları: <strong>07:00 – 00:00</strong></span>
  </div>
  <div class="schedule-row">
  <i class="ri-customer-service-2-line"></i>

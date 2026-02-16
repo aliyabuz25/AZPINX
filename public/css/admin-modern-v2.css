@@ -55,9 +55,10 @@ body {
 }
 
 .main-sidebar {
-    background: #0f1b3d !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: none !important;
+    background: #ffffff !important;
+    border-right: 1px solid #e5eaf6 !important;
+    box-shadow: 0 8px 20px rgba(22, 38, 74, 0.06) !important;
+    transition: all 0.25s ease;
 }
 
 .brand-link {
@@ -65,7 +66,8 @@ body {
     align-items: center;
     justify-content: center;
     padding: 12px 10px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-bottom: 1px solid #eef2fb !important;
+    background: #ffffff !important;
 }
 
 .brand-image-modern {
@@ -83,10 +85,10 @@ body {
 .nav-sidebar .nav-link {
     margin: 2px 8px !important;
     border-radius: 8px !important;
-    color: rgba(229, 238, 255, 0.88) !important;
-    font-weight: 500;
+    color: #27375f !important;
+    font-weight: 600;
     padding: 9px 11px !important;
-    transition: 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .nav-sidebar .nav-header {
@@ -95,25 +97,38 @@ body {
     font-size: 0.68rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.08em;
-    color: rgba(188, 204, 239, 0.72) !important;
+    color: #8a96b3 !important;
     text-transform: uppercase;
 }
 
 .nav-sidebar .nav-link i {
     margin-right: 9px;
-    color: rgba(206, 222, 255, 0.82);
+    color: #5a6f9f;
 }
 
 .nav-sidebar .nav-link:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: #fff !important;
-    transform: none;
+    background: #f3f7ff !important;
+    color: #123a9f !important;
+    transform: translateX(2px);
 }
 
 .nav-sidebar .nav-link.active {
     background: #2f66ff !important;
     color: #fff !important;
     box-shadow: none;
+}
+
+.nav-sidebar .nav-link.nav-link-danger {
+    color: #c5254a !important;
+}
+
+.nav-sidebar .nav-link.nav-link-danger i {
+    color: #c5254a !important;
+}
+
+.nav-sidebar .nav-link.nav-link-danger:hover {
+    background: #fff1f4 !important;
+    color: #ad1538 !important;
 }
 
 .content-header {

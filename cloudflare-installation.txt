@@ -1,0 +1,144 @@
+AZPINX.COM + CLOUDFLARE + TRAEFIK QURULUMU (ADDIM-ADDIM)
+=========================================================
+
+Tarix: 16 Fevral 2026
+Hədəf: `azpinx.com` domenini Cloudflare üzərindən Traefik ilə təhlükəsiz (HTTPS) işlətmək.
+
+Qeyd:
+- Sənin `docker-compose.yml` faylında tətbiq servisi artıq Traefik label-ları ilə gəlir.
+- `edge` network `external: true` olaraq istifadə olunur. Traefik konteyneri də eyni `edge` networkdə olmalıdır.
+
+
+1) CLOUDFLARE-DƏ DOMEN HAZIRLIĞI
+--------------------------------
+1. Cloudflare hesabına daxil ol.
+2. `azpinx.com` domenini Cloudflare-ə əlavə et.
+3. Registrar tərəfində nameserver-ləri Cloudflare-in verdiyi NS-lərlə dəyiş.
+4. DNS qeydlərini yarat:
+   - A record: `@` -> SERVER_PUBLIC_IP (Proxy: ON, narıncı bulud)
+   - A record: `www` -> SERVER_PUBLIC_IP (Proxy: ON)
+   - (İstəyə bağlı) `azpinx.octotech.az` üçün ayrıca DNS/CNAME.
+5. SSL/TLS bölməsində:
+   - Mode: `Full (strict)`
+   - `Always Use HTTPS`: ON
+   - `Automatic HTTPS Rewrites`: ON
+
+
+2) CLOUDFLARE API TOKEN YARAT
+-----------------------------
+Traefik DNS Challenge üçün token lazımdır.
+
+Cloudflare > My Profile > API Tokens > Create Token:
+- Template: Edit zone DNS (və ya custom)
+- Permission:
+  - Zone -> DNS -> Edit
+  - Zone -> Zone -> Read
+- Zone Resources:
+  - Include -> Specific zone -> `azpinx.com`
+
+Tokeni saxla (məs: `CF_DNS_API_TOKEN=...`).
+
+
+3) TRAEFIK STATIC KONFİQ (ƏSAS)
+-------------------------------
+Traefik aşağıdakı entrypoint və certresolver ilə işləməlidir.
+
+Nümunə (`traefik.yml`):
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+
+certificatesResolvers:
+  cfresolver:
+    acme:
+      email: admin@azpinx.com
+      storage: /letsencrypt/acme.json
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: 20
+
+
+4) TRAEFIK KONTEYNERİNDƏ ENV VƏ VOLUME
+--------------------------------------
+Traefik servisinə bunları əlavə et:
+- Environment:
+  - `CF_DNS_API_TOKEN=<Cloudflare token>`
+- Volume:
+  - `./letsencrypt:/letsencrypt`
+
+Hostda:
+- `mkdir -p letsencrypt`
+- `touch letsencrypt/acme.json`
+- `chmod 600 letsencrypt/acme.json`
+
+
+5) SƏNİN `docker-compose.yml` ÜÇÜN LABEL GÜNCƏLLƏMƏSİ
+-----------------------------------------------------
+`azpinx-app` servisinə HTTPS router və HTTP->HTTPS redirect əlavə et.
+
+Mövcud label-lara əlavə et:
+
+- 'traefik.http.routers.azpinx-http.rule=Host(`azpinx.com`) || Host(`www.azpinx.com`)'
+- 'traefik.http.routers.azpinx-http.entrypoints=web'
+- 'traefik.http.routers.azpinx-http.middlewares=azpinx-https-redirect'
+- 'traefik.http.middlewares.azpinx-https-redirect.redirectscheme.scheme=https'
+
+- 'traefik.http.routers.azpinx.rule=Host(`azpinx.com`) || Host(`www.azpinx.com`) || Host(`azpinx.octotech.az`)'
+- 'traefik.http.routers.azpinx.entrypoints=websecure'
+- 'traefik.http.routers.azpinx.tls=true'
+- 'traefik.http.routers.azpinx.tls.certresolver=cfresolver'
+- 'traefik.http.services.azpinx.loadbalancer.server.port=3000'
+
+Səndə artıq olan böyük upload middleware-i saxla:
+- 'traefik.http.middlewares.azpinx-buf.buffering.maxRequestBodyBytes=104857600'
+- 'traefik.http.routers.azpinx.middlewares=azpinx-buf'
+
+Əgər həm redirect, həm buffering birlikdə lazımdırsa:
+- `traefik.http.routers.azpinx.middlewares=azpinx-buf`
+- `traefik.http.routers.azpinx-http.middlewares=azpinx-https-redirect`
+
+
+6) DEPLOY ADDIMLARI
+-------------------
+1. Traefik stack/service-i yenilə və ayağa qaldır.
+2. AZPINX stack/service-i yenilə:
+   - `docker compose up -d --build`
+3. Logları yoxla:
+   - `docker logs -f <traefik_container_name>`
+   - `docker logs -f <azpinx_app_container_name>`
+
+
+7) YOXLAMA
+----------
+Brauzerdə:
+- https://azpinx.com
+- https://www.azpinx.com
+
+Terminal:
+- `curl -I https://azpinx.com`
+- Cavabda `HTTP/2 200` və etibarlı sertifikat olmalıdır.
+
+
+8) PROBLEM OLARSA
+-----------------
+1. Sertifikat alınmırsa:
+   - CF token icazələrini yenidən yoxla (DNS Edit + Zone Read).
+   - `acme.json` faylının yazıla bildiyini yoxla (`chmod 600`).
+2. Router görünmürsə:
+   - Traefik və app eyni `edge` docker network-dədir?
+   - `traefik.enable=true` label var?
+3. Domain açılmırsa:
+   - Cloudflare DNS A record IP düzgün server IP-dir?
+   - Serverdə 80/443 portları açıqdır?
+
+
+QISA NƏTİCƏ
+-----------
+Doğru qurulumda Cloudflare DNS + Traefik DNS Challenge ilə `azpinx.com` üçün avtomatik SSL yenilənməsi və stabil HTTPS işləyəcək.
