@@ -24,11 +24,12 @@ body {
 }
 
 .main-header.navbar {
-    margin: 12px 16px 0 16px;
-    border-radius: 10px;
-    border: 1px solid #e5eaf6;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #e5eaf6 !important;
     background: #ffffff !important;
-    box-shadow: 0 4px 16px rgba(18, 34, 81, 0.06) !important;
+    box-shadow: none !important;
 }
 
 .main-header .nav-link {
@@ -76,6 +77,14 @@ body {
     border-radius: 8px;
     object-fit: cover;
     box-shadow: none;
+}
+
+.brand-text-modern {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #152b64;
+    line-height: 1;
 }
 
 .sidebar {
@@ -593,7 +602,7 @@ body.admin-modern {
 
 @media (max-width: 768px) {
     .admin-modern .main-header.navbar {
-        margin: 6px !important;
+        margin: 0 !important;
     }
 
     .admin-modern .content-wrapper {
