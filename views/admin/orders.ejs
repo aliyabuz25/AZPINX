@@ -17,8 +17,8 @@
  <input type="hidden" name="scope" value="selected">
  <input type="hidden" name="ids" id="selectedOrderIds">
  </form>
- <div class="card-body table-responsive p-0">
- <table class="table table-hover text-nowrap">
+ <div class="card-body p-0">
+ <table class="table table-hover table-sm order-table-fit mb-0">
  <thead>
  <tr>
  <th style="width: 42px;">
@@ -87,10 +87,10 @@
  <span class="badge badge-danger">Ləğv edildi</span>
  <% } %>
  </td>
- <td style="width: 150px;">
+ <td class="order-actions-cell">
  <form action="/admin/orders/<%= order.id %>/update" method="POST">
  <div class="input-group input-group-sm">
- <select name="status" class="form-control">
+ <select name="status" class="form-control form-control-sm">
  <option value="pending" <%=order.status==='pending' ? 'selected'
  : '' %>>Gözləyir</option>
  <option value="completed" <%=order.status==='completed' ? 'selected'
@@ -99,7 +99,7 @@
  : '' %>>Ləğv et</option>
  </select>
  <span class="input-group-append">
- <button type="submit" class="btn btn-primary">Ok</button>
+ <button type="submit" class="btn btn-primary btn-sm">Ok</button>
  </span>
  </div>
  </form>
@@ -156,7 +156,7 @@
  })();
  </script>
 
- <% orders.forEach(order => { %>
+<% orders.forEach(order => { %>
  <div class="modal fade" id="approveNotifyModal_<%= order.id %>" tabindex="-1" role="dialog" aria-hidden="true">
  <div class="modal-dialog" role="document">
  <div class="modal-content">
@@ -184,6 +184,58 @@
  </form>
  </div>
  </div>
- </div>
- <% }) %>
- <%- include('footer') %>
+</div>
+<% }) %>
+<style>
+ .order-table-fit {
+ table-layout: fixed;
+ width: 100%;
+ }
+
+ .order-table-fit th,
+ .order-table-fit td {
+ white-space: normal !important;
+ word-break: break-word;
+ vertical-align: middle;
+ font-size: 12px;
+ padding: 8px 6px;
+ }
+
+ .order-table-fit th:nth-child(1),
+ .order-table-fit td:nth-child(1) { width: 3%; }
+ .order-table-fit th:nth-child(2),
+ .order-table-fit td:nth-child(2) { width: 5%; }
+ .order-table-fit th:nth-child(3),
+ .order-table-fit td:nth-child(3) { width: 14%; }
+ .order-table-fit th:nth-child(4),
+ .order-table-fit td:nth-child(4) { width: 11%; }
+ .order-table-fit th:nth-child(5),
+ .order-table-fit td:nth-child(5) { width: 7%; }
+ .order-table-fit th:nth-child(6),
+ .order-table-fit td:nth-child(6) { width: 15%; }
+ .order-table-fit th:nth-child(7),
+ .order-table-fit td:nth-child(7) { width: 10%; }
+ .order-table-fit th:nth-child(8),
+ .order-table-fit td:nth-child(8) { width: 8%; }
+ .order-table-fit th:nth-child(9),
+ .order-table-fit td:nth-child(9) { width: 11%; }
+ .order-table-fit th:nth-child(10),
+ .order-table-fit td:nth-child(10) { width: 7%; }
+ .order-table-fit th:nth-child(11),
+ .order-table-fit td:nth-child(11) { width: 19%; }
+
+ .order-table-fit .btn.btn-xs,
+ .order-table-fit .btn.btn-sm {
+ padding: 4px 8px;
+ font-size: 11px;
+ }
+
+ .order-actions-cell .input-group {
+ min-width: 132px;
+ }
+
+ .order-actions-cell .btn-success {
+ width: 100%;
+ }
+</style>
+<%- include('footer') %>

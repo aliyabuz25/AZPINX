@@ -148,8 +148,11 @@ const PUBG_CHECKER_CONFIG = {
  .split(',')
  .map((u) => u.trim().replace(/\/$/, ''))
  .filter(Boolean),
- TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 12000)
+ TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 7000),
+ CACHE_TTL_MS: Number(process.env.PUBG_CHECKER_CACHE_TTL_MS || 60000)
 };
+const pubgCheckCache = new Map();
+const pubgCheckInflight = new Map();
 
 const TRANSLATE_CONFIG = {
  URLS: (process.env.TRANSLATE_URLS || 'https://libretranslate.com/translate,https://libretranslate.de/translate')
@@ -1572,28 +1575,57 @@ app.get('/api/pubg-check', async (req, res) => {
  res.set('Expires', '0');
  res.set('ETag', `"pubg-check-${Date.now()}"`);
 
- let lastError = null;
- for (const baseUrl of PUBG_CHECKER_CONFIG.URLS) {
+ const now = Date.now();
+ const cached = pubgCheckCache.get(playerId);
+ if (cached && (now - cached.createdAt) < PUBG_CHECKER_CONFIG.CACHE_TTL_MS) {
+ return res.json(cached.payload);
+ }
+
+ if (!/^\d{5,20}$/.test(playerId)) {
+ const invalid = { success: false, error: 'ID formatı düzgün deyil.' };
+ pubgCheckCache.set(playerId, { createdAt: now, payload: invalid });
+ return res.json(invalid);
+ }
+
  try {
- const response = await axios.get(`${baseUrl}/check-player`, {
+ let lookupPromise = pubgCheckInflight.get(playerId);
+ if (!lookupPromise) {
+ const requests = PUBG_CHECKER_CONFIG.URLS.map((baseUrl) => (
+ axios.get(`${baseUrl}/check-player`, {
  params: { id: playerId },
  timeout: PUBG_CHECKER_CONFIG.TIMEOUT
- });
+ }).then((response) => {
  const data = response.data || {};
-
  if (data.success && data.player_name) {
- return res.json({ success: true, nickname: data.player_name });
+ return { success: true, nickname: data.player_name };
+ }
+ throw new Error(data.error || 'Oyunçu tapılmadı.');
+ })
+ ));
+
+ lookupPromise = Promise.any(requests)
+ .catch((aggregateError) => {
+ const firstReason = Array.isArray(aggregateError?.errors) && aggregateError.errors.length
+ ? aggregateError.errors[0]
+ : null;
+ const message = firstReason?.message || 'PUBG checker servisi ilə bağlantı xətası baş verdi.';
+ return { success: false, error: message };
+ })
+ .finally(() => {
+ pubgCheckInflight.delete(playerId);
+ });
+ pubgCheckInflight.set(playerId, lookupPromise);
  }
 
- // If checker responded but couldn't find the player, continue other sources first.
- lastError = data.error || 'Oyunçu tapılmadı.';
+ const payload = await lookupPromise;
+ pubgCheckCache.set(playerId, { createdAt: Date.now(), payload });
+ return res.json(payload);
  } catch (e) {
- lastError = e.message;
- console.error(`PUBG Checker Error [${baseUrl}]:`, e.message);
+ console.error('PUBG checker lookup error:', e.message);
+ const payload = { success: false, error: 'PUBG checker servisi ilə bağlantı xətası baş verdi.' };
+ pubgCheckCache.set(playerId, { createdAt: Date.now(), payload });
+ return res.json(payload);
  }
- }
-
- return res.json({ success: false, error: lastError || 'PUBG checker servisi ilə bağlantı xətası baş verdi.' });
 });
 
 app.post('/api/translate-batch', async (req, res) => {
