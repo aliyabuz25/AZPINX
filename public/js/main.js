@@ -197,6 +197,18 @@ document.addEventListener('DOMContentLoaded', () => {
  startAuto();
  }
 
+ sliders.forEach((slide) => {
+ const link = (slide.getAttribute('data-link') || '').trim();
+ const hasLink = slide.getAttribute('data-has-link') === 'true' && link && link !== '#';
+ if (!hasLink) return;
+
+ slide.addEventListener('click', (event) => {
+ // Don't hijack slider controls or the explicit CTA button.
+ if (event.target.closest('.slider-controls') || event.target.closest('a')) return;
+ window.location.href = link;
+ });
+ });
+
  // --- Working Hours Popup (only off-hours: 00:00 – 12:00) ---
  (function showWorkingHoursPopup() {
  const hour = new Date().getHours();

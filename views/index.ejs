@@ -7,6 +7,8 @@
  <div class="slider-container">
  <% sliders.forEach(function(slider, index) { %>
  <div class="slider-item <%= index === 0 ? 'active' : '' %>"
+ data-link="<%= slider.link || '' %>"
+ data-has-link="<%= !!(slider.link && slider.link !== '#') %>"
  style="background-image: url('<%= slider.image %>');">
  <% if (slider.title || slider.description) { %>
  <div class="slider-content">
@@ -20,8 +22,9 @@
  <%= slider.description %>
  </p>
  <% } %>
- <a href="<%= slider.link %>" class="btn btn-primary"
- style="width: fit-content;">İndi al</a>
+ <% if (slider.link && slider.link !== '#') { %>
+ <a href="<%= slider.link %>" class="btn btn-primary hero-cta-btn">Ətraflı bax</a>
+ <% } %>
  </div>
  <% } %>
  </div>
