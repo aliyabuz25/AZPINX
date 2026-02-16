@@ -11,3 +11,5 @@ public/uploads/sliders/*
 !public/uploads/products/.gitkeep
 !public/uploads/categories/.gitkeep
 !public/uploads/sliders/.gitkeep
+data/license_codes.json
+data/license_key.txt

@@ -3,10 +3,12 @@ const path = require('path');
 const axios = require('axios');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -153,6 +155,123 @@ const PUBG_CHECKER_CONFIG = {
 };
 const pubgCheckCache = new Map();
 const pubgCheckInflight = new Map();
+
+const LICENSE_CONFIG = {
+ CODES_PATH: process.env.LICENSE_CODES_PATH || path.join(__dirname, 'data', 'license_codes.json'),
+ KEY_PATH: process.env.LICENSE_KEY_PATH || path.join(__dirname, 'data', 'license_key.txt'),
+ KEY: process.env.LICENSE_KEY || '',
+ SECRET: process.env.LICENSE_SECRET || '',
+ REMOTE_URL: process.env.LICENSE_REMOTE_URL || 'https://raw.githubusercontent.com/aliyabuz25/licenses/main/license_codes.json',
+ REMOTE_TIMEOUT_MS: Number(process.env.LICENSE_REMOTE_TIMEOUT_MS || 5000),
+ MACHINE_ID: process.env.LICENSE_MACHINE_ID || '',
+ ENFORCE: process.env.LICENSE_ENFORCE !== '0'
+};
+
+let APP_LICENSE_STATE = { valid: false, reason: 'license_check_pending' };
+
+function normalizeLicenseCode(value) {
+ return String(value || '')
+ .trim()
+ .toUpperCase()
+ .replace(/\s+/g, '')
+ .replace(/[^A-Z0-9-_]/g, '');
+}
+
+function getMachineFingerprint() {
+ const raw = LICENSE_CONFIG.MACHINE_ID || `${os.hostname()}|${os.platform()}|${os.arch()}`;
+ return crypto.createHash('sha256').update(String(raw)).digest('hex');
+}
+
+function hashLicenseCode(code, machineFingerprint, secret = '') {
+ const normalizedCode = normalizeLicenseCode(code);
+ const seed = `${normalizedCode}|${machineFingerprint}|${String(secret || '').trim()}`;
+ return crypto.createHash('sha256').update(seed).digest('hex');
+}
+
+function readLicenseKey() {
+ const envKey = normalizeLicenseCode(LICENSE_CONFIG.KEY);
+ if (envKey) return envKey;
+ try {
+ if (fs.existsSync(LICENSE_CONFIG.KEY_PATH)) {
+ const raw = fs.readFileSync(LICENSE_CONFIG.KEY_PATH, 'utf8');
+ return normalizeLicenseCode(raw);
+ }
+ } catch (e) {
+ console.error('License key read error:', e.message);
+ }
+ return '';
+}
+
+async function readLicenseStore() {
+ const remoteUrl = String(LICENSE_CONFIG.REMOTE_URL || '').trim();
+ if (remoteUrl) {
+ try {
+ const response = await axios.get(remoteUrl, { timeout: LICENSE_CONFIG.REMOTE_TIMEOUT_MS });
+ const data = response?.data;
+ if (data && typeof data === 'object') return data;
+ if (typeof data === 'string' && data.trim()) {
+ const parsed = JSON.parse(data);
+ if (parsed && typeof parsed === 'object') return parsed;
+ }
+ } catch (e) {
+ console.error('License remote store read error:', e.message);
+ }
+ }
+
+ try {
+ if (!fs.existsSync(LICENSE_CONFIG.CODES_PATH)) return null;
+ const raw = fs.readFileSync(LICENSE_CONFIG.CODES_PATH, 'utf8');
+ const parsed = JSON.parse(raw);
+ if (!parsed || typeof parsed !== 'object') return null;
+ return parsed;
+ } catch (e) {
+ console.error('License store read error:', e.message);
+ return null;
+ }
+}
+
+async function validateLicense() {
+ if (!LICENSE_CONFIG.ENFORCE) return { valid: true, reason: 'disabled' };
+
+ const licenseKey = readLicenseKey();
+ if (!licenseKey) return { valid: false, reason: 'license_key_missing' };
+
+ const store = await readLicenseStore();
+ if (!store) return { valid: false, reason: 'license_store_missing' };
+
+ const now = Date.now();
+ if (store.expires_at) {
+ const exp = new Date(store.expires_at).getTime();
+ if (Number.isFinite(exp) && now > exp) return { valid: false, reason: 'license_store_expired' };
+ }
+
+ const machineFingerprint = getMachineFingerprint();
+ const normalizedCodes = Array.isArray(store.codes)
+ ? store.codes.map((c) => normalizeLicenseCode(c)).filter(Boolean)
+ : [];
+ const normalizedHashes = Array.isArray(store.hashes)
+ ? store.hashes.map((h) => String(h || '').trim().toLowerCase()).filter(Boolean)
+ : [];
+
+ if (normalizedCodes.includes(licenseKey)) return { valid: true, reason: 'code_match' };
+
+ const checkHashes = [
+ hashLicenseCode(licenseKey, machineFingerprint, ''),
+ hashLicenseCode(licenseKey, machineFingerprint, LICENSE_CONFIG.SECRET)
+ ];
+ if (checkHashes.some((h) => normalizedHashes.includes(h.toLowerCase()))) {
+ return { valid: true, reason: 'hash_match' };
+ }
+
+ return { valid: false, reason: 'license_mismatch' };
+}
+
+(async () => {
+ APP_LICENSE_STATE = await validateLicense();
+ if (!APP_LICENSE_STATE.valid) {
+ console.error(`License validation failed: ${APP_LICENSE_STATE.reason}`);
+ }
+})();
 
 const TRANSLATE_CONFIG = {
  URLS: (process.env.TRANSLATE_URLS || 'https://libretranslate.com/translate,https://libretranslate.de/translate')
@@ -956,6 +1075,62 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(express.json({ limit: '100mb' }));
 app.set('trust proxy', 1);
+
+app.get('/license-status', (req, res) => {
+ const code = APP_LICENSE_STATE.valid ? 200 : 403;
+ return res.status(code).json({
+  success: APP_LICENSE_STATE.valid,
+  reason: APP_LICENSE_STATE.reason
+ });
+});
+
+app.get('/license-invalid', (req, res) => {
+ if (APP_LICENSE_STATE.valid) {
+  return res.redirect('/');
+ }
+ const reason = APP_LICENSE_STATE.reason || 'unknown';
+ return res.status(403).type('html').send(`<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lisenziya Xətası</title>
+  <style>
+    body { margin:0; background:#0b1020; color:#e2e8f0; font-family:Arial,sans-serif; display:grid; place-items:center; min-height:100vh; padding:24px; }
+    .box { max-width:640px; width:100%; background:#111a33; border:1px solid #233156; border-radius:12px; padding:28px; }
+    h1 { margin:0 0 10px; font-size:22px; }
+    p { margin:0 0 8px; color:#cbd5e1; line-height:1.5; }
+    code { background:#0f172a; padding:2px 6px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Proqram bloklandı</h1>
+    <p>Lisenziya doğrulaması uğursuz oldu. Sistem işləməyə davam etmir.</p>
+    <p>Səbəb: <code>${reason}</code></p>
+    <p>Administrator lisenziya kodunu və store faylını yoxlamalıdır.</p>
+  </div>
+</body>
+</html>`);
+});
+
+app.use((req, res, next) => {
+ if (APP_LICENSE_STATE.valid) return next();
+
+ const pathValue = String(req.path || '');
+ const allowList = ['/license-invalid', '/license-status'];
+ if (allowList.includes(pathValue)) return next();
+
+ if (pathValue.startsWith('/api/')) {
+  return res.status(403).json({
+   success: false,
+   error: 'Lisenziya doğrulaması uğursuz oldu.',
+   reason: APP_LICENSE_STATE.reason
+  });
+ }
+
+ return res.redirect('/license-invalid');
+});
 
 app.use((req, res, next) => {
  res.setHeader('X-Content-Type-Options', 'nosniff');

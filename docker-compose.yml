@@ -20,6 +20,13 @@ services:
       HUBMSG_URL: "${HUBMSG_URL:-https://hubmsgpanel.octotech.az/api/message}"
       HUBMSG_API_KEY: "${HUBMSG_API_KEY:-API-KEY-XXXX}"
       HUBMSG_TIMEOUT_MS: "${HUBMSG_TIMEOUT_MS:-10000}"
+      LICENSE_ENFORCE: "${LICENSE_ENFORCE:-1}"
+      LICENSE_KEY: "${LICENSE_KEY:-}"
+      LICENSE_SECRET: "${LICENSE_SECRET:-}"
+      LICENSE_CODES_PATH: "${LICENSE_CODES_PATH:-/app/data/license_codes.json}"
+      LICENSE_KEY_PATH: "${LICENSE_KEY_PATH:-/app/data/license_key.txt}"
+      LICENSE_REMOTE_URL: "${LICENSE_REMOTE_URL:-https://raw.githubusercontent.com/aliyabuz25/licenses/main/license_codes.json}"
+      LICENSE_REMOTE_TIMEOUT_MS: "${LICENSE_REMOTE_TIMEOUT_MS:-5000}"
     volumes:
       - /datastore/azpinx/uploads/receipts:/app/public/uploads/receipts
       - /datastore/azpinx/uploads/products:/app/public/uploads/products
