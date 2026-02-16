@@ -1511,6 +1511,7 @@ footer {
 
 /* Walking Penguin Sprite Animation */
 .penguin-sprite {
+    display: none;
     position: fixed;
     bottom: 0;
     left: -100px;
