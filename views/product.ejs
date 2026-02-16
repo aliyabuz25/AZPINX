@@ -56,17 +56,13 @@
  </div>
 
  <% if (product.category.toUpperCase().includes('PUBG')) { %>
- <div class="mb-4">
- <label class="small font-weight-bold text-uppercase"
- style="letter-spacing: 0.5px; color: #64748b;">Player ID</label>
- <div class="d-flex" style="gap: 8px;">
- <input type="text" id="player_id" class="form-control" placeholder="5124018318"
- style="height: 48px; border-radius: 8px; font-weight: 600;">
- <button class="btn btn-dark" id="btnCheckID"
- style="height: 48px; border-radius: 8px; padding: 0 25px; font-weight: 600;">Yoxla</button>
+ <div class="mb-3">
+ <label for="player_id" class="small text-muted d-block mb-2">Player ID</label>
+ <div class="d-flex align-items-center">
+ <input type="text" id="player_id" class="form-control mr-2" placeholder="5124018318">
+ <button class="btn btn-outline-dark" id="btnCheckID" type="button">Yoxla</button>
  </div>
- <div id="idStatus" class="mt-2"
- style="min-height: 20px; font-size: 0.85rem; font-weight: 500;"></div>
+ <div id="idStatus" class="small mt-2 text-muted"></div>
  <input type="hidden" id="player_nickname" value="">
  </div>
 
@@ -75,7 +71,8 @@
  const id = document.getElementById('player_id').value;
  const statusDiv = document.getElementById('idStatus');
  if (!id) {
- statusDiv.innerHTML = '<span class="text-danger">Player ID daxil edin.</span>';
+ statusDiv.textContent = 'Player ID daxil edin.';
+ statusDiv.className = 'small mt-2 text-danger';
  return;
  }
 
@@ -84,27 +81,31 @@
  const fallbackNote = 'ID: ' + id;
 
  btn.disabled = true;
- btn.innerHTML = '<i class="ri-loader-4-line icon-spin"></i>';
- statusDiv.innerHTML = '<span class="text-muted">Yoxlanılır...</span>';
+ btn.textContent = '...';
+ statusDiv.textContent = 'Yoxlanılır...';
+ statusDiv.className = 'small mt-2 text-muted';
 
  try {
  const res = await fetch('/api/pubg-check?player_id=' + id);
  const data = await res.json();
 
  if (data.success) {
- statusDiv.innerHTML = '<span class="text-success"><i class="ri-check-line"></i> ' + data.nickname + '</span>';
+ statusDiv.textContent = data.nickname;
+ statusDiv.className = 'small mt-2 text-success';
  hiddenNickname.value = data.nickname || fallbackNote;
  } else {
- statusDiv.innerHTML = '<span class="text-warning"><i class="ri-error-warning-line"></i> ID tapılmadı, ID ilə qəbul ediləcək.</span>';
+ statusDiv.textContent = 'ID tapılmadı, ID ilə qəbul ediləcək.';
+ statusDiv.className = 'small mt-2 text-warning';
  hiddenNickname.value = fallbackNote;
  }
  } catch (e) {
- statusDiv.innerHTML = '<span class="text-warning"><i class="ri-error-warning-line"></i> Bağlantı xətası, ID ilə qəbul ediləcək.</span>';
+ statusDiv.textContent = 'Bağlantı xətası, ID ilə qəbul ediləcək.';
+ statusDiv.className = 'small mt-2 text-warning';
  hiddenNickname.value = fallbackNote;
  }
 
  btn.disabled = false;
- btn.innerHTML = 'Yoxla';
+ btn.textContent = 'Yoxla';
  });
 
  document.getElementById('player_id').addEventListener('input', function () {
