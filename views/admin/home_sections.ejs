@@ -1,101 +1,160 @@
 <%- include('header') %>
 
- <div class="row">
- <div class="col-md-4">
- <div class="card card-primary">
- <div class="card-header">
- <h3 class="card-title">Yeni Bölmə Yarat</h3>
- </div>
- <form action="/admin/home-sections/create" method="POST">
- <div class="card-body">
- <div class="form-group">
- <label>Bölmə Başlığı</label>
- <input type="text" name="title" class="form-control" placeholder="Məs: Populyar Oyunlar"
- required>
- </div>
- <div class="form-group">
- <label>Kateqoriya Seç</label>
- <select name="category_id" class="form-control">
- <option value="">-- Kateqoriya Seçin --</option>
- <% categories.forEach(cat=> { %>
- <option value="<%= cat.id %>">
- <%= cat.name %>
- </option>
- <% }) %>
- </select>
- <small class="form-text text-muted">Əgər boş buraxsanız, başlıq sadəcə mətn kimi
- görünəcək.</small>
- </div>
- <div class="form-group">
- <label>Sıralama (Order Index)</label>
- <input type="number" name="order_index" class="form-control" value="0">
- </div>
- </div>
- <div class="card-footer">
- <button type="submit" class="btn btn-primary btn-block">Əlavə et</button>
- </div>
- </form>
- </div>
- </div>
-
- <div class="col-md-8">
- <div class="card">
- <div class="card-header">
- <h3 class="card-title">Ana Səhifə Bölmələri</h3>
- </div>
- <div class="card-body p-0">
- <table class="table table-hover">
- <thead>
- <tr>
- <th style="width: 50px">Sıra</th>
- <th>Başlıq</th>
- <th>Kateqoriya</th>
- <th>Status</th>
- <th>Əməliyyatlar</th>
- </tr>
- </thead>
- <tbody>
- <% sections.forEach(section=> { %>
- <tr>
- <td>
- <%= section.order_index %>
- </td>
- <td><strong>
- <%= section.title %>
- </strong></td>
- <td>
- <% if (section.category_name) { %>
- <span class="badge badge-info">
- <%= section.category_name %>
- </span>
- <% } else { %>
- <span class="text-muted">-</span>
- <% } %>
- </td>
- <td>
- <% if (section.is_active) { %>
- <span class="badge badge-success">Aktiv</span>
- <% } else { %>
- <span class="badge badge-secondary">Deaktiv</span>
- <% } %>
- </td>
- <td>
- <form action="/admin/home-sections/delete" method="POST"
- onsubmit="return confirm('Bu bölməni silmək istədiyinizə əminsiniz?');"
- style="display:inline;">
- <input type="hidden" name="id" value="<%= section.id %>">
- <button type="submit" class="btn btn-sm btn-danger" title="Sil">
- <i class="ri-delete-bin-line"></i>
- </button>
- </form>
- </td>
- </tr>
- <% }) %>
- </tbody>
- </table>
- </div>
- </div>
- </div>
+<div class="row">
+ <div class="col-lg-4">
+  <div class="card card-primary">
+   <div class="card-header">
+    <h3 class="card-title">Yeni Bölmə</h3>
+   </div>
+   <form action="/admin/home-sections/create" method="POST">
+    <div class="card-body">
+     <div class="form-group">
+      <label>Bölmə başlığı</label>
+      <input type="text" name="title" class="form-control" placeholder="Məs: Oyun İçi Məhsullar" required>
+     </div>
+     <div class="form-group">
+      <label>Kateqoriya (opsional)</label>
+      <select name="category_id" class="form-control">
+       <option value="">-- Kateqoriya seçin --</option>
+       <% categories.forEach(function(cat){ %>
+       <option value="<%= cat.id %>"><%= cat.name %></option>
+       <% }) %>
+      </select>
+     </div>
+     <div class="form-group">
+      <label>Məhsullar (çoxlu seçim)</label>
+      <select name="product_refs" class="form-control" multiple size="8">
+       <% products.forEach(function(prod){ %>
+       <option value="<%= String(prod.id) %>"><%= prod.name %> - <%= Number(prod.price || 0).toFixed(2) %> AZN</option>
+       <% }) %>
+      </select>
+      <small class="text-muted">`Ctrl/Cmd` ilə bir neçə məhsul seçə bilərsiniz.</small>
+     </div>
+     <div class="form-group">
+      <label>Sıra</label>
+      <input type="number" name="order_index" class="form-control" value="0" min="0">
+     </div>
+     <div class="form-group mb-0">
+      <div class="custom-control custom-switch">
+       <input type="checkbox" class="custom-control-input" id="createActiveSwitch" name="is_active" checked>
+       <label class="custom-control-label" for="createActiveSwitch">Aktiv</label>
+      </div>
+     </div>
+    </div>
+    <div class="card-footer">
+     <button type="submit" class="btn btn-primary btn-block">Bölmə əlavə et</button>
+    </div>
+   </form>
+  </div>
  </div>
 
- <%- include('footer') %>
+ <div class="col-lg-8">
+  <div class="card">
+   <div class="card-header">
+    <h3 class="card-title">Mövcud Bölmələr</h3>
+   </div>
+   <div class="card-body p-0">
+    <div class="table-responsive">
+     <table class="table table-hover mb-0">
+      <thead>
+       <tr>
+        <th style="width: 70px;">Sıra</th>
+        <th>Başlıq</th>
+        <th>Kateqoriya</th>
+        <th>Aktiv</th>
+        <th style="width: 180px;">Əməliyyat</th>
+       </tr>
+      </thead>
+      <tbody>
+       <% sections.forEach(function(section){ %>
+       <tr>
+        <td><%= section.order_index %></td>
+        <td><strong><%= section.title %></strong></td>
+        <td><%= section.category_name || '-' %></td>
+        <td>
+         <% if (Number(section.is_active) === 1) { %>
+         <span class="badge badge-success">Aktiv</span>
+         <% } else { %>
+         <span class="badge badge-secondary">Deaktiv</span>
+         <% } %>
+        </td>
+        <td>
+         <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#editSectionModal_<%= section.id %>">
+          <i class="ri-edit-2-line"></i>
+         </button>
+         <form action="/admin/home-sections/delete" method="POST" class="d-inline"
+          onsubmit="return confirm('Bu bölməni silmək istədiyinizə əminsiniz?');">
+          <input type="hidden" name="id" value="<%= section.id %>">
+          <button type="submit" class="btn btn-sm btn-danger">
+           <i class="ri-delete-bin-line"></i>
+          </button>
+         </form>
+        </td>
+       </tr>
+       <% }) %>
+      </tbody>
+     </table>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<% sections.forEach(function(section){ %>
+<div class="modal fade" id="editSectionModal_<%= section.id %>" tabindex="-1" role="dialog" aria-hidden="true">
+ <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-content">
+   <form action="/admin/home-sections/update" method="POST">
+    <div class="modal-header">
+     <h5 class="modal-title">Bölməni redaktə et</h5>
+     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+     </button>
+    </div>
+    <div class="modal-body">
+     <input type="hidden" name="id" value="<%= section.id %>">
+     <div class="form-group">
+      <label>Başlıq</label>
+      <input type="text" name="title" class="form-control" value="<%= section.title %>" required>
+     </div>
+     <div class="form-group">
+      <label>Kateqoriya</label>
+      <select name="category_id" class="form-control">
+       <option value="">-- Kateqoriya seçin --</option>
+       <% categories.forEach(function(cat){ %>
+       <option value="<%= cat.id %>" <%= Number(section.category_id || 0) === Number(cat.id) ? 'selected' : '' %>><%= cat.name %></option>
+       <% }) %>
+      </select>
+     </div>
+     <div class="form-group">
+      <label>Məhsullar (çoxlu seçim)</label>
+      <select name="product_refs" class="form-control" multiple size="10">
+       <% products.forEach(function(prod){ const ref = String(prod.id); %>
+       <option value="<%= ref %>" <%= (section.productRefs || []).includes(ref) ? 'selected' : '' %>><%= prod.name %> - <%= Number(prod.price || 0).toFixed(2) %> AZN</option>
+       <% }) %>
+      </select>
+     </div>
+     <div class="form-row">
+      <div class="form-group col-md-4">
+       <label>Sıra</label>
+       <input type="number" name="order_index" class="form-control" value="<%= section.order_index || 0 %>" min="0">
+      </div>
+      <div class="form-group col-md-8 d-flex align-items-center">
+       <div class="custom-control custom-switch mt-3">
+        <input type="checkbox" class="custom-control-input" id="activeSwitch_<%= section.id %>" name="is_active" <%= Number(section.is_active) === 1 ? 'checked' : '' %>>
+        <label class="custom-control-label" for="activeSwitch_<%= section.id %>">Aktiv</label>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="modal-footer">
+     <button type="button" class="btn btn-secondary" data-dismiss="modal">Bağla</button>
+     <button type="submit" class="btn btn-primary">Yadda saxla</button>
+    </div>
+   </form>
+  </div>
+ </div>
+</div>
+<% }) %>
+
+<%- include('footer') %>

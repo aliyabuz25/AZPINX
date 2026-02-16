@@ -37,13 +37,13 @@
  </div>
  <div class="card-extra-actions d-flex gap-2">
  <div class="wishlist-icon-btn mr-2"
- onclick="event.preventDefault(); toggleWishlist('<%= product.id %>', this)">
+ onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('<%= product.id %>', this)">
  <i class="ri-heart-line"></i>
  </div>
  <!-- Robust data-attributes to avoid SyntaxErrors in attributes -->
  <div class="add-to-cart-btn" data-id="<%= product.id %>" data-name="<%= product.name %>"
  data-price="<%= product.price %>" data-img="<%= product.image %>"
- onclick="event.preventDefault(); if(window.addToCartFromAttr) window.addToCartFromAttr(this)">
+ onclick="event.preventDefault(); event.stopPropagation(); if(window.addToCartFromAttr) window.addToCartFromAttr(this)">
  <i class="ri-add-line"></i>
  </div>
  </div>

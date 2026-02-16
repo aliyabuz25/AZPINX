@@ -141,8 +141,8 @@
  <h3>
  <%= section.title %>
  </h3>
- <% if (section.category_id && section.category_name) { %>
- <a href="/all-products?category=<%= encodeURIComponent(section.category_name) %>"
+ <% if (section.link) { %>
+ <a href="<%= section.link %>"
  class="view-all">Hamısına bax <i class="ri-arrow-right-line"></i></a>
  <% } %>
  </div>

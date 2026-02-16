@@ -316,7 +316,8 @@ let db;
  { table: 'users', column: 'registration_ip', definition: 'VARCHAR(64) NULL AFTER referred_by' },
  { table: 'users', column: 'last_seen_at', definition: 'DATETIME NULL AFTER registration_ip' },
  { table: 'balance_topups', column: 'refund_status', definition: "ENUM('none', 'pending', 'processed', 'rejected') DEFAULT 'none' AFTER status" },
- { table: 'balance_topups', column: 'refund_requested_at', definition: 'DATETIME NULL AFTER refund_status' }
+ { table: 'balance_topups', column: 'refund_requested_at', definition: 'DATETIME NULL AFTER refund_status' },
+ { table: 'wishlist', column: 'product_ref', definition: 'VARCHAR(80) NULL AFTER product_id' }
  ];
 
  for (const m of migrations) {
@@ -384,6 +385,36 @@ let db;
  } catch (idxErr) {
  if (!String(idxErr.message || '').includes('Duplicate key name')) {
  console.warn('Index Warning idx_balance_topups_status_created:', idxErr.message);
+ }
+ }
+
+ try {
+ await db.execute('ALTER TABLE wishlist MODIFY product_id INT NULL');
+ } catch (err) {
+ if (!String(err.message || '').toLowerCase().includes('duplicate')) {
+ console.warn('Wishlist migration warning (product_id nullable):', err.message);
+ }
+ }
+
+ try {
+ await db.execute('UPDATE wishlist SET product_ref = CONCAT("db:", product_id) WHERE (product_ref IS NULL OR product_ref = "") AND product_id IS NOT NULL');
+ } catch (err) {
+ console.warn('Wishlist migration warning (product_ref backfill):', err.message);
+ }
+
+ try {
+ await db.execute('ALTER TABLE wishlist DROP INDEX unique_wish');
+ } catch (err) {
+ if (!String(err.message || '').includes("check that column/key exists")) {
+ console.warn('Wishlist migration warning (drop unique_wish):', err.message);
+ }
+ }
+
+ try {
+ await db.execute('CREATE UNIQUE INDEX unique_wish_ref ON wishlist (user_id, product_ref)');
+ } catch (err) {
+ if (!String(err.message || '').includes('Duplicate key name')) {
+ console.warn('Wishlist migration warning (unique_wish_ref):', err.message);
  }
  }
  }
@@ -566,6 +597,19 @@ function normalizeFooterLink(value, fallback = '#') {
  if (raw.startsWith('/')) return raw;
  if (/^https?:\/\//i.test(raw)) return raw;
  return fallback;
+}
+
+function parseSectionProductRefs(input) {
+ const raw = Array.isArray(input) ? input : String(input || '').split(',');
+ return [...new Set(raw.map((item) => String(item || '').trim()).filter(Boolean))];
+}
+
+function normalizeWishlistProductRef(value) {
+ const normalized = normalizeOptionalString(value);
+ if (!normalized) return null;
+ const ref = String(normalized).trim();
+ if (!ref) return null;
+ return ref;
 }
 
 function resolveSliderLink(body = {}) {
@@ -1107,17 +1151,41 @@ app.get('/', async (req, res) => {
  const [sections] = await db.execute('SELECT * FROM home_sections WHERE is_active = TRUE ORDER BY order_index ASC');
 
  const sectionsWithProducts = await Promise.all(sections.map(async (section) => {
- let products = [];
- if (section.category_id) {
- // Fetch products for this category
- const allCatProducts = allProducts.filter(p => p.category_id === section.category_id);
- products = allCatProducts.slice(0, 8); // Limit to 8 products per section
- } else {
- // If no category, maybe fetch random or latest? For now empty.
- // Or if it's"Featured" (no category but title exists), maybe manual selection later?
- // For now, let's just use the section title as a separator if no products.
+ const productRefs = parseSectionProductRefs(section.product_ids);
+ const selectedProducts = [];
+ const seenRefs = new Set();
+
+ for (const ref of productRefs) {
+ const found = homeCatalogProducts.find((p) =>
+ String(p.id) === String(ref) ||
+ String(p.db_id || '') === String(ref).replace(/^db:/, '')
+ );
+ if (!found) continue;
+ const key = String(found.id);
+ if (seenRefs.has(key)) continue;
+ seenRefs.add(key);
+ selectedProducts.push(found);
  }
- return { ...section, products };
+
+ if (section.category_id) {
+ const categoryProducts = homeCatalogProducts.filter((p) => Number(p.category_id || 0) === Number(section.category_id));
+ for (const product of categoryProducts) {
+ if (selectedProducts.length >= 8) break;
+ const key = String(product.id);
+ if (seenRefs.has(key)) continue;
+ seenRefs.add(key);
+ selectedProducts.push(product);
+ }
+ }
+
+ if (!section.category_id && !selectedProducts.length) {
+ selectedProducts.push(...homeCatalogProducts.slice(0, 8));
+ }
+
+ const categoryName = categories.find((c) => Number(c.id) === Number(section.category_id))?.name || section.category_name || null;
+ const link = categoryName ? `/all-products?category=${encodeURIComponent(categoryName)}` : null;
+
+ return { ...section, category_name: categoryName, link, products: selectedProducts.slice(0, 8), productRefs };
  }));
 
  // Keep"Featured" logic if no sections exist, or as a fallback/top section?
@@ -1204,13 +1272,17 @@ app.get('/', async (req, res) => {
  .filter(p => hasAny(p, ingameKeywords) || hasAny(p, gameKeywords))
  .sort((a, b) => scoreByPriority(a) - scoreByPriority(b));
 
- const homeAutoSections = [
+ let homeAutoSections = [
  { title: 'Oyun İçi Məhsullar', link: '/all-products?search=topup', products: pickSectionProducts(prioritizedIngameApi.length ? prioritizedIngameApi : ingameCandidates, 8) },
  { title: 'Oyunlar', link: '/all-products?search=oyun', products: pickSectionProducts(apiGamesCandidates, 8) },
  { title: 'AI', link: '/all-products?search=ai', products: pickSectionProducts(aiCandidates, 8) },
  { title: 'Yazılımlar', link: '/all-products?search=yaz%C4%B1l%C4%B1m', products: pickSectionProducts(softwareCandidates, 8) },
  { title: 'Pinlər', link: '/all-products?search=pin', products: pickSectionProducts(pinCandidates, 8) }
  ].filter(section => section.products.length > 0);
+
+ if (sectionsWithProducts.length > 0) {
+ homeAutoSections = [];
+ }
 
  // Pagination Logic
  const page = parseInt(req.query.page) || 1;
@@ -1798,8 +1870,27 @@ app.post('/balance/topups/request', uploadReceipt.single('receipt'), async (req,
 // --- Wishlist Routes ---
 app.get('/wishlist', async (req, res) => {
  if (!req.session.user) return res.redirect('/login');
- const [wishlistItems] = await db.execute(`
- SELECT p.* FROM products p  JOIN wishlist w ON p.id = w.product_id  WHERE w.user_id = ?`, [req.session.user.id]);
+ const [wishlistRows] = await db.execute(
+ 'SELECT product_id, product_ref, created_at FROM wishlist WHERE user_id = ? ORDER BY created_at DESC',
+ [req.session.user.id]
+ );
+ let allProducts = await getMappedProducts();
+ allProducts = allProducts.filter((p) => p.status === 'sale' && p.is_active);
+ const productMap = new Map();
+ allProducts.forEach((product) => {
+ productMap.set(String(product.id), product);
+ if (product.db_id) productMap.set(`db:${product.db_id}`, product);
+ });
+
+ const wishlistItems = wishlistRows.map((row) => {
+ const ref = normalizeWishlistProductRef(row.product_ref) || (row.product_id ? `db:${row.product_id}` : null);
+ if (!ref) return null;
+ return productMap.get(ref) ||
+ productMap.get(String(ref).replace(/^db:/, '')) ||
+ productMap.get(`local_${String(ref).replace(/^db:/, '')}`) ||
+ null;
+ }).filter(Boolean);
+
  const resellerDiscountPercent = await getResellerDiscountPercent();
  const pricedWishlist = applyResellerPricing(wishlistItems, req.session.user, resellerDiscountPercent);
  res.render('wishlist', { title: 'İstək Listəm', wishlist: pricedWishlist });
@@ -1807,14 +1898,23 @@ app.get('/wishlist', async (req, res) => {
 
 app.post('/wishlist/toggle', async (req, res) => {
  if (!req.session.user) return res.status(401).json({ success: false, error: 'Login olun' });
- const { product_id } = req.body;
+ const productRef = normalizeWishlistProductRef(req.body.product_id);
+ if (!productRef) return res.status(400).json({ success: false, error: 'Məhsul ID düzgün deyil.' });
  try {
- const [existing] = await db.execute('SELECT * FROM wishlist WHERE user_id = ? AND product_id = ?', [req.session.user.id, product_id]);
+ const [existing] = await db.execute('SELECT id FROM wishlist WHERE user_id = ? AND product_ref = ?', [req.session.user.id, productRef]);
  if (existing.length > 0) {
- await db.execute('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?', [req.session.user.id, product_id]);
+ await db.execute('DELETE FROM wishlist WHERE user_id = ? AND product_ref = ?', [req.session.user.id, productRef]);
  res.json({ success: true, action: 'removed' });
  } else {
- await db.execute('INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)', [req.session.user.id, product_id]);
+ let legacyProductId = null;
+ if (/^\d+$/.test(productRef)) {
+ legacyProductId = Number(productRef);
+ } else if (/^local_\d+$/i.test(productRef)) {
+ legacyProductId = Number(String(productRef).split('_')[1] || 0) || null;
+ } else if (/^db:\d+$/i.test(productRef)) {
+ legacyProductId = Number(String(productRef).replace(/^db:/i, '')) || null;
+ }
+ await db.execute('INSERT INTO wishlist (user_id, product_id, product_ref) VALUES (?, ?, ?)', [req.session.user.id, legacyProductId, productRef]);
  res.json({ success: true, action: 'added' });
  }
  } catch (e) {
@@ -2592,7 +2692,13 @@ app.get('/admin/home-sections', isAdmin, async (req, res) => {
  SELECT hs.*, c.name as category_name  FROM home_sections hs  LEFT JOIN categories c ON hs.category_id = c.id  ORDER BY hs.order_index ASC
  `);
  const [categories] = await db.execute('SELECT * FROM categories');
- res.render('admin/home_sections', { title: 'Ana Səhifə Bölmələri', sections, categories });
+ let products = await getMappedProducts();
+ products = products.filter((p) => p.status === 'sale' && p.is_active);
+ const sectionRows = sections.map((section) => ({
+ ...section,
+ productRefs: parseSectionProductRefs(section.product_ids)
+ }));
+ res.render('admin/home_sections', { title: 'Ana Səhifə Bölmələri', sections: sectionRows, categories, products });
  } catch (e) {
  res.redirect('/admin?error=' + encodeURIComponent(e.message));
  }
@@ -2702,11 +2808,30 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
 app.post('/admin/home-sections/create', isAdmin, async (req, res) => {
  const { title, category_id, order_index } = req.body;
  try {
- await db.execute('INSERT INTO home_sections (title, category_id, order_index) VALUES (?, ?, ?)',
- [title, category_id || null, order_index || 0]);
+ const productRefs = parseSectionProductRefs(req.body.product_refs);
+ const isActive = req.body.is_active ? 1 : 0;
+ await db.execute('INSERT INTO home_sections (title, category_id, product_ids, order_index, is_active) VALUES (?, ?, ?, ?, ?)',
+ [normalizeOptionalString(title), category_id || null, productRefs.join(','), Number(order_index || 0), isActive]);
  res.redirect('/admin/home-sections?success=Bölmə yaradıldı');
  } catch (e) {
  res.redirect('/admin/home-sections?error=' + encodeURIComponent(e.message));
+ }
+});
+
+app.post('/admin/home-sections/update', isAdmin, async (req, res) => {
+ const { id, title, category_id, order_index } = req.body;
+ try {
+ const sectionId = Number(id);
+ if (!sectionId) return res.redirect('/admin/home-sections?error=Yanlış ID');
+ const productRefs = parseSectionProductRefs(req.body.product_refs);
+ const isActive = req.body.is_active ? 1 : 0;
+ await db.execute(
+ 'UPDATE home_sections SET title = ?, category_id = ?, product_ids = ?, order_index = ?, is_active = ? WHERE id = ?',
+ [normalizeOptionalString(title), category_id || null, productRefs.join(','), Number(order_index || 0), isActive, sectionId]
+ );
+ return res.redirect('/admin/home-sections?success=Bölmə yeniləndi');
+ } catch (e) {
+ return res.redirect('/admin/home-sections?error=' + encodeURIComponent(e.message));
  }
 });
 
