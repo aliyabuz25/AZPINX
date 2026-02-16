@@ -26,11 +26,11 @@
 }
 
 .azpin-splash-logo {
-    width: 86px;
-    height: 86px;
-    border-radius: 18px;
+    width: 130px;
+    height: 130px;
+    border-radius: 0;
     object-fit: cover;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
 }
 
 body.is-page-leaving {
@@ -39,8 +39,8 @@ body.is-page-leaving {
 
 @media (max-width: 768px) {
     .azpin-splash-logo {
-        width: 70px;
-        height: 70px;
-        border-radius: 14px;
+        width: 104px;
+        height: 104px;
+        border-radius: 0;
     }
 }

@@ -3,7 +3,8 @@
     if (!splash) return;
 
     const splashInner = splash.querySelector('.azpin-splash-inner');
-    const minimumVisibleMs = 220;
+    const splashLogo = splash.querySelector('.azpin-splash-logo');
+    const minimumVisibleMs = 520;
     const startedAt = Date.now();
 
     function hideSplash() {
@@ -12,18 +13,26 @@
 
         window.setTimeout(() => {
             if (window.gsap) {
-                gsap.to(splash, {
-                    opacity: 0,
-                    duration: 0.26,
-                    ease: 'power2.out',
-                    onComplete: () => splash.classList.add('is-hidden')
+                const pulseTarget = splashLogo || splashInner;
+                const tl = gsap.timeline({
+                    onComplete: () => {
+                        gsap.to(splash, {
+                            opacity: 0,
+                            duration: 0.28,
+                            ease: 'power2.out',
+                            onComplete: () => splash.classList.add('is-hidden')
+                        });
+                        if (splashInner) {
+                            gsap.to(splashInner, { scale: 0.98, opacity: 0.92, duration: 0.28, ease: 'power2.out' });
+                        }
+                    }
                 });
-                if (splashInner) {
-                    gsap.fromTo(
-                        splashInner,
-                        { scale: 1, opacity: 1 },
-                        { scale: 0.97, opacity: 0.9, duration: 0.26, ease: 'power2.out' }
-                    );
+
+                if (pulseTarget) {
+                    tl.to(pulseTarget, { scale: 1.08, duration: 0.14, ease: 'sine.out' })
+                        .to(pulseTarget, { scale: 1, duration: 0.14, ease: 'sine.inOut' })
+                        .to(pulseTarget, { scale: 1.08, duration: 0.14, ease: 'sine.out' })
+                        .to(pulseTarget, { scale: 1, duration: 0.14, ease: 'sine.inOut' });
                 }
             } else {
                 splash.classList.add('is-hidden');
