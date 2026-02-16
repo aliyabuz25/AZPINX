@@ -8,139 +8,22 @@
  <%= (locals.title ? locals.title + ' | ' : '' ) %>AZPINX Admin
  </title>
 
- <!-- Google Font: Source Sans Pro -->
+ <!-- Google Font -->
  <link rel="stylesheet"
- href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+ href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
  <!-- Remix Icons -->
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
  <!-- OverlayScrollbars -->
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@1.13.1/css/OverlayScrollbars.min.css">
  <!-- Theme style -->
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+ <link rel="stylesheet" href="/css/admin-modern.css?v=20260216-1">
  <link rel="stylesheet" href="/css/transition.css?v=20260216-2">
  <!-- Toastify -->
  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
- <style>
- .os-theme-light>.os-scrollbar>.os-scrollbar-track>.os-scrollbar-handle {
- background: rgba(0, 0, 0, 0.2) !important;
- }
-
- /* PREMIUM DARK SIDEBAR OVERRIDES */
- .main-sidebar {
- background-color: rgb(10, 8, 21) !important;
- border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
- box-shadow: 0 0 20px rgba(0, 0, 0, 0.3) !important;
- border-top-right-radius: 16px !important;
- border-bottom-right-radius: 16px !important;
- }
-
- .brand-link {
- border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
- padding: 25px 15px !important;
- background: transparent !important;
- }
-
- .brand-text {
- color: #ffffff !important;
- font-weight: 900 !important;
- font-size: 1.4rem !important;
- letter-spacing: -1px;
- text-transform: uppercase;
- }
-
- .nav-sidebar .nav-item .nav-link {
- border-radius: 10px !important;
- margin: 4px 12px !important;
- padding: 10px 15px !important;
- transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
- color: #94a3b8 !important;
- font-weight: 500;
- }
-
- .nav-sidebar .nav-item .nav-link i {
- margin-right: 10px;
- font-size: 1.1rem;
- opacity: 0.8;
- }
-
- .nav-sidebar .nav-item .nav-link:hover {
- background: rgba(255, 255, 255, 0.05) !important;
- color: #e2e8f0 !important;
- transform: translateX(3px);
- }
-
- .nav-sidebar .nav-item .nav-link.active {
- background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
- color: #ffffff !important;
- font-weight: 700;
- box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
- }
-
- .nav-sidebar .nav-item .nav-link.active i {
- color: #ffffff !important;
- opacity: 1;
- }
-
- .user-panel {
- border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
- padding: 20px 15px !important;
- background: transparent !important;
- }
-
- .user-panel .info a {
- color: #f1f5f9 !important;
- font-weight: 600;
- font-size: 0.95rem;
- }
-
- .nav-header {
- color: #64748b !important;
- font-weight: 700 !important;
- letter-spacing: 0.5px;
- padding-left: 25px !important;
- margin-top: 20px !important;
- }
-
-        .sidebar {
-            padding: 0 !important;
-        }
-
-        .toastify {
-            min-width: 280px;
-            max-width: 380px;
-            padding: 13px 14px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: 0 16px 35px rgba(2, 6, 23, 0.28);
-            backdrop-filter: blur(10px);
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.1px;
-        }
-
-        .toastify .toast-close {
-            opacity: 0.9;
-            font-size: 16px;
-            margin-left: 10px;
-        }
-
-        .toastify .toast-close:hover {
-            opacity: 1;
-        }
-
-        @media (max-width: 768px) {
-            .toastify {
-                min-width: 0;
-                width: calc(100vw - 24px);
-                margin: 0 12px;
-                border-radius: 10px;
-            }
-        }
-    </style>
 </head>
 
 <body class="hold-transition sidebar-mini layout-fixed">
@@ -160,7 +43,7 @@
  <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="ri-menu-line"></i></a>
  </li>
  <li class="nav-item d-none d-sm-inline-block">
- <a href="/" class="nav-link font-weight-bold text-primary"><i
+ <a href="/" class="nav-link nav-link-site"><i
  class="ri-external-link-line mr-1"></i> Sayta Keç</a>
  </li>
  </ul>
@@ -168,7 +51,7 @@
  <!-- Right navbar links -->
  <ul class="navbar-nav ml-auto">
  <li class="nav-item">
- <a class="nav-link text-danger font-weight-bold" href="/logout" role="button">
+ <a class="nav-link nav-link-logout" href="/logout" role="button">
  <i class="ri-logout-box-r-line"></i> Çıxış
  </a>
  </li>
@@ -179,16 +62,19 @@
  <!-- Main Sidebar Container -->
  <aside class="main-sidebar elevation-0">
  <!-- Brand Logo -->
- <a href="/admin" class="brand-link text-center border-0">
- <span class="brand-text">AZPIN</span>
+ <a href="/admin" class="brand-link border-0">
+ <img src="/images/logo-new.jpeg" alt="AZPINX" class="brand-image-modern">
+ <div class="brand-stack">
+ <span class="brand-text">AZPINX</span>
+ <small>Admin Console</small>
+ </div>
  </a>
 
  <!-- Sidebar -->
  <div class="sidebar">
  <div class="user-panel d-flex align-items-center">
  <div class="image">
- <div class="bg-info rounded-circle d-flex align-items-center justify-content-center text-white"
- style="width: 40px; height: 40px; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 15px rgba(0,212,255,0.2);">
+ <div class="admin-avatar d-flex align-items-center justify-content-center text-white">
  <%= user.full_name.charAt(0).toUpperCase() %>
  </div>
  </div>
@@ -296,6 +182,7 @@
  <h1 class="m-0 text-dark">
  <%= locals.title || 'Admin Panel' %>
  </h1>
+ <small class="admin-subtitle">AZPINX idarəetmə mərkəzi</small>
  </div>
  </div>
  </div>
