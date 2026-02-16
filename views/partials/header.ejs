@@ -104,14 +104,6 @@
  <div class="collapse d-lg-flex topbar-actions-wrap" id="topbarActions">
  <div class="auth-buttons">
  <% if (locals.user) { %>
- <!-- User Balance -->
- <div class="nav-balance">
- <i class="ri-wallet-3-line"></i>
- <span>
- <%= Number(user.balance || 0).toFixed(2) %> ₼
- </span>
- </div>
-
  <!-- Wishlist -->
  <a href="/wishlist" class="nav-btn" title="İstəklər">
  <i class="ri-heart-line"></i>
