@@ -116,6 +116,15 @@ const PUBG_CHECKER_CONFIG = {
  TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 12000)
 };
 
+const TRANSLATE_CONFIG = {
+ URLS: (process.env.TRANSLATE_URLS || 'https://libretranslate.com/translate,https://libretranslate.de/translate')
+ .split(',')
+ .map((u) => u.trim())
+ .filter(Boolean),
+ TIMEOUT: Number(process.env.TRANSLATE_TIMEOUT_MS || 9000),
+ SUPPORTED: ['az', 'tr', 'ru']
+};
+
 const REFERRAL_TARGET = 5;
 const REFERRAL_REWARD_LABEL = '60 UC';
 const VPN_BLOCK_ENABLED = process.env.VPN_BLOCK_ENABLED !== '0';
@@ -634,6 +643,48 @@ async function notifyAllAdmins(message) {
  }
 }
 
+async function translateText(text, targetLang) {
+ const raw = String(text || '').trim();
+ if (!raw) return '';
+ if (!TRANSLATE_CONFIG.SUPPORTED.includes(targetLang)) return raw;
+ if (targetLang === 'az') return raw;
+
+ for (const url of TRANSLATE_CONFIG.URLS) {
+ try {
+ const response = await axios.post(url, {
+ q: raw,
+ source: 'az',
+ target: targetLang,
+ format: 'text'
+ }, {
+ timeout: TRANSLATE_CONFIG.TIMEOUT,
+ headers: { 'Content-Type': 'application/json' }
+ });
+ const translated = response?.data?.translatedText;
+ if (typeof translated === 'string' && translated.trim()) {
+ return translated.trim();
+ }
+ } catch (e) {
+ console.warn(`Translate provider failed (${url}):`, e.message);
+ }
+ }
+
+ try {
+ const fallbackResponse = await axios.get('https://api.mymemory.translated.net/get', {
+ params: { q: raw, langpair: `az|${targetLang}` },
+ timeout: TRANSLATE_CONFIG.TIMEOUT
+ });
+ const translated = fallbackResponse?.data?.responseData?.translatedText;
+ if (typeof translated === 'string' && translated.trim()) {
+ return translated.trim();
+ }
+ } catch (e) {
+ console.warn('Translate fallback failed:', e.message);
+ }
+
+ return raw;
+}
+
 function clampPercent(value, min = 0, max = 90) {
  const n = Number(value);
  if (Number.isNaN(n)) return min;
@@ -951,10 +1002,10 @@ app.get('/', async (req, res) => {
  .sort((a, b) => scoreByPriority(a) - scoreByPriority(b));
 
  const homeAutoSections = [
- { title: 'Bayi Məhsulları', link: '/all-products?search=oyun', products: pickSectionProducts(prioritizedIngameApi.length ? prioritizedIngameApi : apiGamesCandidates, 8) },
+ { title: 'Oyun İçi Məhsullar', link: '/all-products?search=topup', products: pickSectionProducts(prioritizedIngameApi.length ? prioritizedIngameApi : ingameCandidates, 8) },
+ { title: 'Oyunlar', link: '/all-products?search=oyun', products: pickSectionProducts(apiGamesCandidates, 8) },
  { title: 'AI', link: '/all-products?search=ai', products: pickSectionProducts(aiCandidates, 8) },
  { title: 'Yazılımlar', link: '/all-products?search=yaz%C4%B1l%C4%B1m', products: pickSectionProducts(softwareCandidates, 8) },
- { title: 'Oyun İçi Məhsullar', link: '/all-products?search=topup', products: pickSectionProducts(ingameCandidates, 8) },
  { title: 'Pinlər', link: '/all-products?search=pin', products: pickSectionProducts(pinCandidates, 8) }
  ].filter(section => section.products.length > 0);
 
@@ -1193,6 +1244,35 @@ app.get('/api/pubg-check', async (req, res) => {
  }
 
  return res.json({ success: false, error: lastError || 'PUBG checker servisi ilə bağlantı xətası baş verdi.' });
+});
+
+app.post('/api/translate-batch', async (req, res) => {
+ try {
+ const target = normalizeOptionalString(req.body.target);
+ const textsRaw = Array.isArray(req.body.texts) ? req.body.texts : [];
+ const texts = textsRaw
+ .map((t) => String(t || '').trim())
+ .filter(Boolean)
+ .slice(0, 200);
+
+ if (!target || !TRANSLATE_CONFIG.SUPPORTED.includes(target)) {
+ return res.status(400).json({ success: false, error: 'Yanlış dil.' });
+ }
+ if (!texts.length) {
+ return res.json({ success: true, translations: {} });
+ }
+
+ const uniqueTexts = [...new Set(texts)];
+ const translations = {};
+ for (const text of uniqueTexts) {
+ translations[text] = await translateText(text, target);
+ }
+
+ return res.json({ success: true, translations });
+ } catch (e) {
+ console.error('Translate batch error:', e.message);
+ return res.status(500).json({ success: false, error: 'Tərcümə servisi xətası.' });
+ }
 });
 
 app.get('/product/:id', async (req, res) => {
