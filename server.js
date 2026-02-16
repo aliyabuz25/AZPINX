@@ -1595,8 +1595,62 @@ app.post('/admin/products/add', isAdmin, (req, res, next) => {
 
 // Admin Products (List)
 app.get('/admin/products', isAdmin, async (req, res) => {
- const products = await getMappedProducts();
- res.render('admin/products', { title: 'Məhsul Kataloqu', products });
+ const q = normalizeOptionalString(req.query.q) || '';
+ const status = normalizeOptionalString(req.query.status) || 'all';
+ const active = normalizeOptionalString(req.query.active) || 'all';
+ const source = normalizeOptionalString(req.query.source) || 'all';
+ const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+ const perPage = 20;
+
+ let products = await getMappedProducts();
+
+ if (q) {
+ const query = q.toLowerCase();
+ products = products.filter((p) =>
+ String(p.name || '').toLowerCase().includes(query) ||
+ String(p.category || '').toLowerCase().includes(query) ||
+ String(p.description || '').toLowerCase().includes(query) ||
+ String(p.api_id || '').toLowerCase().includes(query)
+ );
+ }
+
+ if (status === 'sale' || status === 'draft') {
+ products = products.filter(p => p.status === status);
+ }
+
+ if (active === 'active') {
+ products = products.filter(p => p.is_active);
+ } else if (active === 'inactive') {
+ products = products.filter(p => !p.is_active);
+ }
+
+ if (source === 'api') {
+ products = products.filter(p => p.api_id && !p.is_local);
+ } else if (source === 'api_local') {
+ products = products.filter(p => p.api_id && p.is_local);
+ } else if (source === 'local') {
+ products = products.filter(p => !p.api_id);
+ }
+
+ const totalItems = products.length;
+ const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+ const currentPage = Math.min(page, totalPages);
+ const startIndex = (currentPage - 1) * perPage;
+ const paginatedProducts = products.slice(startIndex, startIndex + perPage);
+
+ const params = new URLSearchParams();
+ if (q) params.set('q', q);
+ if (status !== 'all') params.set('status', status);
+ if (active !== 'all') params.set('active', active);
+ if (source !== 'all') params.set('source', source);
+ const baseQuery = params.toString();
+
+ res.render('admin/products', {
+ title: 'Məhsul Kataloqu',
+ products: paginatedProducts,
+ filters: { q, status, active, source },
+ pagination: { currentPage, totalPages, totalItems, perPage, baseQuery }
+ });
 });
 
 // Admin Product Edit Page

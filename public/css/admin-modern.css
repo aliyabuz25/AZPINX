@@ -15,10 +15,7 @@
 
 body {
     font-family: 'Manrope', sans-serif !important;
-    background:
-        radial-gradient(85% 120% at -5% -20%, rgba(79, 70, 229, 0.22) 0%, transparent 62%),
-        radial-gradient(90% 110% at 105% -15%, rgba(37, 99, 235, 0.18) 0%, transparent 58%),
-        var(--admin-bg) !important;
+    background: #f4f6fb !important;
     color: var(--admin-text);
 }
 
@@ -28,11 +25,10 @@ body {
 
 .main-header.navbar {
     margin: 12px 16px 0 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(47, 102, 255, 0.14);
-    background: rgba(255, 255, 255, 0.86) !important;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 14px 34px rgba(18, 34, 81, 0.1) !important;
+    border-radius: 10px;
+    border: 1px solid #e5eaf6;
+    background: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(18, 34, 81, 0.06) !important;
 }
 
 .main-header .nav-link {
@@ -59,9 +55,9 @@ body {
 }
 
 .main-sidebar {
-    background: linear-gradient(180deg, var(--admin-sidebar-top) 0%, var(--admin-sidebar-bottom) 100%) !important;
+    background: #0f1b3d !important;
     border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 24px 60px rgba(8, 19, 51, 0.45) !important;
+    box-shadow: 0 8px 20px rgba(8, 19, 51, 0.3) !important;
 }
 
 .brand-link {
@@ -178,14 +174,14 @@ body {
 
 .card {
     border: 1px solid var(--admin-border) !important;
-    border-radius: var(--admin-radius) !important;
-    box-shadow: 0 10px 26px rgba(25, 42, 87, 0.08) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 3px 12px rgba(25, 42, 87, 0.05) !important;
     overflow: hidden;
 }
 
 .card-header {
     border-bottom: 1px solid #edf2ff !important;
-    background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%) !important;
+    background: #ffffff !important;
     padding: 0.85rem 1rem !important;
 }
 
@@ -236,25 +232,47 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #2f66ff 0%, #4f46e5 100%) !important;
-    border: 0 !important;
-    box-shadow: 0 10px 18px rgba(47, 102, 255, 0.28);
+    background: #2f66ff !important;
+    border: 1px solid #2f66ff !important;
+    box-shadow: none;
 }
 
 .btn-info {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
-    border: 0 !important;
+    background: #0ea5e9 !important;
+    border: 1px solid #0ea5e9 !important;
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #1f9d62 0%, #15803d 100%) !important;
-    border: 0 !important;
+    background: #1f9d62 !important;
+    border: 1px solid #1f9d62 !important;
 }
 
 .btn-warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
-    border: 0 !important;
+    background: #f59e0b !important;
+    border: 1px solid #f59e0b !important;
     color: #fff !important;
+}
+
+.admin-toolbar-card {
+    border-style: dashed !important;
+}
+
+.admin-toolbar-form {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.admin-toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.admin-toolbar-filters .form-control {
+    width: 160px;
 }
 
 .badge {
@@ -306,6 +324,18 @@ body {
 
     .main-sidebar {
         border-radius: 0 !important;
+    }
+
+    .admin-toolbar-form {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-toolbar-filters {
+        justify-content: flex-start;
+    }
+
+    .admin-toolbar-filters .form-control {
+        width: 100%;
     }
 
     .toastify {
