@@ -1,0 +1,52 @@
+<%- include('partials/header') %>
+
+<div class="product-page-container">
+ <div class="cart-page-shell">
+ <div class="cart-page-left">
+ <div class="cart-page-header">
+ <div>
+ <h1>Səbət</h1>
+ <p>Seçdiyiniz məhsulları yoxlayın və sifarişi tamamlayın.</p>
+ </div>
+ <button class="btn btn-outline cart-clear-btn" id="clearCartBtn" type="button">
+ <i class="ri-delete-bin-line"></i> Səbəti təmizlə
+ </button>
+ </div>
+
+ <div id="cartPageItems" class="cart-page-items"></div>
+
+ <div id="cartPageEmpty" class="cart-empty-state" style="display:none;">
+ <i class="ri-shopping-cart-2-line icon-3x"></i>
+ <h3>Səbətiniz hazırda boşdur</h3>
+ <p>Yeni məhsullar əlavə edib davam edə bilərsiniz.</p>
+ <a href="/" class="btn btn-primary">Alış-verişə qayıt</a>
+ </div>
+ </div>
+
+ <aside class="cart-page-right">
+ <div class="cart-summary-card">
+ <h3>Sifariş Xülasəsi</h3>
+ <div class="cart-summary-row">
+ <span>Məhsul sayı</span>
+ <strong id="cartPageCount">0</strong>
+ </div>
+ <div class="cart-summary-row">
+ <span>Ara cəm</span>
+ <strong id="cartPageSubtotal">0.00 AZN</strong>
+ </div>
+ <div class="cart-summary-row total">
+ <span>Yekun</span>
+ <strong id="cartPageTotal">0.00 AZN</strong>
+ </div>
+ <a href="/checkout" class="btn btn-primary cart-summary-btn" id="goCheckoutBtn">
+ <i class="ri-secure-payment-line"></i> Sifarişi tamamla
+ </a>
+ <a href="/" class="btn btn-outline cart-summary-btn">
+ <i class="ri-arrow-left-line"></i> Alış-verişə davam et
+ </a>
+ </div>
+ </aside>
+ </div>
+</div>
+
+<%- include('partials/footer') %>

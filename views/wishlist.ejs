@@ -1,27 +1,27 @@
 <%- include('partials/header') %>
 
-    <div class="product-page-container">
-        <div class="section-header mb-4">
-            <h2><i class="fa-solid fa-heart text-danger mr-2"></i> İstək Listəm</h2>
-            <p class="text-muted">Bəyəndiyiniz və sonra almaq istədiyiniz məhsullar.</p>
-        </div>
+ <div class="product-page-container">
+ <div class="section-header mb-4">
+ <h2><i class="ri-heart-line text-danger mr-2"></i> İstək Listəm</h2>
+ <p class="text-muted">Bəyəndiyiniz və sonra almaq istədiyiniz məhsullar.</p>
+ </div>
 
-        <% if (wishlist && wishlist.length> 0) { %>
-            <div class="product-grid">
-                <% wishlist.forEach(prod=> { %>
-                    <%- include('partials/product_card', { product: prod }) %>
-                        <% }) %>
-            </div>
-            <% } else { %>
-                <div class="empty-wishlist text-center py-5">
-                    <div class="mb-4">
-                        <i class="fa-solid fa-heart-crack fa-4x text-muted"></i>
-                    </div>
-                    <h4>İstək listəniz boşdur</h4>
-                    <p class="text-muted">Hələ ki, heç bir məhsulu bəyənməmisiniz.</p>
-                    <a href="/" class="btn btn-primary mt-3">Alış-verişə başla</a>
-                </div>
-                <% } %>
-    </div>
+ <% if (wishlist && wishlist.length> 0) { %>
+ <div class="product-grid">
+ <% wishlist.forEach(prod=> { %>
+ <%- include('partials/product_card', { product: prod }) %>
+ <% }) %>
+ </div>
+ <% } else { %>
+ <div class="empty-wishlist text-center py-5">
+ <div class="mb-4">
+ <i class="ri-heart-crack-line icon-4x text-muted"></i>
+ </div>
+ <h4>İstək listəniz boşdur</h4>
+ <p class="text-muted">Hələ ki, heç bir məhsulu bəyənməmisiniz.</p>
+ <a href="/" class="btn btn-primary mt-3">Alış-verişə başla</a>
+ </div>
+ <% } %>
+ </div>
 
-    <%- include('partials/footer') %>
+ <%- include('partials/footer') %>

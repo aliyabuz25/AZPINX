@@ -3,22 +3,22 @@
         {
             "id": "mobile-games",
             "name": "Mobil Oyunlar",
-            "icon": "fa-mobile-alt"
+            "icon": "ri-smartphone-line"
         },
         {
             "id": "pc-games",
             "name": "PC Oyunları",
-            "icon": "fa-desktop"
+            "icon": "ri-computer-line"
         },
         {
             "id": "subscriptions",
             "name": "Abunəliklər",
-            "icon": "fa-crown"
+            "icon": "ri-vip-crown-line"
         },
         {
             "id": "gift-cards",
             "name": "Hədiyyə Kartları",
-            "icon": "fa-gift"
+            "icon": "ri-gift-line"
         }
     ],
     "quickActions": [

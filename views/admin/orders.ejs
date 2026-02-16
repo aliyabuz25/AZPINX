@@ -1,92 +1,92 @@
 <%- include('header') %>
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Bütün Sifarişlər</h3>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover text-nowrap">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Məhsul</th>
-                                <th>Oyunçu Məlumatı</th>
-                                <th>Məbləğ</th>
-                                <th>Göndərən</th>
-                                <th>Dekont</th>
-                                <th>Tarix</th>
-                                <th>Status</th>
-                                <th>Əməliyyat</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% orders.forEach(order=> { %>
-                                <tr>
-                                    <td>#<%= order.id %>
-                                    </td>
-                                    <td>
-                                        <%= order.product_name %>
-                                    </td>
-                                    <td>
-                                        <% if (order.player_id) { %>
-                                            <strong>ID:</strong>
-                                            <%= order.player_id %><br>
-                                                <strong>Nick:</strong>
-                                                <%= order.player_nickname %>
-                                                    <% } else { %>
-                                                        <span class="text-muted">-</span>
-                                                        <% } %>
-                                    </td>
-                                    <td>
-                                        <%= order.amount %> AZN
-                                    </td>
-                                    <td>
-                                        <%= order.sender_name %>
-                                    </td>
-                                    <td>
-                                        <% if (order.receipt_path) { %>
-                                            <a href="<%= order.receipt_path %>" target="_blank"
-                                                class="btn btn-xs btn-info"><i class="fas fa-file-invoice"></i> Bax</a>
-                                            <% } else { %>
-                                                <span class="text-muted">Yoxdur</span>
-                                                <% } %>
-                                    </td>
-                                    <td>
-                                        <%= new Date(order.created_at).toLocaleString() %>
-                                    </td>
-                                    <td>
-                                        <% if (order.status==='pending' ) { %>
-                                            <span class="badge badge-warning">Gözləyir</span>
-                                            <% } else if (order.status==='completed' ) { %>
-                                                <span class="badge badge-success">Tamamlandı</span>
-                                                <% } else { %>
-                                                    <span class="badge badge-danger">Ləğv edildi</span>
-                                                    <% } %>
-                                    </td>
-                                    <td style="width: 150px;">
-                                        <form action="/admin/orders/<%= order.id %>/update" method="POST">
-                                            <div class="input-group input-group-sm">
-                                                <select name="status" class="form-control">
-                                                    <option value="pending" <%=order.status==='pending' ? 'selected'
-                                                        : '' %>>Gözləyir</option>
-                                                    <option value="completed" <%=order.status==='completed' ? 'selected'
-                                                        : '' %>>Tamamla</option>
-                                                    <option value="cancelled" <%=order.status==='cancelled' ? 'selected'
-                                                        : '' %>>Ləğv et</option>
-                                                </select>
-                                                <span class="input-group-append">
-                                                    <button type="submit" class="btn btn-primary">Ok</button>
-                                                </span>
-                                            </div>
-                                        </form>
-                                    </td>
-                                </tr>
-                                <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    <%- include('footer') %>
+ <div class="row">
+ <div class="col-12">
+ <div class="card">
+ <div class="card-header">
+ <h3 class="card-title">Bütün Sifarişlər</h3>
+ </div>
+ <div class="card-body table-responsive p-0">
+ <table class="table table-hover text-nowrap">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>Məhsul</th>
+ <th>Oyunçu Məlumatı</th>
+ <th>Məbləğ</th>
+ <th>Göndərən</th>
+ <th>Dekont</th>
+ <th>Tarix</th>
+ <th>Status</th>
+ <th>Əməliyyat</th>
+ </tr>
+ </thead>
+ <tbody>
+ <% orders.forEach(order=> { %>
+ <tr>
+ <td>#<%= order.id %>
+ </td>
+ <td>
+ <%= order.product_name %>
+ </td>
+ <td>
+ <% if (order.player_id) { %>
+ <strong>ID:</strong>
+ <%= order.player_id %><br>
+ <strong>Nick:</strong>
+ <%= order.player_nickname %>
+ <% } else { %>
+ <span class="text-muted">-</span>
+ <% } %>
+ </td>
+ <td>
+ <%= order.amount %> AZN
+ </td>
+ <td>
+ <%= order.sender_name %>
+ </td>
+ <td>
+ <% if (order.receipt_path) { %>
+ <a href="<%= order.receipt_path %>" target="_blank"
+ class="btn btn-xs btn-info"><i class="ri-file-list-3-line"></i> Bax</a>
+ <% } else { %>
+ <span class="text-muted">Yoxdur</span>
+ <% } %>
+ </td>
+ <td>
+ <%= new Date(order.created_at).toLocaleString() %>
+ </td>
+ <td>
+ <% if (order.status==='pending' ) { %>
+ <span class="badge badge-warning">Gözləyir</span>
+ <% } else if (order.status==='completed' ) { %>
+ <span class="badge badge-success">Tamamlandı</span>
+ <% } else { %>
+ <span class="badge badge-danger">Ləğv edildi</span>
+ <% } %>
+ </td>
+ <td style="width: 150px;">
+ <form action="/admin/orders/<%= order.id %>/update" method="POST">
+ <div class="input-group input-group-sm">
+ <select name="status" class="form-control">
+ <option value="pending" <%=order.status==='pending' ? 'selected'
+ : '' %>>Gözləyir</option>
+ <option value="completed" <%=order.status==='completed' ? 'selected'
+ : '' %>>Tamamla</option>
+ <option value="cancelled" <%=order.status==='cancelled' ? 'selected'
+ : '' %>>Ləğv et</option>
+ </select>
+ <span class="input-group-append">
+ <button type="submit" class="btn btn-primary">Ok</button>
+ </span>
+ </div>
+ </form>
+ </td>
+ </tr>
+ <% }) %>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+ </div>
+ <%- include('footer') %>

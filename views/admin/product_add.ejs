@@ -1,91 +1,91 @@
 <%- include('header') %>
 
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card card-primary">
-                <div class="card-header">
-                    <h3 class="card-title">Yeni Məhsul Əlavə Et</h3>
-                </div>
-                <form action="/admin/products/add" method="POST" enctype="multipart/form-data">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Məhsul Adı</label>
-                                    <input type="text" name="name" class="form-control"
-                                        placeholder="Məs: PUBG Mobile 60 UC" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Kateqoriya</label>
-                                    <select name="category" class="form-control" required>
-                                        <option value="">Kateqoriya seçin</option>
-                                        <% categories.forEach(cat=> { %>
-                                            <option value="<%= cat.name %>">
-                                                <%= cat.name %>
-                                            </option>
-                                            <% }) %>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+ <div class="row justify-content-center">
+ <div class="col-md-8">
+ <div class="card card-primary">
+ <div class="card-header">
+ <h3 class="card-title">Yeni Məhsul Əlavə Et</h3>
+ </div>
+ <form action="/admin/products/add" method="POST" enctype="multipart/form-data">
+ <div class="card-body">
+ <div class="row">
+ <div class="col-md-6">
+ <div class="form-group">
+ <label>Məhsul Adı</label>
+ <input type="text" name="name" class="form-control"
+ placeholder="Məs: PUBG Mobile 60 UC" required>
+ </div>
+ </div>
+ <div class="col-md-6">
+ <div class="form-group">
+ <label>Kateqoriya</label>
+ <select name="category" class="form-control" required>
+ <option value="">Kateqoriya seçin</option>
+ <% categories.forEach(cat=> { %>
+ <option value="<%= cat.name %>">
+ <%= cat.name %>
+ </option>
+ <% }) %>
+ </select>
+ </div>
+ </div>
+ </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Qiymət (AZN)</label>
-                                    <input type="number" step="0.01" name="price" class="form-control"
-                                        placeholder="0.00" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Status</label>
-                                    <select name="status" class="form-control">
-                                        <option value="sale" selected>Satışda (Active)</option>
-                                        <option value="draft">Taslak (Draft)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+ <div class="row">
+ <div class="col-md-6">
+ <div class="form-group">
+ <label>Qiymət (AZN)</label>
+ <input type="number" step="0.01" name="price" class="form-control"
+ placeholder="0.00" required>
+ </div>
+ </div>
+ <div class="col-md-6">
+ <div class="form-group">
+ <label>Status</label>
+ <select name="status" class="form-control">
+ <option value="sale" selected>Satışda (Active)</option>
+ <option value="draft">Taslak (Draft)</option>
+ </select>
+ </div>
+ </div>
+ </div>
 
-                        <div class="form-group">
-                            <label>API ID (Opsional)</label>
-                            <input type="text" name="api_id" class="form-control"
-                                placeholder="Xarici API ID varsa daxil edin">
-                        </div>
+ <div class="form-group">
+ <label>API ID (Opsional)</label>
+ <input type="text" name="api_id" class="form-control"
+ placeholder="Xarici API ID varsa daxil edin">
+ </div>
 
-                        <div class="form-group">
-                            <label>Məhsul Şəkli</label>
-                            <div class="custom-file">
-                                <input type="file" name="image" class="custom-file-input" id="productImage">
-                                <label class="custom-file-label" for="productImage">Fayl seçin...</label>
-                            </div>
-                        </div>
+ <div class="form-group">
+ <label>Məhsul Şəkli</label>
+ <div class="custom-file">
+ <input type="file" name="image" class="custom-file-input" id="productImage">
+ <label class="custom-file-label" for="productImage">Fayl seçin...</label>
+ </div>
+ </div>
 
-                        <div class="form-group">
-                            <label>Təsvir</label>
-                            <textarea name="description" class="form-control" rows="4"
-                                placeholder="Məhsul haqqında ətraflı məlumat..."></textarea>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button type="submit" class="btn btn-primary float-right">Məhsulu Yadda Saxla</button>
-                        <a href="/admin/products" class="btn btn-default">Ləğv et</a>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+ <div class="form-group">
+ <label>Təsvir</label>
+ <textarea name="description" class="form-control" rows="4"
+ placeholder="Məhsul haqqında ətraflı məlumat..."></textarea>
+ </div>
+ </div>
+ <div class="card-footer">
+ <button type="submit" class="btn btn-primary float-right">Məhsulu Yadda Saxla</button>
+ <a href="/admin/products" class="btn btn-default">Ləğv et</a>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
 
-    <script>
-        // Show filename in custom file input
-        document.querySelector('.custom-file-input').addEventListener('change', function (e) {
-            var fileName = document.getElementById("productImage").files[0].name;
-            var nextSibling = e.target.nextElementSibling;
-            nextSibling.innerText = fileName;
-        });
-    </script>
+ <script>
+ // Show filename in custom file input
+ document.querySelector('.custom-file-input').addEventListener('change', function (e) {
+ var fileName = document.getElementById("productImage").files[0].name;
+ var nextSibling = e.target.nextElementSibling;
+ nextSibling.innerText = fileName;
+ });
+ </script>
 
-    <%- include('footer') %>
+ <%- include('footer') %>

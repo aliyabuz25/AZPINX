@@ -1,0 +1,87 @@
+<%- include('partials/header') %>
+
+<main class="all-products-page smooth-enter">
+    <section class="section-container all-products-hero">
+        <div class="section-header all-products-header">
+            <div>
+                <h3>Bütün Məhsullar</h3>
+                <p class="all-products-subtitle"><%= totalItems || 0 %> məhsul tapıldı</p>
+            </div>
+            <a href="/all-products" class="view-all"><i class="ri-close-line"></i> Filtrləri təmizlə</a>
+        </div>
+
+        <form action="/all-products" method="GET" class="all-products-search">
+            <i class="ri-search-line"></i>
+            <input
+                type="text"
+                name="search"
+                value="<%= searchQuery || '' %>"
+                placeholder="Məhsul, kateqoriya və ya açar söz axtarın..."
+            >
+            <% if (selectedCategory) { %>
+                <input type="hidden" name="category" value="<%= selectedCategory %>">
+            <% } %>
+            <button type="submit" class="btn btn-primary">Axtar</button>
+        </form>
+
+        <div class="all-products-categories">
+            <a href="/all-products<%= searchQuery ? '?search=' + encodeURIComponent(searchQuery) : '' %>" class="all-cat-chip <%= !selectedCategory ? 'active' : '' %>">
+                Hamısı
+            </a>
+            <% categories.forEach(function(cat) { %>
+                <a
+                    href="/all-products?category=<%= encodeURIComponent(cat.name) %><%= searchQuery ? '&search=' + encodeURIComponent(searchQuery) : '' %>"
+                    class="all-cat-chip <%= selectedCategory === cat.name ? 'active' : '' %>"
+                >
+                    <% if (cat.image_path) { %>
+                        <img src="<%= cat.image_path %>" alt="<%= cat.name %>">
+                    <% } else { %>
+                        <i class="<%= cat.icon || 'ri-gamepad-line' %>"></i>
+                    <% } %>
+                    <span><%= cat.name %></span>
+                </a>
+            <% }) %>
+        </div>
+    </section>
+
+    <section class="section-container all-products-results">
+        <% if (featuredProducts.length === 0) { %>
+            <div class="text-center py-5">
+                <i class="ri-inbox-unarchive-line icon-3x text-muted mb-3"></i>
+                <p class="text-muted">Məhsul tapılmadı.</p>
+            </div>
+        <% } else { %>
+            <div class="product-grid">
+                <% featuredProducts.forEach(function(product) { %>
+                    <%- include('partials/product_card', { product: product }) %>
+                <% }) %>
+            </div>
+
+            <% if (totalPages > 1) { %>
+                <div class="pagination-container">
+                    <ul class="pagination">
+                        <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                            <a class="page-link" href="/all-products?page=<%= currentPage - 1 %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= searchQuery ? '&search=' + encodeURIComponent(searchQuery) : '' %>">
+                                <i class="ri-arrow-left-s-line"></i>
+                            </a>
+                        </li>
+                        <% for(let i = 1; i <= totalPages; i++) { %>
+                            <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                <a class="page-link" href="/all-products?page=<%= i %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= searchQuery ? '&search=' + encodeURIComponent(searchQuery) : '' %>">
+                                    <%= i %>
+                                </a>
+                            </li>
+                        <% } %>
+                        <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                            <a class="page-link" href="/all-products?page=<%= currentPage + 1 %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= searchQuery ? '&search=' + encodeURIComponent(searchQuery) : '' %>">
+                                <i class="ri-arrow-right-s-line"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            <% } %>
+        <% } %>
+    </section>
+</main>
+
+<%- include('partials/footer') %>

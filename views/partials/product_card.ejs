@@ -1,52 +1,52 @@
 <a href="/product/<%= product.id %>" class="product-card">
-    <% if (product.badge) { %>
-        <span class="product-badge <%= product.badge === 'Bitib' ? 'badge-out' : '' %>">
-            <%= product.badge %>
-        </span>
-        <% } %>
-            <div class="product-img">
-                <% if (product.image && !product.image.includes('placeholder')) { %>
-                    <img src="<%= product.image %>" alt="<%= product.name %>" loading="lazy">
-                    <% } else { %>
-                        <div class="no-image-placeholder">
-                            <i class="fa-solid fa-gamepad"></i>
-                            <span>Şəkil yoxdur</span>
-                        </div>
-                        <% } %>
-                            <div class="product-overlay">
-                                <span>Sürətli Baxış</span>
-                            </div>
-            </div>
-            <div class="product-info">
-                <span class="product-cat">
-                    <%= product.category %>
-                </span>
-                <h4 class="product-name">
-                    <%= product.name %>
-                </h4>
-                <div class="product-footer">
-                    <div class="price-box">
-                        <% if (typeof product.oldPrice !=='undefined' && product.oldPrice) { %>
-                            <span class="old-price">
-                                <%= Number(product.oldPrice).toFixed(2) %> AZN
-                            </span>
-                            <% } %>
-                                <span class="current-price">
-                                    <%= Number(product.price).toFixed(2) %> AZN
-                                </span>
-                    </div>
-                    <div class="card-extra-actions d-flex gap-2">
-                        <div class="wishlist-icon-btn mr-2"
-                            onclick="event.preventDefault(); toggleWishlist('<%= product.id %>', this)">
-                            <i class="fa-regular fa-heart"></i>
-                        </div>
-                        <!-- Robust data-attributes to avoid SyntaxErrors in attributes -->
-                        <div class="add-to-cart-btn" data-id="<%= product.id %>" data-name="<%= product.name %>"
-                            data-price="<%= product.price %>" data-img="<%= product.image %>"
-                            onclick="event.preventDefault(); if(window.addToCartFromAttr) window.addToCartFromAttr(this)">
-                            <i class="fa-solid fa-plus"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+ <% if (product.badge) { %>
+ <span class="product-badge <%= product.badge === 'Bitib' ? 'badge-out' : '' %>">
+ <%= product.badge %>
+ </span>
+ <% } %>
+ <div class="product-img">
+ <% if (product.image && !product.image.includes('placeholder')) { %>
+ <img src="<%= product.image %>" alt="<%= product.name %>" loading="lazy">
+ <% } else { %>
+ <div class="no-image-placeholder">
+ <i class="ri-gamepad-line"></i>
+ <span>Şəkil yoxdur</span>
+ </div>
+ <% } %>
+ <div class="product-overlay">
+ <span>Sürətli Baxış</span>
+ </div>
+ </div>
+ <div class="product-info">
+ <span class="product-cat">
+ <%= product.category %>
+ </span>
+ <h4 class="product-name">
+ <%= product.name %>
+ </h4>
+ <div class="product-footer">
+ <div class="price-box">
+ <% if (typeof product.oldPrice !=='undefined' && product.oldPrice) { %>
+ <span class="old-price">
+ <%= Number(product.oldPrice).toFixed(2) %> AZN
+ </span>
+ <% } %>
+ <span class="current-price">
+ <%= Number(product.price).toFixed(2) %> AZN
+ </span>
+ </div>
+ <div class="card-extra-actions d-flex gap-2">
+ <div class="wishlist-icon-btn mr-2"
+ onclick="event.preventDefault(); toggleWishlist('<%= product.id %>', this)">
+ <i class="ri-heart-line"></i>
+ </div>
+ <!-- Robust data-attributes to avoid SyntaxErrors in attributes -->
+ <div class="add-to-cart-btn" data-id="<%= product.id %>" data-name="<%= product.name %>"
+ data-price="<%= product.price %>" data-img="<%= product.image %>"
+ onclick="event.preventDefault(); if(window.addToCartFromAttr) window.addToCartFromAttr(this)">
+ <i class="ri-add-line"></i>
+ </div>
+ </div>
+ </div>
+ </div>
 </a>

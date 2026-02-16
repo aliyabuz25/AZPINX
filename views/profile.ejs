@@ -1,305 +1,305 @@
 <%- include('partials/header') %>
 
-    <div class="product-page-container">
-        <div class="profile-header">
-            <div class="user-avatar">
-                <%= ((user.full_name || 'U' ).charAt(0).toUpperCase()) %>
-            </div>
-            <div class="user-details">
-                <h2>
-                    <%= user.full_name %>
-                </h2>
-                <p>
-                    <%= user.email %>
-                </p>
-                <span class="role-badge">
-                    <%= user.role==='admin' ? 'Administrator' : 'İstifadəçi' %>
-                </span>
-            </div>
-            <div class="profile-actions">
-                <% if (user.role==='admin' ) { %>
-                    <a href="/admin" class="btn btn-primary"><i class="fa-solid fa-cogs"></i> Admin Panel</a>
-                    <% } %>
-                        <a href="/logout" class="btn btn-outline"><i class="fa-solid fa-sign-out"></i> Çıxış</a>
-            </div>
-        </div>
+ <div class="product-page-container">
+ <div class="profile-header">
+ <div class="user-avatar">
+ <%= ((user.full_name || 'U' ).charAt(0).toUpperCase()) %>
+ </div>
+ <div class="user-details">
+ <h2>
+ <%= user.full_name %>
+ </h2>
+ <p>
+ <%= user.email %>
+ </p>
+ <span class="role-badge">
+ <%= user.role==='admin' ? 'Administrator' : 'İstifadəçi' %>
+ </span>
+ </div>
+ <div class="profile-actions">
+ <% if (user.role==='admin' ) { %>
+ <a href="/admin" class="btn btn-primary"><i class="ri-settings-3-line"></i> Admin Panel</a>
+ <% } %>
+ <a href="/logout" class="btn btn-outline"><i class="ri-logout-box-r-line"></i> Çıxış</a>
+ </div>
+ </div>
 
-        <div class="profile-section-card mb-4">
-            <div class="card-header-premium">
-                <i class="fa-solid fa-shield-halved"></i>
-                <h3>Təhlükəsizlik Ayarları (2FA)</h3>
-            </div>
-            <form action="/profile/update-2fa" method="POST" class="p-4">
-                <div class="row align-items-center">
-                    <div class="col-md-5">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold text-uppercase pb-1"
-                                style="color: #64748b; letter-spacing: 0.5px;">Telefon Nömrəsi</label>
-                            <div class="input-group-premium">
-                                <i class="fa-solid fa-phone"></i>
-                                <input type="text" name="phone" class="form-control-premium"
-                                    value="<%= user.phone || '' %>" placeholder="994XXXXXXXXX">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="custom-control custom-switch mt-md-4">
-                            <input type="checkbox" class="custom-control-input" name="two_factor_enabled"
-                                id="2fa_toggle" <%=user.two_factor_enabled ? 'checked' : '' %>>
-                            <label class="custom-control-label font-weight-bold" for="2fa_toggle"
-                                style="cursor: pointer;">2FA Aktiv et</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3 text-md-right mt-3 mt-md-4">
-                        <button type="submit" class="btn btn-primary btn-block"
-                            style="height: 45px; border-radius: 10px;">Yadda saxla</button>
-                    </div>
-                </div>
-                <div class="mt-4 p-3 rounded-lg" style="background: #f8fafc; border: 1px dashed #e2e8f0;">
-                    <p class="text-muted small mb-0">
-                        <i class="fa-solid fa-circle-info text-primary mr-1"></i> 2FA aktiv edildikdə, hər girişdə
-                        HubMSG vasitəsilə telefonunuza doğrulama kodu göndəriləcək. Bu, hesabınızın təhlükəsizliyini
-                        maksimum səviyyədə təmin edir.
-                    </p>
-                </div>
-            </form>
-        </div>
+ <div class="profile-section-card mb-4">
+ <div class="card-header-premium">
+ <i class="ri-shield-star-line"></i>
+ <h3>Təhlükəsizlik Ayarları (2FA)</h3>
+ </div>
+ <form action="/profile/update-2fa" method="POST" class="p-4">
+ <div class="row align-items-center">
+ <div class="col-md-5">
+ <div class="form-group mb-0">
+ <label class="small font-weight-bold text-uppercase pb-1"
+ style="color: #64748b; letter-spacing: 0.5px;">Telefon Nömrəsi</label>
+ <div class="input-group-premium">
+ <i class="ri-phone-line"></i>
+ <input type="text" name="phone" class="form-control-premium"
+ value="<%= user.phone || '' %>" placeholder="994XXXXXXXXX">
+ </div>
+ </div>
+ </div>
+ <div class="col-md-4">
+ <div class="custom-control custom-switch mt-md-4">
+ <input type="checkbox" class="custom-control-input" name="two_factor_enabled"
+ id="2fa_toggle" <%=user.two_factor_enabled ? 'checked' : '' %>>
+ <label class="custom-control-label font-weight-bold" for="2fa_toggle"
+ style="cursor: pointer;">2FA Aktiv et</label>
+ </div>
+ </div>
+ <div class="col-md-3 text-md-right mt-3 mt-md-4">
+ <button type="submit" class="btn btn-primary btn-block"
+ style="height: 45px; border-radius: 10px;">Yadda saxla</button>
+ </div>
+ </div>
+ <div class="mt-4 p-3 rounded-lg" style="background: #f8fafc; border: 1px dashed #e2e8f0;">
+ <p class="text-muted small mb-0">
+ <i class="ri-information-line text-primary mr-1"></i> 2FA aktiv edildikdə, hər girişdə
+ HubMSG vasitəsilə telefonunuza doğrulama kodu göndəriləcək. Bu, hesabınızın təhlükəsizliyini
+ maksimum səviyyədə təmin edir.
+ </p>
+ </div>
+ </form>
+ </div>
 
-        <div class="profile-section-card">
-            <div class="card-header-premium">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <h3>Sifariş Tarixçəsi</h3>
-            </div>
+ <div class="profile-section-card">
+ <div class="card-header-premium">
+ <i class="ri-history-line"></i>
+ <h3>Sifariş Tarixçəsi</h3>
+ </div>
 
-            <div class="p-0">
-                <% if (orders.length> 0) { %>
-                    <div class="table-responsive">
-                        <table class="table table-hover-premium mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Məhsul</th>
-                                    <th>Tarix</th>
-                                    <th>Məbləğ</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% orders.forEach(order=> { %>
-                                    <tr>
-                                        <td class="font-weight-bold text-muted">#<%= order.id %>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="order-prod-icon mr-3">
-                                                    <i class="fa-solid fa-box"></i>
-                                                </div>
-                                                <span class="font-weight-600">
-                                                    <%= order.product_name %>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="text-muted small">
-                                            <%= new Date(order.created_at).toLocaleDateString() %>
-                                        </td>
-                                        <td class="font-weight-bold text-dark">
-                                            <%= Number(order.amount).toFixed(2) %> AZN
-                                        </td>
-                                        <td>
-                                            <span class="status-badge-premium <%= order.status %>">
-                                                <i
-                                                    class="fa-solid <%= order.status === 'completed' ? 'fa-check-circle' : (order.status === 'pending' ? 'fa-hourglass-half' : 'fa-circle-xmark') %> mr-1"></i>
-                                                <%= order.status==='pending' ? 'Gözləyir' : (order.status==='completed'
-                                                    ? 'Tamamlandı' : 'Ləğv edildi' ) %>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
-                    <% } else { %>
-                        <div class="text-center py-5">
-                            <i class="fa-solid fa-receipt fa-3x mb-3 text-light"></i>
-                            <p class="text-muted">Hələ heç bir sifarişiniz yoxdur.</p>
-                        </div>
-                        <% } %>
-            </div>
-        </div>
-    </div>
+ <div class="p-0">
+ <% if (orders.length> 0) { %>
+ <div class="table-responsive">
+ <table class="table table-hover-premium mb-0">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>Məhsul</th>
+ <th>Tarix</th>
+ <th>Məbləğ</th>
+ <th>Status</th>
+ </tr>
+ </thead>
+ <tbody>
+ <% orders.forEach(order=> { %>
+ <tr>
+ <td class="font-weight-bold text-muted">#<%= order.id %>
+ </td>
+ <td>
+ <div class="d-flex align-items-center">
+ <div class="order-prod-icon mr-3">
+ <i class="ri-archive-line"></i>
+ </div>
+ <span class="font-weight-600">
+ <%= order.product_name %>
+ </span>
+ </div>
+ </td>
+ <td class="text-muted small">
+ <%= new Date(order.created_at).toLocaleDateString() %>
+ </td>
+ <td class="font-weight-bold text-dark">
+ <%= Number(order.amount).toFixed(2) %> AZN
+ </td>
+ <td>
+ <span class="status-badge-premium <%= order.status %>">
+ <i
+ class="<%= order.status === 'completed' ? 'ri-checkbox-circle-line' : (order.status === 'pending' ? 'ri-time-line' : 'ri-close-circle-line') %> mr-1"></i>
+ <%= order.status==='pending' ? 'Gözləyir' : (order.status==='completed'
+ ? 'Tamamlandı' : 'Ləğv edildi' ) %>
+ </span>
+ </td>
+ </tr>
+ <% }) %>
+ </tbody>
+ </table>
+ </div>
+ <% } else { %>
+ <div class="text-center py-5">
+ <i class="ri-receipt-line icon-3x mb-3 text-light"></i>
+ <p class="text-muted">Hələ heç bir sifarişiniz yoxdur.</p>
+ </div>
+ <% } %>
+ </div>
+ </div>
+ </div>
 
-    <style>
-        .profile-section-card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid #e2e8f0;
-            overflow: hidden;
-        }
+ <style>
+ .profile-section-card {
+ background: #fff;
+ border-radius: 16px;
+ box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+ border: 1px solid #e2e8f0;
+ overflow: hidden;
+ }
 
-        .card-header-premium {
-            padding: 20px 25px;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+ .card-header-premium {
+ padding: 20px 25px;
+ background: #f8fafc;
+ border-bottom: 1px solid #e2e8f0;
+ display: flex;
+ align-items: center;
+ gap: 12px;
+ }
 
-        .card-header-premium i {
-            font-size: 20px;
-            color: var(--primary-color);
-        }
+ .card-header-premium i {
+ font-size: 20px;
+ color: var(--primary-color);
+ }
 
-        .card-header-premium h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-        }
+ .card-header-premium h3 {
+ margin: 0;
+ font-size: 18px;
+ font-weight: 700;
+ color: #1e293b;
+ }
 
-        .profile-header {
-            display: flex;
-            align-items: center;
-            gap: 30px;
-            margin-bottom: 30px;
-            background: linear-gradient(135deg, var(--white) 0%, #f8fafc 100%);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid #e2e8f0;
-        }
+ .profile-header {
+ display: flex;
+ align-items: center;
+ gap: 30px;
+ margin-bottom: 30px;
+ background: linear-gradient(135deg, var(--white) 0%, #f8fafc 100%);
+ padding: 40px;
+ border-radius: 20px;
+ box-shadow: var(--shadow-soft);
+ border: 1px solid #e2e8f0;
+ }
 
-        .user-avatar {
-            width: 100px;
-            height: 100px;
-            background: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 42px;
-            font-weight: 800;
-            box-shadow: 0 10px 15px -3px rgba(190, 18, 60, 0.2);
-            border: 4px solid var(--white);
-        }
+ .user-avatar {
+ width: 100px;
+ height: 100px;
+ background: var(--primary-color);
+ color: white;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 42px;
+ font-weight: 800;
+ box-shadow: 0 10px 15px -3px rgba(190, 18, 60, 0.2);
+ border: 4px solid var(--white);
+ }
 
-        .role-badge {
-            background: rgba(190, 18, 60, 0.1);
-            color: var(--primary-color);
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-block;
-            margin-top: 10px;
-        }
+ .role-badge {
+ background: rgba(190, 18, 60, 0.1);
+ color: var(--primary-color);
+ padding: 4px 14px;
+ border-radius: 20px;
+ font-size: 11px;
+ font-weight: 800;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ display: inline-block;
+ margin-top: 10px;
+ }
 
-        .form-control-premium {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 10px 15px 10px 40px;
-            width: 100%;
-            height: 45px;
-            font-weight: 600;
-            color: #334155;
-            transition: all 0.2s;
-            background: #f8fafc;
-        }
+ .form-control-premium {
+ border: 1px solid #e2e8f0;
+ border-radius: 10px;
+ padding: 10px 15px 10px 40px;
+ width: 100%;
+ height: 45px;
+ font-weight: 600;
+ color: #334155;
+ transition: all 0.2s;
+ background: #f8fafc;
+ }
 
-        .form-control-premium:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background: white;
-            box-shadow: 0 0 0 4px rgba(190, 18, 60, 0.05);
-        }
+ .form-control-premium:focus {
+ outline: none;
+ border-color: var(--primary-color);
+ background: white;
+ box-shadow: 0 0 0 4px rgba(190, 18, 60, 0.05);
+ }
 
-        .input-group-premium {
-            position: relative;
-        }
+ .input-group-premium {
+ position: relative;
+ }
 
-        .input-group-premium i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-        }
+ .input-group-premium i {
+ position: absolute;
+ left: 15px;
+ top: 50%;
+ transform: translateY(-50%);
+ color: #94a3b8;
+ }
 
-        /* Table styles */
-        .table-hover-premium thead th {
-            background: #fff;
-            border-top: none;
-            border-bottom: 2px solid #f1f5f9;
-            color: #64748b;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 20px 25px;
-        }
+ /* Table styles */
+ .table-hover-premium thead th {
+ background: #fff;
+ border-top: none;
+ border-bottom: 2px solid #f1f5f9;
+ color: #64748b;
+ font-size: 12px;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ padding: 20px 25px;
+ }
 
-        .table-hover-premium tbody td {
-            padding: 20px 25px;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-        }
+ .table-hover-premium tbody td {
+ padding: 20px 25px;
+ vertical-align: middle;
+ border-bottom: 1px solid #f1f5f9;
+ }
 
-        .order-prod-icon {
-            width: 36px;
-            height: 36px;
-            background: #f1f5f9;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-        }
+ .order-prod-icon {
+ width: 36px;
+ height: 36px;
+ background: #f1f5f9;
+ border-radius: 10px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ color: #64748b;
+ }
 
-        .status-badge-premium {
-            padding: 6px 14px;
-            border-radius: 40px;
-            font-size: 12px;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-        }
+ .status-badge-premium {
+ padding: 6px 14px;
+ border-radius: 40px;
+ font-size: 12px;
+ font-weight: 700;
+ display: inline-flex;
+ align-items: center;
+ }
 
-        .status-badge-premium.pending {
-            background: #fff7ed;
-            color: #c2410c;
-        }
+ .status-badge-premium.pending {
+ background: #fff7ed;
+ color: #c2410c;
+ }
 
-        .status-badge-premium.completed {
-            background: #f0fdf4;
-            color: #15803d;
-        }
+ .status-badge-premium.completed {
+ background: #f0fdf4;
+ color: #15803d;
+ }
 
-        .status-badge-premium.cancelled {
-            background: #fef2f2;
-            color: #b91c1c;
-        }
+ .status-badge-premium.cancelled {
+ background: #fef2f2;
+ color: #b91c1c;
+ }
 
-        .font-weight-600 {
-            font-weight: 600;
-        }
+ .font-weight-600 {
+ font-weight: 600;
+ }
 
-        @media (max-width: 768px) {
-            .profile-header {
-                flex-direction: column;
-                text-align: center;
-                padding: 30px;
-            }
+ @media (max-width: 768px) {
+ .profile-header {
+ flex-direction: column;
+ text-align: center;
+ padding: 30px;
+ }
 
-            .profile-actions {
-                margin-left: 0;
-                margin-top: 20px;
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
+ .profile-actions {
+ margin-left: 0;
+ margin-top: 20px;
+ width: 100%;
+ justify-content: center;
+ }
+ }
+ </style>
 
-    <%- include('partials/footer') %>
+ <%- include('partials/footer') %>

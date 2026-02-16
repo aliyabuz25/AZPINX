@@ -1,179 +1,209 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Select elements
-    const cartSidebar = document.getElementById('cartSidebar');
-    const cartTrigger = document.getElementById('cartTrigger');
-    const closeCart = document.getElementById('closeCart');
-    const cartItemsList = document.getElementById('cartItemsList');
-    const cartTotal = document.getElementById('cartTotal');
-    const cartCount = document.querySelector('.cart-count');
+ // Select elements
+ const cartTrigger = document.getElementById('cartTrigger');
+ const cartCount = document.querySelector('.cart-count');
+ const cartPageItems = document.getElementById('cartPageItems');
+ const cartPageEmpty = document.getElementById('cartPageEmpty');
+ const cartPageCount = document.getElementById('cartPageCount');
+ const cartPageSubtotal = document.getElementById('cartPageSubtotal');
+ const cartPageTotal = document.getElementById('cartPageTotal');
+ const clearCartBtn = document.getElementById('clearCartBtn');
+ const goCheckoutBtn = document.getElementById('goCheckoutBtn');
 
-    let cart = JSON.parse(localStorage.getItem('azpin_cart')) || [];
+ let cart = JSON.parse(localStorage.getItem('azpin_cart')) || [];
 
-    // --- Global Cart Logic ---
-    const updateCartUI = () => {
-        if (!cartItemsList) return; // Cart might not be on all pages if we didn't include partials everywhere
+ // --- Global Cart Logic ---
+ const updateCartUI = () => {
+ let total = 0;
+ let count = 0;
 
-        cartItemsList.innerHTML = '';
-        let total = 0;
-        let count = 0;
+ cart.forEach((item) => {
+ total += Number(item.price) || 0;
+ count += 1;
+ });
 
-        cart.forEach((item, index) => {
-            total += item.price;
-            count++;
+ if (cartCount) cartCount.textContent = count;
+ renderCartPage(total, count);
+ localStorage.setItem('azpin_cart', JSON.stringify(cart));
+ };
 
-            const itemEl = document.createElement('div');
-            itemEl.className = 'cart-item';
-            itemEl.innerHTML = `
-                <div class="cart-item-img">
-                    <img src="${item.img}" alt="${item.name}">
-                </div>
-                <div class="cart-item-info">
-                    <h5>${item.name}</h5>
-                    <span>${item.price.toFixed(2)} AZN</span>
-                </div>
-                <div class="modal-close" onclick="removeFromCart(${index})" style="position: static; box-shadow: none; font-size: 12px; height: 24px; width: 24px;">
-                    <i class="fa-solid fa-trash"></i>
-                </div>
-            `;
-            cartItemsList.appendChild(itemEl);
-        });
+ const renderCartPage = (total, count) => {
+ if (!cartPageItems) return;
 
-        if (cartTotal) cartTotal.textContent = `${total.toFixed(2)} AZN`;
-        if (cartCount) cartCount.textContent = count;
-        localStorage.setItem('azpin_cart', JSON.stringify(cart));
-    };
+ cartPageItems.innerHTML = '';
+ const isEmpty = count === 0;
 
-    window.addToCartFromPage = (product) => {
-        console.log('Adding to cart (page):', product);
-        cart.push(product);
-        updateCartUI();
-        openCartSidebar();
-    };
+ if (cartPageEmpty) cartPageEmpty.style.display = isEmpty ? 'flex' : 'none';
+ cartPageItems.style.display = isEmpty ? 'none' : 'grid';
+ if (goCheckoutBtn) {
+ goCheckoutBtn.style.pointerEvents = isEmpty ? 'none' : 'auto';
+ goCheckoutBtn.style.opacity = isEmpty ? '0.55' : '1';
+ }
 
-    window.removeFromCart = (index) => {
-        cart.splice(index, 1);
-        updateCartUI();
-    };
+ if (cartPageCount) cartPageCount.textContent = String(count);
+ if (cartPageSubtotal) cartPageSubtotal.textContent = `${total.toFixed(2)} AZN`;
+ if (cartPageTotal) cartPageTotal.textContent = `${total.toFixed(2)} AZN`;
+ if (isEmpty) return;
 
-    const openCartSidebar = () => cartSidebar && cartSidebar.classList.add('active');
-    const closeCartSidebar = () => cartSidebar && cartSidebar.classList.remove('active');
+ cart.forEach((item, index) => {
+ const row = document.createElement('article');
+ row.className = 'cart-page-item';
+ row.innerHTML = `
+ <div class="cart-page-item-media">
+ <img src="${item.img}" alt="${item.name}">
+ </div>
+ <div class="cart-page-item-body">
+ <h4>${item.name}</h4>
+ <p>${item.player_id ? `ID: ${item.player_id} • Nick: ${item.player_nickname || '-'}` : 'Ani təhvil verilən rəqəmsal məhsul'}</p>
+ </div>
+ <div class="cart-page-item-right">
+ <strong>${item.price.toFixed(2)} AZN</strong>
+ <button class="btn btn-link cart-page-remove" type="button" onclick="removeFromCart(${index})">
+ <i class="ri-delete-bin-line"></i> Sil
+ </button>
+ </div>
+ `;
+ cartPageItems.appendChild(row);
+ });
+ };
 
-    window.addToCart = (product) => {
-        console.log('Adding to cart (card):', product);
-        cart.push(product);
-        updateCartUI();
-        if (typeof Toastify !== 'undefined') {
-            Toastify({ text: "Səbətə əlavə edildi!", backgroundColor: "#10b981" }).showToast();
-        } else {
-            console.error('Toastify is not defined!');
-        }
-    };
+ window.addToCartFromPage = (product) => {
+ console.log('Adding to cart (page):', product);
+ cart.push(product);
+ updateCartUI();
+ if (typeof Toastify !== 'undefined') {
+ Toastify({ text:"Səbətə əlavə edildi!", backgroundColor:"#10b981" }).showToast();
+ }
+ };
 
-    window.addToCartFromAttr = (el) => {
-        const product = {
-            id: el.getAttribute('data-id'),
-            name: el.getAttribute('data-name'),
-            price: parseFloat(el.getAttribute('data-price')) || 0,
-            img: el.getAttribute('data-img')
-        };
-        window.addToCart(product);
-    };
+ window.removeFromCart = (index) => {
+ cart.splice(index, 1);
+ updateCartUI();
+ };
 
-    window.toggleWishlist = (prodId, btnElement) => {
-        fetch('/wishlist/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_id: prodId })
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const icon = btnElement ? btnElement.querySelector('i') : document.querySelector('.wishlist-btn i');
-                    if (data.action === 'added') {
-                        if (icon) {
-                            icon.classList.replace('fa-regular', 'fa-solid');
-                            icon.style.color = '#ef4444';
-                        }
-                        Toastify({ text: "İstək listəsinə əlavə edildi!", backgroundColor: "#10b981" }).showToast();
-                    } else {
-                        if (icon) {
-                            icon.classList.replace('fa-solid', 'fa-regular');
-                            icon.style.color = 'inherit';
-                        }
-                        Toastify({ text: "İstək listəsindən çıxarıldı!", backgroundColor: "#64748b" }).showToast();
-                    }
-                } else {
-                    if (data.error === 'Login olun') window.location.href = '/login';
-                }
-            });
-    };
+ window.clearCart = () => {
+ cart = [];
+ updateCartUI();
+ };
 
-    if (cartTrigger) cartTrigger.onclick = openCartSidebar;
-    if (closeCart) closeCart.onclick = closeCartSidebar;
+ window.addToCart = (product) => {
+ console.log('Adding to cart (card):', product);
+ cart.push(product);
+ updateCartUI();
+ if (typeof Toastify !== 'undefined') {
+ Toastify({ text:"Səbətə əlavə edildi!", backgroundColor:"#10b981" }).showToast();
+ } else {
+ console.error('Toastify is not defined!');
+ }
+ };
 
-    // Initial UI load
-    updateCartUI();
+ window.addToCartFromAttr = (el) => {
+ const product = {
+ id: el.getAttribute('data-id'),
+ name: el.getAttribute('data-name'),
+ price: parseFloat(el.getAttribute('data-price')) || 0,
+ img: el.getAttribute('data-img')
+ };
+ window.addToCart(product);
+ };
 
-    // --- Slider Logic (Maintain original) ---
-    const sliders = document.querySelectorAll('.slider-item');
-    if (sliders.length > 1) {
-        let current = 0;
-        setInterval(() => {
-            sliders[current].style.display = 'none';
-            current = (current + 1) % sliders.length;
-            sliders[current].style.display = 'flex';
-        }, 5000);
-    }
+ window.toggleWishlist = (prodId, btnElement) => {
+ fetch('/wishlist/toggle', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ product_id: prodId })
+ })
+ .then(res => res.json())
+ .then(data => {
+ if (data.success) {
+ const icon = btnElement ? btnElement.querySelector('i') : document.querySelector('.wishlist-btn i');
+ if (data.action === 'added') {
+ if (icon) {
+ icon.classList.remove('ri-heart-line');
+ icon.classList.add('ri-heart-fill');
+ icon.style.color = '#ef4444';
+ }
+ Toastify({ text:"İstək listəsinə əlavə edildi!", backgroundColor:"#10b981" }).showToast();
+ } else {
+ if (icon) {
+ icon.classList.remove('ri-heart-fill');
+ icon.classList.add('ri-heart-line');
+ icon.style.color = 'inherit';
+ }
+ Toastify({ text:"İstək listəsindən çıxarıldı!", backgroundColor:"#64748b" }).showToast();
+ }
+ } else {
+ if (data.error === 'Login olun') window.location.href = '/login';
+ }
+ });
+ };
 
-    // --- Working Hours Popup (only off-hours: 00:00 – 12:00) ---
-    (function showWorkingHoursPopup() {
-        const hour = new Date().getHours();
-        const isOffHours = (hour >= 0 && hour < 12);
+ if (cartTrigger) cartTrigger.onclick = () => { window.location.href = '/cart'; };
+ if (clearCartBtn) clearCartBtn.onclick = () => window.clearCart();
 
-        // Only show popup during off-hours
-        if (!isOffHours) return;
-        if (sessionStorage.getItem('azpin_hours_shown')) return;
-        sessionStorage.setItem('azpin_hours_shown', '1');
+ // Initial UI load
+ updateCartUI();
 
-        const overlay = document.createElement('div');
-        overlay.className = 'hours-popup-overlay';
-        overlay.innerHTML = `
-            <div class="hours-popup-box">
-                <div class="hours-popup-header">
-                    <div class="hours-popup-status">
-                        <span class="status-dot offline"></span>
-                        <span>İş saatlarından kənar</span>
-                    </div>
-                    <button class="hours-popup-close" onclick="this.closest('.hours-popup-overlay').remove()">&times;</button>
-                </div>
-                <div class="hours-popup-body">
-                    <div class="hours-popup-icon-wrap">
-                        <i class="fa-solid fa-clock"></i>
-                    </div>
-                    <h3 class="hours-popup-title">Hörmətli müştərimiz!</h3>
-                    <p class="hours-popup-msg">Hazırda iş saatlarımız bitib. Verdiyiniz sifarişlər <strong>səhər saatlarında</strong> emal edilərək təhvil veriləcək.</p>
-                    <div class="hours-popup-schedule">
-                        <div class="schedule-row">
-                            <i class="fa-regular fa-clock"></i>
-                            <span>İş saatları: <strong>12:00 – 00:00</strong></span>
-                        </div>
-                        <div class="schedule-row">
-                            <i class="fa-solid fa-headset"></i>
-                            <span>Dəstək: <a href="/tickets">Texniki Dəstək</a></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="hours-popup-footer">
-                    <button class="hours-popup-btn" onclick="this.closest('.hours-popup-overlay').remove()">Anladım, davam et</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
+ // --- Slider Logic (Maintain original) ---
+ const sliders = document.querySelectorAll('.slider-item');
+ if (sliders.length > 1) {
+ let current = 0;
+ setInterval(() => {
+ sliders[current].style.display = 'none';
+ current = (current + 1) % sliders.length;
+ sliders[current].style.display = 'flex';
+ }, 5000);
+ }
 
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) overlay.remove();
-        });
-    })();
+ // --- Working Hours Popup (only off-hours: 00:00 – 12:00) ---
+ (function showWorkingHoursPopup() {
+ const hour = new Date().getHours();
+ const isOffHours = (hour >= 0 && hour < 12);
 
-    console.log('AZPINX Scripts Loaded');
+ // Only show popup during off-hours
+ if (!isOffHours) return;
+ if (sessionStorage.getItem('azpin_hours_shown')) return;
+ sessionStorage.setItem('azpin_hours_shown', '1');
+
+ const overlay = document.createElement('div');
+ overlay.className = 'hours-popup-overlay';
+ overlay.innerHTML = `
+ <div class="hours-popup-box">
+ <div class="hours-popup-header">
+ <div class="hours-popup-status">
+ <span class="status-dot offline"></span>
+ <span>İş saatlarından kənar</span>
+ </div>
+ <button class="hours-popup-close" onclick="this.closest('.hours-popup-overlay').remove()">&times;</button>
+ </div>
+ <div class="hours-popup-body">
+ <div class="hours-popup-icon-wrap">
+ <i class="ri-time-line"></i>
+ </div>
+ <h3 class="hours-popup-title">Hörmətli müştərimiz!</h3>
+ <p class="hours-popup-msg">Hazırda iş saatlarımız bitib. Verdiyiniz sifarişlər <strong>səhər saatlarında</strong> emal edilərək təhvil veriləcək.</p>
+ <div class="hours-popup-schedule">
+ <div class="schedule-row">
+ <i class="ri-time-line"></i>
+ <span>İş saatları: <strong>12:00 – 00:00</strong></span>
+ </div>
+ <div class="schedule-row">
+ <i class="ri-customer-service-2-line"></i>
+ <span>Dəstək: <a href="/tickets">Texniki Dəstək</a></span>
+ </div>
+ </div>
+ </div>
+ <div class="hours-popup-footer">
+ <button class="hours-popup-btn" onclick="this.closest('.hours-popup-overlay').remove()">Anladım, davam et</button>
+ </div>
+ </div>
+ `;
+ document.body.appendChild(overlay);
+
+ overlay.addEventListener('click', (e) => {
+ if (e.target === overlay) overlay.remove();
+ });
+ })();
+
+ console.log('AZPINX Scripts Loaded');
 });

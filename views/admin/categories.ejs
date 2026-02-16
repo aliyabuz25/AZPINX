@@ -1,107 +1,107 @@
 <%- include('header') %>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card card-primary">
-                <div class="card-header">
-                    <h3 class="card-title">Yeni Kateqoriya</h3>
-                </div>
-                <!-- Added enctype for file upload -->
-                <form action="/admin/categories/create" method="POST" enctype="multipart/form-data">
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label>Kateqoriya Adı</label>
-                            <input type="text" name="name" class="form-control" placeholder="Məs: Mobil Oyunlar"
-                                required>
-                        </div>
-                        <div class="form-group">
-                            <label>İkon (FontAwesome)</label>
-                            <input type="text" name="icon" class="form-control" placeholder="Məs: fa-mobile-alt"
-                                value="fa-layer-group">
-                        </div>
-                        <!-- New Image Upload Field -->
-                        <div class="form-group">
-                            <label>Şəkil Yüklə</label>
-                            <div class="input-group">
-                                <div class="custom-file">
-                                    <input type="file" class="custom-file-input" name="image" accept="image/*">
-                                    <label class="custom-file-label">Fayl seçin</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Təsvir</label>
-                            <textarea name="description" class="form-control" rows="3"></textarea>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button type="submit" class="btn btn-primary btn-block">Yarat</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+ <div class="row">
+ <div class="col-md-4">
+ <div class="card card-primary">
+ <div class="card-header">
+ <h3 class="card-title">Yeni Kateqoriya</h3>
+ </div>
+ <!-- Added enctype for file upload -->
+ <form action="/admin/categories/create" method="POST" enctype="multipart/form-data">
+ <div class="card-body">
+ <div class="form-group">
+ <label>Kateqoriya Adı</label>
+ <input type="text" name="name" class="form-control" placeholder="Məs: Mobil Oyunlar"
+ required>
+ </div>
+ <div class="form-group">
+ <label>İkon (FontAwesome)</label>
+ <input type="text" name="icon" class="form-control" placeholder="Məs: ri-smartphone-line"
+ value="ri-stack-line">
+ </div>
+ <!-- New Image Upload Field -->
+ <div class="form-group">
+ <label>Şəkil Yüklə</label>
+ <div class="input-group">
+ <div class="custom-file">
+ <input type="file" class="custom-file-input" name="image" accept="image/*">
+ <label class="custom-file-label">Fayl seçin</label>
+ </div>
+ </div>
+ </div>
+ <div class="form-group">
+ <label>Təsvir</label>
+ <textarea name="description" class="form-control" rows="3"></textarea>
+ </div>
+ </div>
+ <div class="card-footer">
+ <button type="submit" class="btn btn-primary btn-block">Yarat</button>
+ </div>
+ </form>
+ </div>
+ </div>
 
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Mövcud Kateqoriyalar</h3>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px">ID</th>
-                                <th>Şəkil</th>
-                                <th>İkon</th>
-                                <th>Ad</th>
-                                <th>Təsvir</th>
-                                <th>Əməliyyatlar</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% categories.forEach(cat=> { %>
-                                <tr>
-                                    <td>
-                                        <%= cat.id %>
-                                    </td>
-                                    <td>
-                                        <% if (cat.image_path) { %>
-                                            <img src="<%= cat.image_path %>" alt="Img"
-                                                style="height: 40px; border-radius: 4px;">
-                                            <% } else { %>
-                                                <span class="text-muted">-</span>
-                                                <% } %>
-                                    </td>
-                                    <td><i class="fas <%= cat.icon %> text-muted"></i></td>
-                                    <td><strong>
-                                            <%= cat.name %>
-                                        </strong></td>
-                                    <td>
-                                        <%= cat.description || '-' %>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="/admin/categories/<%= cat.id %>/edit" class="btn btn-sm btn-info"
-                                                title="Redaktə et">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form action="/admin/categories/delete" method="POST"
-                                                onsubmit="return confirm('Bu kateqoriyanı silmək istədiyinizə əminsiniz?');"
-                                                style="display:inline;">
-                                                <input type="hidden" name="category_id" value="<%= cat.id %>">
-                                                <button type="submit" class="btn btn-sm btn-danger" title="Sil">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+ <div class="col-md-8">
+ <div class="card">
+ <div class="card-header">
+ <h3 class="card-title">Mövcud Kateqoriyalar</h3>
+ </div>
+ <div class="card-body p-0">
+ <table class="table table-hover">
+ <thead>
+ <tr>
+ <th style="width: 50px">ID</th>
+ <th>Şəkil</th>
+ <th>İkon</th>
+ <th>Ad</th>
+ <th>Təsvir</th>
+ <th>Əməliyyatlar</th>
+ </tr>
+ </thead>
+ <tbody>
+ <% categories.forEach(cat=> { %>
+ <tr>
+ <td>
+ <%= cat.id %>
+ </td>
+ <td>
+ <% if (cat.image_path) { %>
+ <img src="<%= cat.image_path %>" alt="Img"
+ style="height: 40px; border-radius: 4px;">
+ <% } else { %>
+ <span class="text-muted">-</span>
+ <% } %>
+ </td>
+ <td><i class="<%= cat.icon %> text-muted"></i></td>
+ <td><strong>
+ <%= cat.name %>
+ </strong></td>
+ <td>
+ <%= cat.description || '-' %>
+ </td>
+ <td>
+ <div class="btn-group">
+ <a href="/admin/categories/<%= cat.id %>/edit" class="btn btn-sm btn-info"
+ title="Redaktə et">
+ <i class="ri-edit-2-line"></i>
+ </a>
+ <form action="/admin/categories/delete" method="POST"
+ onsubmit="return confirm('Bu kateqoriyanı silmək istədiyinizə əminsiniz?');"
+ style="display:inline;">
+ <input type="hidden" name="category_id" value="<%= cat.id %>">
+ <button type="submit" class="btn btn-sm btn-danger" title="Sil">
+ <i class="ri-delete-bin-line"></i>
+ </button>
+ </form>
+ </div>
+ </td>
+ </tr>
+ <% }) %>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <%- include('footer') %>
+ <%- include('footer') %>

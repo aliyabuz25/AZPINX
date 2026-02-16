@@ -2,161 +2,170 @@
 <html lang="az">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        <%= title %>
-    </title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/style.css">
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>
+ <%= title %>
+ </title>
+ <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+ rel="stylesheet">
+ <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
+ <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+ <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+ <link rel="stylesheet" href="/css/style.css">
 </head>
 
 <body>
-    <% if (locals.error) { %>
-        <script>
-            window.addEventListener('load', () => {
-                Toastify({
-                    text: "<%= error %>",
-                    duration: 3000,
-                    gravity: "top",
-                    position: "right",
-                    backgroundColor: "#ef4444",
-                    stopOnFocus: true
-                }).showToast();
-            });
-        </script>
-        <% } %>
-            <% if (locals.success) { %>
-                <script>
-                    window.addEventListener('load', () => {
-                        Toastify({
-                            text: "<%= success %>",
-                            duration: 3000,
-                            gravity: "top",
-                            position: "right",
-                            backgroundColor: "#10b981",
-                            stopOnFocus: true
-                        }).showToast();
-                    });
-                </script>
-                <% } %>
-                    <% if (locals.announcements && announcements.length> 0) { %>
-                        <div class="hub-msg-container">
-                            <div class="hub-msg-slider">
-                                <% announcements.forEach(msg=> { %>
-                                    <div class="hub-msg-item hub-msg-<%= msg.type %>">
-                                        <i class="fas fa-bullhorn mr-2"></i>
-                                        <strong>
-                                            <%= msg.title %>:
-                                        </strong>
-                                        <span>
-                                            <%= msg.message %>
-                                        </span>
-                                    </div>
-                                    <% }) %>
-                                        <!-- Duplicate for seamless loop if content is short -->
-                                        <% announcements.forEach(msg=> { %>
-                                            <div class="hub-msg-item hub-msg-<%= msg.type %>">
-                                                <i class="fas fa-bullhorn mr-2"></i>
-                                                <strong>
-                                                    <%= msg.title %>:
-                                                </strong>
-                                                <span>
-                                                    <%= msg.message %>
-                                                </span>
-                                            </div>
-                                            <% }) %>
-                            </div>
-                        </div>
-                        <% } %>
-                            <header>
-                                <div class="top-bar">
-                                    <a href="/" class="logo">
-                                        <img src="/images/logo-new.jpeg" alt="AZPINX Logo" style="height: 85px;">
-                                    </a>
-                                    <form action="/" method="GET" class="search-container">
-                                        <i class="fa-solid fa-magnifying-glass"></i>
-                                        <input type="text" name="q" placeholder="Yüz minlərlə məhsul içində axtar..."
-                                            value="<%= locals.searchQuery || '' %>">
-                                    </form>
-                                    <div class="auth-buttons">
-                                        <% if (locals.user) { %>
-                                            <!-- User Balance -->
-                                            <div class="nav-balance">
-                                                <i class="fa-solid fa-wallet"></i>
-                                                <span>
-                                                    <%= Number(user.balance || 0).toFixed(2) %> ₼
-                                                </span>
-                                            </div>
+ <% if (locals.error) { %>
+ <script>
+ window.addEventListener('load', () => {
+ Toastify({
+ text:"<%= error %>",
+ duration: 3000,
+ gravity:"top",
+ position:"right",
+ backgroundColor:"#ef4444",
+ stopOnFocus: true
+ }).showToast();
+ });
+ </script>
+ <% } %>
+ <% if (locals.success) { %>
+ <script>
+ window.addEventListener('load', () => {
+ Toastify({
+ text:"<%= success %>",
+ duration: 3000,
+ gravity:"top",
+ position:"right",
+ backgroundColor:"#10b981",
+ stopOnFocus: true
+ }).showToast();
+ });
+ </script>
+ <% } %>
+ <% if (locals.announcements && announcements.length> 0) { %>
+ <div class="hub-msg-container">
+ <div class="hub-msg-slider">
+ <% announcements.forEach(msg=> { %>
+ <div class="hub-msg-item hub-msg-<%= msg.type %>">
+ <i class="ri-megaphone-line mr-2"></i>
+ <strong>
+ <%= msg.title %>:
+ </strong>
+ <span>
+ <%= msg.message %>
+ </span>
+ </div>
+ <% }) %>
+ <!-- Duplicate for seamless loop if content is short -->
+ <% announcements.forEach(msg=> { %>
+ <div class="hub-msg-item hub-msg-<%= msg.type %>">
+ <i class="ri-megaphone-line mr-2"></i>
+ <strong>
+ <%= msg.title %>:
+ </strong>
+ <span>
+ <%= msg.message %>
+ </span>
+ </div>
+ <% }) %>
+ </div>
+ </div>
+ <% } %>
+ <header>
+ <div class="top-bar">
+ <div class="top-bar-main">
+ <a href="/" class="logo">
+ <img src="/images/logo-new.jpeg" alt="AZPINX Logo" style="height: 85px;">
+ </a>
+ <button class="navbar-toggler topbar-toggler d-lg-none" type="button"
+ data-toggle="collapse" data-target="#topbarActions"
+ aria-controls="topbarActions" aria-expanded="false"
+ aria-label="Toggle navigation">
+ <i class="ri-menu-line"></i>
+ </button>
+ </div>
+ <form action="/" method="GET" class="search-container">
+ <i class="ri-search-line"></i>
+ <input type="text" name="q" placeholder="Yüz minlərlə məhsul içində axtar..."
+ value="<%= locals.searchQuery || '' %>">
+ </form>
+ <div class="collapse d-lg-flex topbar-actions-wrap" id="topbarActions">
+ <div class="auth-buttons">
+ <% if (locals.user) { %>
+ <!-- User Balance -->
+ <div class="nav-balance">
+ <i class="ri-wallet-3-line"></i>
+ <span>
+ <%= Number(user.balance || 0).toFixed(2) %> ₼
+ </span>
+ </div>
 
-                                            <!-- Wishlist -->
-                                            <a href="/wishlist" class="nav-btn" title="İstəklər">
-                                                <i class="fa-solid fa-heart"></i>
-                                            </a>
+ <!-- Wishlist -->
+ <a href="/wishlist" class="nav-btn" title="İstəklər">
+ <i class="ri-heart-line"></i>
+ </a>
 
-                                            <!-- Tickets -->
-                                            <a href="/tickets" class="nav-btn" title="Dəstək">
-                                                <i class="fa-solid fa-headset"></i>
-                                            </a>
+ <!-- Tickets -->
+ <a href="/tickets" class="nav-btn" title="Dəstək">
+ <i class="ri-customer-service-2-line"></i>
+ </a>
 
-                                            <!-- FAQ -->
-                                            <a href="/faq" class="nav-btn" title="FAQ">
-                                                <i class="fa-solid fa-circle-question"></i>
-                                            </a>
+ <!-- FAQ -->
+ <a href="/faq" class="nav-btn" title="FAQ">
+ <i class="ri-question-line"></i>
+ </a>
 
-                                            <!-- Profile -->
-                                            <a href="/profile" class="nav-btn" title="Profil: <%= user.full_name %>">
-                                                <i class="fa-solid fa-user"></i>
-                                            </a>
+ <!-- Profile -->
+ <a href="/profile" class="nav-btn" title="Profil: <%= user.full_name %>">
+ <i class="ri-user-3-line"></i>
+ </a>
 
-                                            <!-- Admin Access -->
-                                            <% if (user.role==='admin' ) { %>
-                                                <a href="/admin" class="nav-btn" title="Admin Panel"
-                                                    style="color: #f43f5e;">
-                                                    <i class="fa-solid fa-shield-halved"></i>
-                                                </a>
-                                                <% } %>
+ <!-- Admin Access -->
+ <% if (user.role==='admin' ) { %>
+ <a href="/admin" class="nav-btn" title="Admin Panel"
+ style="color: #f43f5e;">
+ <i class="ri-shield-star-line"></i>
+ </a>
+ <% } %>
 
-                                                    <!-- Logout -->
-                                                    <a href="/logout" class="nav-btn" title="Çıxış">
-                                                        <i class="fa-solid fa-right-from-bracket"></i>
-                                                    </a>
+ <!-- Logout -->
+ <a href="/logout" class="nav-btn" title="Çıxış">
+ <i class="ri-logout-box-r-line"></i>
+ </a>
 
-                                                    <% } else { %>
-                                                        <a href="/login" class="btn btn-outline"
-                                                            style="border-color: rgba(255,255,255,0.2); color:white;">Daxil
-                                                            ol</a>
-                                                        <a href="/register" class="btn btn-primary">Qeydiyyat</a>
-                                                        <% } %>
+ <% } else { %>
+ <a href="/login" class="btn btn-outline"
+ style="border-color: rgba(255,255,255,0.2); color:white;">Daxil
+ ol</a>
+ <a href="/register" class="btn btn-primary">Qeydiyyat</a>
+ <% } %>
 
-                                                            <!-- Cart Trigger (Always Visible or adjust as needed) -->
-                                                            <div class="nav-btn" id="cartTrigger"
-                                                                style="margin-left: 5px;">
-                                                                <i class="fa-solid fa-cart-shopping"></i>
-                                                                <span class="cart-count">0</span>
-                                                            </div>
-                                    </div>
-                                </div>
-                            </header>
+ <!-- Cart Trigger (Always Visible or adjust as needed) -->
+ <div class="nav-btn" id="cartTrigger">
+ <i class="ri-shopping-cart-2-line"></i>
+ <span class="cart-count">0</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ </header>
 
-                            <script>
-                                function createSnowflake() {
-                                    const snowflake = document.createElement('div');
-                                    snowflake.classList.add('snowflake');
-                                    snowflake.innerHTML = '&#10052;';
-                                    snowflake.style.left = Math.random() * 100 + 'vw';
-                                    snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
-                                    snowflake.style.opacity = Math.random();
-                                    snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
-                                    document.body.appendChild(snowflake);
-                                    setTimeout(() => { snowflake.remove(); }, 5000);
-                                }
-                                setInterval(createSnowflake, 150);
-                            </script>
+ <script>
+ function createFloatingGlyph() {
+ const glyph = document.createElement('i');
+ const iconPool = ['ri-gamepad-line', 'ri-rocket-line', 'ri-flashlight-line', 'ri-fire-line'];
+ glyph.className = 'floating-glyph ' + iconPool[Math.floor(Math.random() * iconPool.length)];
+ glyph.style.left = Math.random() * 100 + 'vw';
+ glyph.style.animationDuration = (10 + Math.random() * 8) + 's';
+ glyph.style.opacity = (0.18 + Math.random() * 0.2).toFixed(2);
+ glyph.style.fontSize = (20 + Math.random() * 22) + 'px';
+ document.body.appendChild(glyph);
+ setTimeout(() => { glyph.remove(); }, 19000);
+ }
+ setInterval(createFloatingGlyph, 900);
+ </script>

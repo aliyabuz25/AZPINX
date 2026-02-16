@@ -1,170 +1,170 @@
 <%- include('partials/header') %>
-    <div class="support-wrapper py-5">
-        <div class="container" style="max-width: 900px;">
-            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-                <div>
-                    <a href="/tickets" class="text-muted small mb-2 d-inline-block text-decoration-none transition-all">
-                        <i class="fas fa-arrow-left mr-1"></i> Dəstək Mərkəzinə qayıt
-                    </a>
-                    <h2 class="font-weight-bold text-dark mt-2 mb-1">
-                        <%= ticket.subject %>
-                    </h2>
-                    <div class="small text-muted">
-                        Bilet #<%= ticket.id %> •
-                            <% if (ticket.status==='open' ) { %>
-                                <span class="text-success font-weight-bold"><i class="fas fa-circle mr-1 small"></i>
-                                    AÇIQ</span>
-                                <% } else { %>
-                                    <span class="text-danger font-weight-bold"><i class="fas fa-lock mr-1 small"></i>
-                                        BAĞLI</span>
-                                    <% } %>
-                                        <% if (ticket.order_id) { %>
-                                            • <span class="text-primary font-weight-bold">Sifariş #<%= ticket.order_id
-                                                    %></span>
-                                            <% } %>
-                    </div>
-                </div>
-            </div>
+ <div class="support-wrapper py-5">
+ <div class="container" style="max-width: 900px;">
+ <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+ <div>
+ <a href="/tickets" class="text-muted small mb-2 d-inline-block text-decoration-none transition-all">
+ <i class="ri-arrow-left-line mr-1"></i> Dəstək Mərkəzinə qayıt
+ </a>
+ <h2 class="font-weight-bold text-dark mt-2 mb-1">
+ <%= ticket.subject %>
+ </h2>
+ <div class="small text-muted">
+ Bilet #<%= ticket.id %> •
+ <% if (ticket.status==='open' ) { %>
+ <span class="text-success font-weight-bold"><i class="ri-checkbox-blank-circle-fill mr-1 small"></i>
+ AÇIQ</span>
+ <% } else { %>
+ <span class="text-danger font-weight-bold"><i class="ri-lock-line mr-1 small"></i>
+ BAĞLI</span>
+ <% } %>
+ <% if (ticket.order_id) { %>
+ • <span class="text-primary font-weight-bold">Sifariş #<%= ticket.order_id
+ %></span>
+ <% } %>
+ </div>
+ </div>
+ </div>
 
-            <div class="chat-container card shadow-sm border-0 mb-4"
-                style="border-radius: 16px; overflow: hidden; background: #fff;">
-                <div class="card-body p-4 chat-body-scroll" id="chatBody">
-                    <% messages.forEach(m=> { %>
-                        <div
-                            class="message-wrapper d-flex flex-column <%= m.is_admin ? 'align-items-start' : 'align-items-end' %> mb-4">
-                            <div class="chat-bubble shadow-sm p-3 <%= m.is_admin ? 'admin-bubble' : 'user-bubble' %>">
-                                <div class="message-info d-flex justify-content-between align-items-center mb-2">
-                                    <span
-                                        class="font-weight-bold small <%= m.is_admin ? 'text-primary' : 'text-white' %>">
-                                        <%= m.is_admin ? 'Dəstək Komandası' : 'Siz' %>
-                                    </span>
-                                    <span class="message-time small opacity-70 ml-3">
-                                        <%= new Date(m.created_at).toLocaleTimeString('az-AZ', { hour: '2-digit' ,
-                                            minute: '2-digit' }) %>
-                                    </span>
-                                </div>
-                                <div class="message-text">
-                                    <%= m.message %>
-                                </div>
-                            </div>
-                        </div>
-                        <% }) %>
-                            <% if (messages.length===0) { %>
-                                <div class="text-center py-5">
-                                    <div class="mb-3 text-muted" style="font-size: 40px; opacity: 0.2;">
-                                        <i class="far fa-comments"></i>
-                                    </div>
-                                    <p class="text-muted italic">Müraciətiniz qəbul edilib. Komandamız tezliklə sizi
-                                        cavablandıracaq.</p>
-                                </div>
-                                <% } %>
-                </div>
+ <div class="chat-container card shadow-sm border-0 mb-4"
+ style="border-radius: 16px; overflow: hidden; background: #fff;">
+ <div class="card-body p-4 chat-body-scroll" id="chatBody">
+ <% messages.forEach(m=> { %>
+ <div
+ class="message-wrapper d-flex flex-column <%= m.is_admin ? 'align-items-start' : 'align-items-end' %> mb-4">
+ <div class="chat-bubble shadow-sm p-3 <%= m.is_admin ? 'admin-bubble' : 'user-bubble' %>">
+ <div class="message-info d-flex justify-content-between align-items-center mb-2">
+ <span
+ class="font-weight-bold small <%= m.is_admin ? 'text-primary' : 'text-white' %>">
+ <%= m.is_admin ? 'Dəstək Komandası' : 'Siz' %>
+ </span>
+ <span class="message-time small opacity-70 ml-3">
+ <%= new Date(m.created_at).toLocaleTimeString('az-AZ', { hour: '2-digit' ,
+ minute: '2-digit' }) %>
+ </span>
+ </div>
+ <div class="message-text">
+ <%= m.message %>
+ </div>
+ </div>
+ </div>
+ <% }) %>
+ <% if (messages.length===0) { %>
+ <div class="text-center py-5">
+ <div class="mb-3 text-muted" style="font-size: 40px; opacity: 0.2;">
+ <i class="ri-chat-3-line"></i>
+ </div>
+ <p class="text-muted italic">Müraciətiniz qəbul edilib. Komandamız tezliklə sizi
+ cavablandıracaq.</p>
+ </div>
+ <% } %>
+ </div>
 
-                <% if (ticket.status==='open' ) { %>
-                    <div class="card-footer bg-light border-0 p-3">
-                        <form id="replyForm" class="d-flex align-items-center bg-white p-2 shadow-sm"
-                            style="border-radius: 30px; border: 1px solid #e2e8f0;">
-                            <input type="text" name="message" class="form-control border-0 bg-transparent px-3"
-                                placeholder="Mesajınızı bura yazın..." required
-                                style="box-shadow: none; font-size: 15px;">
-                            <button type="submit" class="btn btn-primary btn-icon rounded-circle shadow-sm">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </form>
-                    </div>
-                    <% } else { %>
-                        <div class="card-footer text-center bg-white py-4 border-top">
-                            <div class="text-muted small mb-0">
-                                <i class="fas fa-info-circle mr-1"></i> Bu bilet artıq bağlanıb. Yeni müraciət üçün
-                                bilet mərkəzinə qayıdın.
-                            </div>
-                        </div>
-                        <% } %>
-            </div>
-        </div>
-    </div>
+ <% if (ticket.status==='open' ) { %>
+ <div class="card-footer bg-light border-0 p-3">
+ <form id="replyForm" class="d-flex align-items-center bg-white p-2 shadow-sm"
+ style="border-radius: 30px; border: 1px solid #e2e8f0;">
+ <input type="text" name="message" class="form-control border-0 bg-transparent px-3"
+ placeholder="Mesajınızı bura yazın..." required
+ style="box-shadow: none; font-size: 15px;">
+ <button type="submit" class="btn btn-primary btn-icon rounded-circle shadow-sm">
+ <i class="ri-send-plane-2-line"></i>
+ </button>
+ </form>
+ </div>
+ <% } else { %>
+ <div class="card-footer text-center bg-white py-4 border-top">
+ <div class="text-muted small mb-0">
+ <i class="ri-information-line mr-1"></i> Bu bilet artıq bağlanıb. Yeni müraciət üçün
+ bilet mərkəzinə qayıdın.
+ </div>
+ </div>
+ <% } %>
+ </div>
+ </div>
+ </div>
 
-    <style>
-        .chat-body-scroll {
-            height: 500px;
-            overflow-y: auto;
-            background-color: #f8fafc;
-        }
+ <style>
+ .chat-body-scroll {
+ height: 500px;
+ overflow-y: auto;
+ background-color: #f8fafc;
+ }
 
-        .message-wrapper {
-            width: 100%;
-        }
+ .message-wrapper {
+ width: 100%;
+ }
 
-        .chat-bubble {
-            max-width: 75%;
-            position: relative;
-            line-height: 1.5;
-            font-size: 15px;
-        }
+ .chat-bubble {
+ max-width: 75%;
+ position: relative;
+ line-height: 1.5;
+ font-size: 15px;
+ }
 
-        .admin-bubble {
-            background: #fff;
-            color: #1e293b;
-            border-radius: 4px 18px 18px 18px;
-            border: 1px solid #e2e8f0;
-        }
+ .admin-bubble {
+ background: #fff;
+ color: #1e293b;
+ border-radius: 4px 18px 18px 18px;
+ border: 1px solid #e2e8f0;
+ }
 
-        .user-bubble {
-            background: var(--primary-color);
-            color: #fff;
-            border-radius: 18px 18px 4px 18px;
-        }
+ .user-bubble {
+ background: var(--primary-color);
+ color: #fff;
+ border-radius: 18px 18px 4px 18px;
+ }
 
-        .btn-icon {
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
+ .btn-icon {
+ width: 45px;
+ height: 45px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ padding: 0;
+ }
 
-        .transition-all {
-            transition: all 0.2s ease;
-        }
+ .transition-all {
+ transition: all 0.2s ease;
+ }
 
-        .transition-all:hover {
-            opacity: 0.8;
-        }
+ .transition-all:hover {
+ opacity: 0.8;
+ }
 
-        .opacity-70 {
-            opacity: 0.7;
-        }
+ .opacity-70 {
+ opacity: 0.7;
+ }
 
-        #chatBody::-webkit-scrollbar {
-            width: 5px;
-        }
+ #chatBody::-webkit-scrollbar {
+ width: 5px;
+ }
 
-        #chatBody::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-    </style>
+ #chatBody::-webkit-scrollbar-thumb {
+ background: #cbd5e1;
+ border-radius: 10px;
+ }
+ </style>
 
-    <script>
-        const chatBody = document.getElementById('chatBody');
-        chatBody.scrollTop = chatBody.scrollHeight;
+ <script>
+ const chatBody = document.getElementById('chatBody');
+ chatBody.scrollTop = chatBody.scrollHeight;
 
-        $('#replyForm').on('submit', async function (e) {
-            e.preventDefault();
-            const msg = this.message.value;
-            const res = await fetch('/ticket/<%= ticket.id %>/message', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg })
-            });
-            const result = await res.json();
-            if (result.success) {
-                location.reload();
-            } else {
-                Swal.fire('Xəta', result.error, 'error');
-            }
-        });
-    </script>
+ $('#replyForm').on('submit', async function (e) {
+ e.preventDefault();
+ const msg = this.message.value;
+ const res = await fetch('/ticket/<%= ticket.id %>/message', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ message: msg })
+ });
+ const result = await res.json();
+ if (result.success) {
+ location.reload();
+ } else {
+ Swal.fire('Xəta', result.error, 'error');
+ }
+ });
+ </script>
 
-    <%- include('partials/footer') %>
+ <%- include('partials/footer') %>

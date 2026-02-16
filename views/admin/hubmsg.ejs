@@ -1,112 +1,112 @@
 <%- include('header') %>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card card-primary">
-                <div class="card-header">
-                    <h3 class="card-title">Yeni Bildiriş Yarat</h3>
-                </div>
-                <form action="/admin/hubmsg/create" method="POST">
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label>Başlıq</label>
-                            <input type="text" name="title" class="form-control"
-                                placeholder="Məs: Həftəsonu Kampaniyası!" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Mesaj</label>
-                            <textarea name="message" class="form-control" rows="3" placeholder="Bildiriş mətni..."
-                                required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Növ</label>
-                            <select name="type" class="form-control">
-                                <option value="info" class="text-info">Məlumat (Göy)</option>
-                                <option value="warning" class="text-warning">Xəbərdarlıq (Sarı)</option>
-                                <option value="danger" class="text-danger">Təhlükə (Qırmızı)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button type="submit" class="btn btn-primary btn-block">Yarat</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+ <div class="row">
+ <div class="col-md-4">
+ <div class="card card-primary">
+ <div class="card-header">
+ <h3 class="card-title">Yeni Bildiriş Yarat</h3>
+ </div>
+ <form action="/admin/hubmsg/create" method="POST">
+ <div class="card-body">
+ <div class="form-group">
+ <label>Başlıq</label>
+ <input type="text" name="title" class="form-control"
+ placeholder="Məs: Həftəsonu Kampaniyası!" required>
+ </div>
+ <div class="form-group">
+ <label>Mesaj</label>
+ <textarea name="message" class="form-control" rows="3" placeholder="Bildiriş mətni..."
+ required></textarea>
+ </div>
+ <div class="form-group">
+ <label>Növ</label>
+ <select name="type" class="form-control">
+ <option value="info" class="text-info">Məlumat (Göy)</option>
+ <option value="warning" class="text-warning">Xəbərdarlıq (Sarı)</option>
+ <option value="danger" class="text-danger">Təhlükə (Qırmızı)</option>
+ </select>
+ </div>
+ </div>
+ <div class="card-footer">
+ <button type="submit" class="btn btn-primary btn-block">Yarat</button>
+ </div>
+ </form>
+ </div>
+ </div>
 
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Aktiv Bildirişlər (HubMsg)</h3>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Növ</th>
-                                <th>Başlıq</th>
-                                <th>Tarix</th>
-                                <th>Status</th>
-                                <th>Əməliyyat</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% messages.forEach(msg=> { %>
-                                <tr>
-                                    <td>
-                                        <span class="badge badge-<%= msg.type %>">
-                                            <%= msg.type.toUpperCase() %>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <strong>
-                                            <%= msg.title %>
-                                        </strong><br>
-                                        <small class="text-muted">
-                                            <%= msg.message.substring(0, 50) %>...
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <%= new Date(msg.created_at).toLocaleDateString('az-AZ') %>
-                                    </td>
-                                    <td>
-                                        <div class="custom-control custom-switch">
-                                            <input type="checkbox" class="custom-control-input" id="switch<%= msg.id %>"
-                                                <%=msg.is_active ? 'checked' : '' %> onchange="toggleMsg(<%= msg.id %>,
-                                                this.checked)">
-                                                <label class="custom-control-label" for="switch<%= msg.id %>"></label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <form action="/admin/hubmsg/delete" method="POST" style="display:inline;">
-                                            <input type="hidden" name="id" value="<%= msg.id %>">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('Silmək istədiyinizə əminsiniz?')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+ <div class="col-md-8">
+ <div class="card">
+ <div class="card-header">
+ <h3 class="card-title">Aktiv Bildirişlər (HubMsg)</h3>
+ </div>
+ <div class="card-body p-0">
+ <table class="table table-hover">
+ <thead>
+ <tr>
+ <th>Növ</th>
+ <th>Başlıq</th>
+ <th>Tarix</th>
+ <th>Status</th>
+ <th>Əməliyyat</th>
+ </tr>
+ </thead>
+ <tbody>
+ <% messages.forEach(msg=> { %>
+ <tr>
+ <td>
+ <span class="badge badge-<%= msg.type %>">
+ <%= msg.type.toUpperCase() %>
+ </span>
+ </td>
+ <td>
+ <strong>
+ <%= msg.title %>
+ </strong><br>
+ <small class="text-muted">
+ <%= msg.message.substring(0, 50) %>...
+ </small>
+ </td>
+ <td>
+ <%= new Date(msg.created_at).toLocaleDateString('az-AZ') %>
+ </td>
+ <td>
+ <div class="custom-control custom-switch">
+ <input type="checkbox" class="custom-control-input" id="switch<%= msg.id %>"
+ <%=msg.is_active ? 'checked' : '' %> onchange="toggleMsg(<%= msg.id %>,
+ this.checked)">
+ <label class="custom-control-label" for="switch<%= msg.id %>"></label>
+ </div>
+ </td>
+ <td>
+ <form action="/admin/hubmsg/delete" method="POST" style="display:inline;">
+ <input type="hidden" name="id" value="<%= msg.id %>">
+ <button type="submit" class="btn btn-sm btn-outline-danger"
+ onclick="return confirm('Silmək istədiyinizə əminsiniz?')">
+ <i class="ri-delete-bin-line"></i>
+ </button>
+ </form>
+ </td>
+ </tr>
+ <% }) %>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <script>
-        function toggleMsg(id, status) {
-            fetch('/admin/hubmsg/toggle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, is_active: status ? 1 : 0 })
-            }).then(res => res.json()).then(data => {
-                if (data.success) {
-                    Toastify({ text: "Status yeniləndi", backgroundColor: "#10b981" }).showToast();
-                }
-            });
-        }
-    </script>
+ <script>
+ function toggleMsg(id, status) {
+ fetch('/admin/hubmsg/toggle', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ id, is_active: status ? 1 : 0 })
+ }).then(res => res.json()).then(data => {
+ if (data.success) {
+ Toastify({ text:"Status yeniləndi", backgroundColor:"#10b981" }).showToast();
+ }
+ });
+ }
+ </script>
 
-    <%- include('footer') %>
+ <%- include('footer') %>

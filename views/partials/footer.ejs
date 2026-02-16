@@ -1,60 +1,129 @@
 <footer>
-    <div class="footer-grid">
-        <div class="footer-brand">
-            <img src="/images/logo-new.jpeg" alt="AZPINX Logo" style="height: 50px; margin-bottom: 25px;">
-            <p>AZPINX - Azərbaycanda bütün oyunlar üçün ən ucuz e-pinlərin rəsmi satış platformasıdır. Biz 7/24
-                xidmətinizdəyik.</p>
-            <div class="trust-badges">
-                <span class="trust-badge"><i class="fa-solid fa-shield-halved"></i> SSL Təhlükəsiz</span>
-                <span class="trust-badge"><i class="fa-solid fa-certificate"></i> Lisenziyalı</span>
-            </div>
-        </div>
-        <div class="footer-links">
-            <h5>Sürətli Keçidlər</h5>
-            <ul>
-                <li><a href="/">Ana Səhifə</a></li>
-                <li><a href="/faq">FAQ</a></li>
-                <li><a href="/terms">Qaydalar və Şərtlər</a></li>
-            </ul>
-        </div>
-        <div class="footer-links">
-            <h5>Hesabım</h5>
-            <ul>
-                <li><a href="/profile">Profil</a></li>
-                <li><a href="/tickets">Texniki Dəstək</a></li>
-                <li><a href="/wishlist">İstək Siyahısı</a></li>
-            </ul>
-        </div>
-        <div class="footer-contact">
-            <h5>Bizimlə Əlaqə</h5>
-            <div class="contact-item">
-                <i class="fa-brands fa-whatsapp"></i>
-                <div class="contact-info">
-                    <p>WhatsApp</p>
-                    <span>0107292236</span>
-                </div>
-            </div>
-            <div class="contact-item">
-                <i class="fa-regular fa-envelope"></i>
-                <div class="contact-info">
-                    <p>E-poçt</p>
-                    <span>destek@azpinx.com</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        <p>&copy; 2024 AZPINX - Bütün hüquqlar qorunur.</p>
-        <div class="payment-icons">
-            <i class="fa-brands fa-cc-visa"></i>
-            <i class="fa-brands fa-cc-mastercard"></i>
-            <span>M10 / MilliÖN / eManat</span>
-        </div>
-    </div>
+ <div class="footer-grid">
+ <div class="footer-brand">
+ <img src="/images/logo-new.jpeg" alt="AZPINX Logo" style="height: 50px; margin-bottom: 25px;">
+ <p>AZPINX - Azərbaycanda bütün oyunlar üçün ən ucuz e-pinlərin rəsmi satış platformasıdır. Biz 7/24
+ xidmətinizdəyik.</p>
+ <div class="trust-badges">
+ <span class="trust-badge"><i class="ri-shield-star-line"></i> SSL Təhlükəsiz</span>
+ <span class="trust-badge"><i class="ri-award-line"></i> Lisenziyalı</span>
+ </div>
+ </div>
+ <div class="footer-links">
+ <h5>Sürətli Keçidlər</h5>
+ <ul>
+ <li><a href="/">Ana Səhifə</a></li>
+ <li><a href="/faq">FAQ</a></li>
+ <li><a href="/terms">Qaydalar və Şərtlər</a></li>
+ </ul>
+ </div>
+ <div class="footer-links">
+ <h5>Hesabım</h5>
+ <ul>
+ <li><a href="/profile">Profil</a></li>
+ <li><a href="/tickets">Texniki Dəstək</a></li>
+ <li><a href="/wishlist">İstək Siyahısı</a></li>
+ </ul>
+ </div>
+ <div class="footer-contact">
+ <h5>Bizimlə Əlaqə</h5>
+ <div class="contact-item">
+ <i class="ri-whatsapp-line"></i>
+ <div class="contact-info">
+ <p>WhatsApp</p>
+ <span>0107292236</span>
+ </div>
+ </div>
+ <div class="contact-item">
+ <i class="ri-mail-line"></i>
+ <div class="contact-info">
+ <p>E-poçt</p>
+ <span>destek@azpinx.com</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="footer-bottom">
+ <p>&copy; 2024 AZPINX - Bütün hüquqlar qorunur.</p>
+ <div class="payment-icons">
+ <i class="ri-visa-line"></i>
+ <i class="ri-mastercard-line"></i>
+ <span>M10 / MilliÖN / eManat</span>
+ </div>
+ </div>
 </footer>
-<div class="gtranslate_wrapper"></div>
-<script>window.gtranslateSettings = { "default_language": "az", "languages": ["az", "tr", "ru"], "wrapper_selector": ".gtranslate_wrapper", "switcher_horizontal_position": "right" }</script>
-<script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>
+<div id="google_translate_element" style="display:none;"></div>
+<div class="language-switcher" id="languageSwitcher">
+ <button class="lang-current" id="langCurrentBtn" type="button" aria-label="Dil seçimi">
+ <i class="ri-translate-2"></i>
+ <span id="langCurrentCode">AZ</span>
+ </button>
+ <div class="lang-menu" id="langMenu">
+ <button class="lang-option" type="button" data-lang="az">AZ</button>
+ <button class="lang-option" type="button" data-lang="tr">TR</button>
+ <button class="lang-option" type="button" data-lang="ru">RU</button>
+ </div>
+</div>
+<script>
+ (function () {
+ const STORAGE_KEY = 'azpin_lang';
+ const langBtn = document.getElementById('langCurrentBtn');
+ const langMenu = document.getElementById('langMenu');
+ const langCode = document.getElementById('langCurrentCode');
+ const langOptions = document.querySelectorAll('.lang-option');
+
+ function setLanguageCode(lang) {
+ if (langCode) langCode.textContent = (lang || 'az').toUpperCase();
+ }
+
+ function applyLanguage(lang) {
+ const combo = document.querySelector('.goog-te-combo');
+ if (combo) {
+ combo.value = lang;
+ combo.dispatchEvent(new Event('change'));
+ } else {
+ document.cookie = `googtrans=/az/${lang};path=/`;
+ document.cookie = `googtrans=/az/${lang};domain=${location.hostname};path=/`;
+ location.reload();
+ }
+ localStorage.setItem(STORAGE_KEY, lang);
+ setLanguageCode(lang);
+ }
+
+ langBtn && langBtn.addEventListener('click', () => {
+ langMenu.classList.toggle('open');
+ });
+
+ document.addEventListener('click', (e) => {
+ if (!e.target.closest('#languageSwitcher')) langMenu.classList.remove('open');
+ });
+
+ langOptions.forEach((btn) => {
+ btn.addEventListener('click', () => {
+ const selected = btn.getAttribute('data-lang') || 'az';
+ applyLanguage(selected);
+ langMenu.classList.remove('open');
+ });
+ });
+
+ window.googleTranslateElementInit = function () {
+ new google.translate.TranslateElement({
+ pageLanguage: 'az',
+ includedLanguages: 'az,tr,ru',
+ autoDisplay: false
+ }, 'google_translate_element');
+
+ const saved = localStorage.getItem(STORAGE_KEY) || 'az';
+ setLanguageCode(saved);
+ if (saved !== 'az') {
+ setTimeout(() => applyLanguage(saved), 400);
+ }
+ };
+
+ setLanguageCode(localStorage.getItem(STORAGE_KEY) || 'az');
+ })();
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <!-- <div class="penguin-sprite"></div> -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
