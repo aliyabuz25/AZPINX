@@ -9,13 +9,13 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@1.13.1/css/OverlayScrollbars.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
-  <link rel="stylesheet" href="/css/admin-modern-v2.css?v=20260216-5">
+  <link rel="stylesheet" href="/css/admin-modern-v2.css?v=20260216-6">
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </head>
-<body class="hold-transition sidebar-mini layout-fixed">
+<body class="hold-transition sidebar-mini layout-fixed admin-modern">
 <div class="wrapper">
 
   <nav class="main-header navbar navbar-expand navbar-white navbar-light">
@@ -29,6 +29,9 @@
     </ul>
 
     <ul class="navbar-nav ml-auto">
+      <li class="nav-item d-none d-md-flex align-items-center pr-2">
+        <span class="admin-top-badge"><i class="ri-shield-check-line mr-1"></i> Secure Admin</span>
+      </li>
       <li class="nav-item">
         <a class="nav-link nav-link-logout" href="/logout"><i class="ri-logout-box-r-line"></i> Çıxış</a>
       </li>
@@ -123,8 +126,9 @@
     <div class="content-header">
       <div class="container-fluid">
         <div class="row mb-2">
-          <div class="col-sm-6">
+          <div class="col-sm-8">
             <h1 class="m-0"><%= locals.title || 'Admin Panel' %></h1>
+            <div class="admin-subtitle">AZPINX idarəetmə paneli</div>
           </div>
         </div>
       </div>

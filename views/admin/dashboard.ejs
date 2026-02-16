@@ -1,100 +1,128 @@
 <%- include('header') %>
-<div class="row">
-  <div class="col-lg-3 col-6">
-    <div class="small-box bg-info">
-      <div class="inner">
-        <h3><%= stats.totalOrders %></h3>
-        <p>Ümumi sifariş</p>
+
+<div class="admin-page-wrap">
+  <div class="metric-grid">
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-shopping-cart-2-line"></i></div>
+      <div>
+        <p class="metric-label">Ümumi sifariş</p>
+        <h3 class="metric-value"><%= stats.totalOrders %></h3>
       </div>
-      <div class="icon"><i class="ri-shopping-cart-2-line"></i></div>
-      <a href="/admin/orders" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
-    </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-time-line"></i></div>
+      <div>
+        <p class="metric-label">Gözləyən sifariş</p>
+        <h3 class="metric-value"><%= stats.pendingOrders %></h3>
+      </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-group-line"></i></div>
+      <div>
+        <p class="metric-label">Ümumi istifadəçi</p>
+        <h3 class="metric-value"><%= stats.totalUsers %></h3>
+      </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-wallet-3-line"></i></div>
+      <div>
+        <p class="metric-label">Gözləyən topup</p>
+        <h3 class="metric-value"><%= stats.pendingTopups %></h3>
+      </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-user-follow-line"></i></div>
+      <div>
+        <p class="metric-label">Aktiv istifadəçi (5 dəq)</p>
+        <h3 class="metric-value"><%= stats.activeUsers %></h3>
+      </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-door-open-line"></i></div>
+      <div>
+        <p class="metric-label">Günlük giriş (unikal)</p>
+        <h3 class="metric-value"><%= stats.dailyAccessVisitors %></h3>
+      </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-line-chart-line"></i></div>
+      <div>
+        <p class="metric-label">Günlük giriş (hit)</p>
+        <h3 class="metric-value"><%= stats.dailyAccessHits %></h3>
+      </div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon"><i class="ri-checkbox-circle-line"></i></div>
+      <div>
+        <p class="metric-label">Günlük təsdiqlənən sifariş</p>
+        <h3 class="metric-value"><%= stats.dailyCompletedOrders %></h3>
+      </div>
+    </article>
   </div>
-  <div class="col-lg-3 col-6">
-    <div class="small-box bg-warning">
-      <div class="inner">
-        <h3><%= stats.pendingOrders %></h3>
-        <p>Gözləyən sifariş</p>
+
+  <div class="row mt-3">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Əməliyyat Mərkəzi</h3>
+        </div>
+        <div class="card-body p-0">
+          <div class="admin-quick-links">
+            <a class="admin-link-tile" href="/admin/orders">
+              <i class="ri-shopping-bag-3-line"></i>
+              <span>Sifarişlər</span>
+            </a>
+            <a class="admin-link-tile" href="/admin/topups">
+              <i class="ri-wallet-3-line"></i>
+              <span>Balans Tələbləri</span>
+            </a>
+            <a class="admin-link-tile" href="/admin/products">
+              <i class="ri-stack-line"></i>
+              <span>Məhsullar</span>
+            </a>
+            <a class="admin-link-tile" href="/admin/users">
+              <i class="ri-shield-user-line"></i>
+              <span>İstifadəçilər</span>
+            </a>
+            <a class="admin-link-tile" href="/admin/tickets">
+              <i class="ri-customer-service-2-line"></i>
+              <span>Dəstək</span>
+            </a>
+            <a class="admin-link-tile" href="/admin/settings">
+              <i class="ri-settings-3-line"></i>
+              <span>Ayarlar</span>
+            </a>
+          </div>
+        </div>
       </div>
-      <div class="icon"><i class="ri-time-line"></i></div>
-      <a href="/admin/orders" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
     </div>
-  </div>
-  <div class="col-lg-3 col-6">
-    <div class="small-box bg-success">
-      <div class="inner">
-        <h3><%= stats.totalUsers %></h3>
-        <p>Ümumi istifadəçi</p>
+
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Günlük Satış Xülasəsi</h3>
+        </div>
+        <div class="card-body">
+          <div class="summary-row">
+            <span>Bu gün sifariş</span>
+            <strong><%= stats.dailyOrders %></strong>
+          </div>
+          <div class="summary-row">
+            <span>Bu gün tamamlanan</span>
+            <strong><%= stats.dailyCompletedOrders %></strong>
+          </div>
+          <div class="summary-row">
+            <span>Gözləyən topup</span>
+            <strong><%= stats.pendingTopups %></strong>
+          </div>
+          <div class="summary-row">
+            <span>Aktiv istifadəçi</span>
+            <strong><%= stats.activeUsers %></strong>
+          </div>
+        </div>
       </div>
-      <div class="icon"><i class="ri-group-line"></i></div>
-      <a href="/admin/users" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
-    </div>
-  </div>
-  <div class="col-lg-3 col-6">
-    <div class="small-box bg-danger">
-      <div class="inner">
-        <h3><%= stats.pendingTopups %></h3>
-        <p>Gözləyən topup</p>
-      </div>
-      <div class="icon"><i class="ri-wallet-3-line"></i></div>
-      <a href="/admin/topups" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
     </div>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-lg-4 col-6">
-    <div class="small-box bg-primary">
-      <div class="inner">
-        <h3><%= stats.activeUsers %></h3>
-        <p>Aktiv istifadəçi (5 dəq)</p>
-      </div>
-      <div class="icon"><i class="ri-user-follow-line"></i></div>
-      <a href="/admin/users" class="small-box-footer">Bax <i class="ri-arrow-right-circle-line"></i></a>
-    </div>
-  </div>
-  <div class="col-lg-4 col-6">
-    <div class="small-box bg-secondary">
-      <div class="inner">
-        <h3><%= stats.dailyAccessVisitors %></h3>
-        <p>Günlük giriş (unikal)</p>
-      </div>
-      <div class="icon"><i class="ri-door-open-line"></i></div>
-      <a href="/admin" class="small-box-footer">Bu gün</a>
-    </div>
-  </div>
-  <div class="col-lg-4 col-6">
-    <div class="small-box bg-dark">
-      <div class="inner">
-        <h3><%= stats.dailyAccessHits %></h3>
-        <p>Günlük erişim (hit)</p>
-      </div>
-      <div class="icon"><i class="ri-line-chart-line"></i></div>
-      <a href="/admin" class="small-box-footer">Bu gün</a>
-    </div>
-  </div>
-</div>
-
-<div class="row">
-  <div class="col-lg-6 col-12">
-    <div class="small-box bg-teal">
-      <div class="inner">
-        <h3><%= stats.dailyOrders %></h3>
-        <p>Günlük satın alım sayı</p>
-      </div>
-      <div class="icon"><i class="ri-shopping-bag-3-line"></i></div>
-      <a href="/admin/orders" class="small-box-footer">Sifarişlər <i class="ri-arrow-right-circle-line"></i></a>
-    </div>
-  </div>
-  <div class="col-lg-6 col-12">
-    <div class="small-box bg-olive">
-      <div class="inner">
-        <h3><%= stats.dailyCompletedOrders %></h3>
-        <p>Günlük təsdiqlənən satın alım</p>
-      </div>
-      <div class="icon"><i class="ri-checkbox-circle-line"></i></div>
-      <a href="/admin/orders" class="small-box-footer">Sifarişlər <i class="ri-arrow-right-circle-line"></i></a>
-    </div>
-  </div>
-</div>
 <%- include('footer') %>

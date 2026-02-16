@@ -368,3 +368,141 @@ body {
         gap: 6px;
     }
 }
+
+.admin-modern .wrapper {
+    min-height: 100vh;
+}
+
+.admin-top-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 1px solid #dbe6ff;
+    background: #f5f8ff;
+    color: #2549b8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.content-wrapper>.content {
+    padding-top: 0;
+}
+
+.admin-page-wrap {
+    padding: 4px 2px 8px;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.metric-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #e5ecff;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(19, 40, 88, 0.05);
+}
+
+.metric-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: #edf3ff;
+    color: #2556d9;
+    font-size: 18px;
+}
+
+.metric-label {
+    margin: 0;
+    color: #64739a;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.metric-value {
+    margin: 2px 0 0;
+    color: #10224d;
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 800;
+}
+
+.admin-quick-links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+}
+
+.admin-link-tile {
+    border: 1px solid #e2eaff;
+    border-radius: 11px;
+    min-height: 92px;
+    background: #fbfcff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #213a78;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none !important;
+    transition: 0.2s ease;
+}
+
+.admin-link-tile i {
+    font-size: 20px;
+    color: #2b5ee3;
+}
+
+.admin-link-tile:hover {
+    background: #f1f6ff;
+    border-color: #c7d8ff;
+    transform: translateY(-1px);
+}
+
+.summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #edf2ff;
+    padding: 10px 0;
+    color: #435789;
+    font-weight: 600;
+}
+
+.summary-row:last-child {
+    border-bottom: 0;
+}
+
+.summary-row strong {
+    color: #132959;
+    font-weight: 800;
+}
+
+@media (max-width: 1200px) {
+    .metric-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-quick-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
