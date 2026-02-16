@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= (locals.title ? locals.title + ' | ' : '' ) %>AZPINX Admin</title>
 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@1.13.1/css/OverlayScrollbars.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <link rel="stylesheet" href="/css/admin-modern-v2.css?v=20260216-3">
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -23,33 +24,27 @@
         <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="ri-menu-line"></i></a>
       </li>
       <li class="nav-item d-none d-sm-inline-block">
-        <a href="/" class="nav-link">Sayta Keç</a>
+        <a href="/" class="nav-link nav-link-site"><i class="ri-external-link-line mr-1"></i> Sayta Keç</a>
       </li>
     </ul>
 
     <ul class="navbar-nav ml-auto">
       <li class="nav-item">
-        <a class="nav-link text-danger" href="/logout"><i class="ri-logout-box-r-line"></i> Çıxış</a>
+        <a class="nav-link nav-link-logout" href="/logout"><i class="ri-logout-box-r-line"></i> Çıxış</a>
       </li>
     </ul>
   </nav>
 
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
-    <a href="/admin" class="brand-link">
-      <img src="/images/logo-new.jpeg" alt="AZPINX" class="brand-image img-circle elevation-3" style="opacity: .9">
-      <span class="brand-text font-weight-light">AZPINX Admin</span>
+    <a href="/admin" class="brand-link border-0">
+      <img src="/images/logo-new.jpeg" alt="AZPINX" class="brand-image-modern">
+      <div class="brand-stack">
+        <span class="brand-text">AZPINX</span>
+        <small>Admin Console</small>
+      </div>
     </a>
 
     <div class="sidebar">
-      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-        <div class="image">
-          <img src="/images/logo-new.jpeg" class="img-circle elevation-2" alt="User Image">
-        </div>
-        <div class="info">
-          <a href="#" class="d-block"><%= user.full_name %></a>
-        </div>
-      </div>
-
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
           <li class="nav-item">
