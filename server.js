@@ -116,6 +116,9 @@ const PUBG_CHECKER_CONFIG = {
  TIMEOUT: Number(process.env.PUBG_CHECKER_TIMEOUT_MS || 12000)
 };
 
+const REFERRAL_TARGET = 5;
+const REFERRAL_REWARD_LABEL = '60 UC';
+
 // Database Connection
 let db;
 (async () => {
@@ -141,6 +144,8 @@ let db;
  two_factor_enabled TINYINT(1) DEFAULT 0,
  otp_code VARCHAR(10) NULL,
  otp_expiry DATETIME NULL,
+ referral_code VARCHAR(32) UNIQUE NULL,
+ referred_by INT NULL,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
  )`,
  `CREATE TABLE IF NOT EXISTS categories (
@@ -235,6 +240,14 @@ let db;
  setting_key VARCHAR(100) UNIQUE NOT NULL,
  setting_value TEXT,
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+ )`,
+ `CREATE TABLE IF NOT EXISTS referral_reward_requests (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ user_id INT NOT NULL,
+ required_count INT DEFAULT 5,
+ reward_label VARCHAR(100) DEFAULT '60 UC',
+ status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
  )`
  ];
 
@@ -253,7 +266,9 @@ let db;
  { table: 'orders', column: 'player_nickname', definition: 'VARCHAR(255) AFTER player_id' },
  { table: 'users', column: 'two_factor_enabled', definition: 'TINYINT(1) DEFAULT 0 AFTER phone', oldColumn: 'two_fa_enabled' },
  { table: 'users', column: 'otp_code', definition: 'VARCHAR(10) NULL AFTER two_factor_enabled' },
- { table: 'users', column: 'otp_expiry', definition: 'DATETIME NULL AFTER otp_code' }
+ { table: 'users', column: 'otp_expiry', definition: 'DATETIME NULL AFTER otp_code' },
+ { table: 'users', column: 'referral_code', definition: 'VARCHAR(32) UNIQUE NULL AFTER otp_expiry' },
+ { table: 'users', column: 'referred_by', definition: 'INT NULL AFTER referral_code' }
  ];
 
  for (const m of migrations) {
@@ -284,6 +299,32 @@ let db;
  }
  }
  console.log("Database Migration Complete.");
+
+ try {
+ await db.execute('CREATE INDEX idx_users_referred_by ON users (referred_by)');
+ } catch (idxErr) {
+ if (!String(idxErr.message || '').includes('Duplicate key name')) {
+ console.warn('Index Warning idx_users_referred_by:', idxErr.message);
+ }
+ }
+
+ try {
+ await db.execute('CREATE INDEX idx_referral_reward_requests_user_status ON referral_reward_requests (user_id, status)');
+ } catch (idxErr) {
+ if (!String(idxErr.message || '').includes('Duplicate key name')) {
+ console.warn('Index Warning idx_referral_reward_requests_user_status:', idxErr.message);
+ }
+ }
+
+ try {
+ const [usersWithoutCode] = await db.execute('SELECT id FROM users WHERE referral_code IS NULL OR referral_code = ""');
+ for (const userRow of usersWithoutCode) {
+ const code = await generateUniqueReferralCode();
+ await db.execute('UPDATE users SET referral_code = ? WHERE id = ?', [code, userRow.id]);
+ }
+ } catch (seedErr) {
+ console.warn('Referral code backfill warning:', seedErr.message);
+ }
 
  // --- Seed Default Settings ---
  const defaultSettings = [
@@ -416,6 +457,50 @@ function normalizeOptionalString(value) {
  if (typeof value !== 'string') return value;
  const trimmed = value.trim();
  return trimmed === '' ? null : trimmed;
+}
+
+function sanitizeReferralCode(value) {
+ const normalized = normalizeOptionalString(value);
+ if (!normalized) return null;
+ const cleaned = String(normalized).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+ return cleaned || null;
+}
+
+function randomReferralCode() {
+ return `AZP${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
+async function generateUniqueReferralCode() {
+ for (let i = 0; i < 20; i += 1) {
+ const code = randomReferralCode();
+ const [exists] = await db.execute('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [code]);
+ if (!exists.length) return code;
+ }
+ return `AZP${Date.now().toString(36).toUpperCase()}`;
+}
+
+async function ensureUserReferralCode(userId) {
+ const [rows] = await db.execute('SELECT referral_code FROM users WHERE id = ? LIMIT 1', [userId]);
+ if (!rows.length) return null;
+ if (rows[0].referral_code) return rows[0].referral_code;
+ const newCode = await generateUniqueReferralCode();
+ await db.execute('UPDATE users SET referral_code = ? WHERE id = ? AND (referral_code IS NULL OR referral_code = "")', [newCode, userId]);
+ const [updated] = await db.execute('SELECT referral_code FROM users WHERE id = ? LIMIT 1', [userId]);
+ return updated.length ? updated[0].referral_code : newCode;
+}
+
+async function getReferralCountForUser(userId) {
+ const [rows] = await db.execute('SELECT COUNT(*) AS total FROM users WHERE referred_by = ?', [userId]);
+ return Number(rows[0]?.total || 0);
+}
+
+async function notifyAllAdmins(message) {
+ try {
+ const [admins] = await db.execute('SELECT phone FROM users WHERE role = "admin" AND phone IS NOT NULL AND phone <> ""');
+ admins.forEach((admin) => sendSMS(admin.phone, message));
+ } catch (e) {
+ console.error('Admin notification error:', e.message);
+ }
 }
 
 function clampPercent(value, min = 0, max = 90) {
@@ -926,7 +1011,28 @@ app.get('/product/:id', async (req, res) => {
 
 // --- Auth Routes ---
 
-app.get('/register', (req, res) => res.render('register', { title: 'Qeydiyyat' }));
+app.get('/register', async (req, res) => {
+ const incomingRefCode = sanitizeReferralCode(req.query.ref);
+ if (incomingRefCode) req.session.reg_referral_code = incomingRefCode;
+
+ const activeReferralCode = sanitizeReferralCode(req.session.reg_referral_code);
+ let referrerName = null;
+
+ if (activeReferralCode) {
+ const [referrerRows] = await db.execute('SELECT full_name FROM users WHERE referral_code = ? LIMIT 1', [activeReferralCode]);
+ if (referrerRows.length) {
+ referrerName = referrerRows[0].full_name;
+ } else {
+ delete req.session.reg_referral_code;
+ }
+ }
+
+ res.render('register', {
+ title: 'Qeydiyyat',
+ referralCode: activeReferralCode,
+ referrerName
+ });
+});
 
 app.post('/register/send-otp', async (req, res) => {
  const { phone } = req.body;
@@ -954,26 +1060,49 @@ app.post('/register', async (req, res) => {
 
  // Verify OTP
  if (!req.session.reg_otp || req.session.reg_otp !== otp || new Date(req.session.reg_expiry) < new Date() || req.session.reg_phone !== phone) {
- return res.render('register', { title: 'Qeydiyyat', error: 'Yanlış və ya vaxtı keçmiş təsdiq kodu.' });
+ return res.render('register', {
+ title: 'Qeydiyyat',
+ error: 'Yanlış və ya vaxtı keçmiş təsdiq kodu.',
+ referralCode: sanitizeReferralCode(req.session.reg_referral_code),
+ referrerName: null
+ });
  }
 
  const hashed = await bcrypt.hash(password, 10);
  try {
  const [usersCount] = await db.execute('SELECT count(*) as count FROM users');
  const role = usersCount[0].count === 0 ? 'admin' : 'user';
+ const ownReferralCode = await generateUniqueReferralCode();
+ let referredBy = null;
+ const referralCodeFromSession = sanitizeReferralCode(req.session.reg_referral_code);
 
- await db.execute('INSERT INTO users (full_name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)',
- [full_name, email, hashed, role, phone]);
+ if (referralCodeFromSession) {
+ const [referrerRows] = await db.execute('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [referralCodeFromSession]);
+ if (referrerRows.length) {
+ referredBy = referrerRows[0].id;
+ }
+ }
+
+ await db.execute(
+ 'INSERT INTO users (full_name, email, password, role, phone, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+ [full_name, email, hashed, role, phone, ownReferralCode, referredBy]
+ );
 
  // Clear registration session
  delete req.session.reg_otp;
  delete req.session.reg_phone;
  delete req.session.reg_expiry;
+ delete req.session.reg_referral_code;
 
  req.session.success = 'Uğurla qeydiyyatdan keçdiniz! İndi giriş edin.';
  res.redirect('/login');
  } catch (e) {
- res.render('register', { title: 'Qeydiyyat', error: 'Xəta: Bu email artıq istifadə olunub.' });
+ res.render('register', {
+ title: 'Qeydiyyat',
+ error: 'Xəta: Bu email artıq istifadə olunub.',
+ referralCode: sanitizeReferralCode(req.session.reg_referral_code),
+ referrerName: null
+ });
  }
 });
 
@@ -1108,12 +1237,8 @@ app.post('/process-order', uploadReceipt.single('receipt'), async (req, res) => 
  }
 
  // Notify Admins
- const adminMsg = `AZPINX: Yeni Sifariş!\nİstifadəçi: ${req.session.user.full_name}\nNömrə: ${req.session.user.phone || 'Yoxdur'}\nMəhsul: ${productList}\nMəbləğ: ${totalAmount} AZN\nSaat: ${timeNow}`;
-
- const [admins] = await db.execute('SELECT phone FROM users WHERE role ="admin" AND phone IS NOT NULL');
- admins.forEach(admin => {
- sendSMS(admin.phone, adminMsg);
- });
+ const adminMsg = `AZPINX: Yeni sifariş!\nİstifadəçi: ${req.session.user.full_name}\nNömrə: ${req.session.user.phone || 'Yoxdur'}\nMəhsul: ${productList}\nMəbləğ: ${totalAmount} AZN\nSaat: ${timeNow}`;
+ await notifyAllAdmins(adminMsg);
 
  res.json({ success: true });
  } catch (e) {
@@ -1153,7 +1278,74 @@ app.get('/profile', async (req, res) => {
  if (!req.session.user) return res.redirect('/login');
  const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
  const [userData] = await db.execute('SELECT * FROM users WHERE id = ?', [req.session.user.id]);
- res.render('profile', { title: 'Profilim', orders, user: userData[0] });
+ const user = userData[0];
+ const referralCode = await ensureUserReferralCode(user.id);
+ const referredCount = await getReferralCountForUser(user.id);
+ const [pendingClaims] = await db.execute('SELECT id, status, created_at FROM referral_reward_requests WHERE user_id = ? AND status = "pending" ORDER BY created_at DESC LIMIT 1', [user.id]);
+ const progressPercent = Math.min(100, Math.round((referredCount / REFERRAL_TARGET) * 100));
+ const baseUrl = `${req.protocol}://${req.get('host')}`;
+ const inviteLink = `${baseUrl}/register?ref=${encodeURIComponent(referralCode)}`;
+
+ res.render('profile', {
+ title: 'Profilim',
+ orders,
+ user: { ...user, referral_code: referralCode },
+ referral: {
+ target: REFERRAL_TARGET,
+ reward: REFERRAL_REWARD_LABEL,
+ referredCount,
+ progressPercent,
+ inviteLink,
+ pendingClaim: pendingClaims[0] || null,
+ canClaim: referredCount >= REFERRAL_TARGET && pendingClaims.length === 0
+ }
+ });
+});
+
+app.post('/profile/referral/claim', async (req, res) => {
+ if (!req.session.user) return res.redirect('/login');
+
+ try {
+ const userId = req.session.user.id;
+ const [users] = await db.execute('SELECT id, full_name, phone FROM users WHERE id = ? LIMIT 1', [userId]);
+ if (!users.length) {
+ req.session.error = 'İstifadəçi tapılmadı.';
+ return res.redirect('/profile');
+ }
+
+ const referredCount = await getReferralCountForUser(userId);
+ if (referredCount < REFERRAL_TARGET) {
+ req.session.error = `Ödül üçün ən az ${REFERRAL_TARGET} təsdiqlənmiş dəvət lazımdır.`;
+ return res.redirect('/profile');
+ }
+
+ const [pendingClaims] = await db.execute('SELECT id FROM referral_reward_requests WHERE user_id = ? AND status = "pending" LIMIT 1', [userId]);
+ if (pendingClaims.length) {
+ req.session.error = 'Artıq gözləyən bir ödül tələbiniz var.';
+ return res.redirect('/profile');
+ }
+
+ await db.execute(
+ 'INSERT INTO referral_reward_requests (user_id, required_count, reward_label, status) VALUES (?, ?, ?, "pending")',
+ [userId, REFERRAL_TARGET, REFERRAL_REWARD_LABEL]
+ );
+
+ const msg = `AZPINX: Referral ödül tələbi!\nİstifadəçi: ${users[0].full_name}\nTelefon: ${users[0].phone || 'Yoxdur'}\nDəvət: ${referredCount}/${REFERRAL_TARGET}\nÖdül: ${REFERRAL_REWARD_LABEL}`;
+ await notifyAllAdmins(msg);
+
+ req.session.success = 'Ödül tələbiniz qəbul edildi. Admin yoxlamasından sonra sizinlə əlaqə saxlanılacaq.';
+ return res.redirect('/profile');
+ } catch (e) {
+ console.error('Referral claim error:', e.message);
+ req.session.error = 'Ödül tələbi zamanı xəta baş verdi.';
+ return res.redirect('/profile');
+ }
+});
+
+app.get('/invite/:code', (req, res) => {
+ const code = sanitizeReferralCode(req.params.code);
+ if (!code) return res.redirect('/register');
+ return res.redirect(`/register?ref=${encodeURIComponent(code)}`);
 });
 
 app.post('/profile/update-2fa', async (req, res) => {

@@ -34,6 +34,15 @@
  </div>
  <% } %>
 
+ <% if (typeof referralCode !== 'undefined' && referralCode) { %>
+ <div class="alert alert-info" style="margin-bottom: 20px; font-size: 13px;">
+ Dəvət kodu tətbiq olundu: <strong><%= referralCode %></strong>
+ <% if (typeof referrerName !== 'undefined' && referrerName) { %>
+ (<%= referrerName %>)
+ <% } %>
+ </div>
+ <% } %>
+
  <form action="/register" method="POST" id="registerForm">
  <div class="form-group">
  <label>Tam Adınız</label>
