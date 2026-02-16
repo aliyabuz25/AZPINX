@@ -32,12 +32,12 @@ async function sendSMS(phone, message) {
  const payload = { recipient, message: String(message || '') };
 
  const headerVariants = [];
- if (apiKey && apiKey !== 'API-KEY-XXXX') {
+ if (apiKey) {
  headerVariants.push({ 'Content-Type': 'application/json', 'x-api-key': apiKey });
  headerVariants.push({ 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` });
  headerVariants.push({ 'Content-Type': 'application/json', 'api-key': apiKey });
  headerVariants.push({ 'Content-Type': 'application/json', 'x-api-token': apiKey });
- }
+}
  headerVariants.push({ 'Content-Type': 'application/json' });
 
  let lastError = null;
@@ -55,9 +55,9 @@ async function sendSMS(phone, message) {
  }
  }
 
- if (!apiKey || apiKey === 'API-KEY-XXXX') {
+ if (!apiKey) {
  console.error('HubMSG Error: HUBMSG_API_KEY təyin edilməyib.');
- } else {
+} else {
  console.error('HubMSG Error:', lastError?.message || 'Bilinməyən xəta');
  }
  return false;
