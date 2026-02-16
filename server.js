@@ -248,6 +248,8 @@ let db;
  receipt_path VARCHAR(255) NOT NULL,
  payment_method VARCHAR(50) DEFAULT 'C2C Card Transfer',
  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+ refund_status ENUM('none', 'pending', 'processed', 'rejected') DEFAULT 'none',
+ refund_requested_at DATETIME NULL,
  admin_note TEXT NULL,
  reviewed_by INT NULL,
  reviewed_at DATETIME NULL,
@@ -295,7 +297,9 @@ let db;
  { table: 'users', column: 'referral_code', definition: 'VARCHAR(32) UNIQUE NULL AFTER otp_expiry' },
  { table: 'users', column: 'referred_by', definition: 'INT NULL AFTER referral_code' },
  { table: 'users', column: 'registration_ip', definition: 'VARCHAR(64) NULL AFTER referred_by' },
- { table: 'users', column: 'last_seen_at', definition: 'DATETIME NULL AFTER registration_ip' }
+ { table: 'users', column: 'last_seen_at', definition: 'DATETIME NULL AFTER registration_ip' },
+ { table: 'balance_topups', column: 'refund_status', definition: "ENUM('none', 'pending', 'processed', 'rejected') DEFAULT 'none' AFTER status" },
+ { table: 'balance_topups', column: 'refund_requested_at', definition: 'DATETIME NULL AFTER refund_status' }
  ];
 
  for (const m of migrations) {
@@ -1538,6 +1542,20 @@ app.post('/wishlist/toggle', async (req, res) => {
 app.get('/profile', async (req, res) => {
  if (!req.session.user) return res.redirect('/login');
  const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
+ const [topups] = await db.execute('SELECT * FROM balance_topups WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
+ const refundWindowMs = 5 * 24 * 60 * 60 * 1000;
+ const now = Date.now();
+ const enrichedTopups = topups.map((topup) => {
+ const createdAtMs = new Date(topup.created_at).getTime();
+ const withinRefundWindow = Number.isFinite(createdAtMs) && (now - createdAtMs) <= refundWindowMs;
+ const refundStatus = topup.refund_status || 'none';
+ const canRefund = topup.status === 'approved' && withinRefundWindow && refundStatus === 'none';
+ return {
+ ...topup,
+ can_refund: canRefund,
+ within_refund_window: withinRefundWindow
+ };
+ });
  const [userData] = await db.execute('SELECT * FROM users WHERE id = ?', [req.session.user.id]);
  const user = userData[0];
  const referralCode = await ensureUserReferralCode(user.id);
@@ -1550,6 +1568,7 @@ app.get('/profile', async (req, res) => {
  res.render('profile', {
  title: 'Profilim',
  orders,
+ topups: enrichedTopups,
  user: { ...user, referral_code: referralCode },
  referral: {
  target: REFERRAL_TARGET,
@@ -1561,6 +1580,54 @@ app.get('/profile', async (req, res) => {
  canClaim: referredCount >= REFERRAL_TARGET && pendingClaims.length === 0
  }
  });
+});
+
+app.post('/profile/topups/:id/refund-request', async (req, res) => {
+ if (!req.session.user) return res.redirect('/login');
+ const topupId = Number(req.params.id);
+ if (!topupId) {
+ req.session.error = 'Yanlış topup ID.';
+ return res.redirect('/profile');
+ }
+
+ try {
+ const [rows] = await db.execute('SELECT * FROM balance_topups WHERE id = ? AND user_id = ? LIMIT 1', [topupId, req.session.user.id]);
+ if (!rows.length) {
+ req.session.error = 'Balans artırma qeydi tapılmadı.';
+ return res.redirect('/profile');
+ }
+
+ const topup = rows[0];
+ if (topup.status !== 'approved') {
+ req.session.error = 'Yalnız təsdiqlənmiş balans artırma üçün iade tələbi yaradıla bilər.';
+ return res.redirect('/profile');
+ }
+
+ const createdAtMs = new Date(topup.created_at).getTime();
+ const refundWindowMs = 5 * 24 * 60 * 60 * 1000;
+ if (!Number.isFinite(createdAtMs) || (Date.now() - createdAtMs) > refundWindowMs) {
+ req.session.error = 'İade tələbi yalnız ilk 5 gün ərzində mümkündür.';
+ return res.redirect('/profile');
+ }
+
+ if ((topup.refund_status || 'none') !== 'none') {
+ req.session.error = 'Bu ödəniş üçün iade tələbi artıq mövcuddur.';
+ return res.redirect('/profile');
+ }
+
+ await db.execute('UPDATE balance_topups SET refund_status = ?, refund_requested_at = NOW() WHERE id = ? AND user_id = ?', ['pending', topupId, req.session.user.id]);
+
+ const [users] = await db.execute('SELECT full_name, phone FROM users WHERE id = ? LIMIT 1', [req.session.user.id]);
+ const user = users[0] || { full_name: 'İstifadəçi', phone: 'Yoxdur' };
+ await notifyAllAdmins(`AZPINX: Yeni iade tələbi!\nİstifadəçi: ${user.full_name}\nNömrə: ${user.phone || 'Yoxdur'}\nTopup ID: #${topupId}\nMəbləğ: ${Number(topup.amount || 0).toFixed(2)} AZN`);
+
+ req.session.success = 'İadeniz işleme alınmıştır. Sizə müştəri dəstəyi geri dönüş yapacaktır.';
+ return res.redirect('/profile');
+ } catch (e) {
+ console.error('Topup refund request error:', e.message);
+ req.session.error = 'İade tələbi yaradılarkən xəta baş verdi.';
+ return res.redirect('/profile');
+ }
 });
 
 app.post('/profile/referral/claim', async (req, res) => {

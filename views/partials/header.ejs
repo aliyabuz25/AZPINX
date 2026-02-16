@@ -179,12 +179,14 @@
  <button type="button" class="topup-package-btn" data-amount="<%= pkg %>"><%= pkg %> AZN</button>
  <% }) %>
  </div>
+ <input type="number" id="topupAmountManual" class="topup-input mt-2" min="1" step="0.01" placeholder="və ya məbləği əl ilə daxil edin (AZN)">
 
  <div class="topup-c2c-box">
  <div class="topup-bank-row"><span>Kart</span><strong><%= settings.bank_card || '0000 0000 0000 0000' %></strong></div>
  <div class="topup-bank-row"><span>Sahib</span><strong><%= settings.bank_holder || 'AZPINX ADMIN' %></strong></div>
  <div class="topup-bank-row"><span>Bank</span><strong><%= settings.bank_name || 'BANK' %></strong></div>
  </div>
+ <p class="topup-security-note"><i class="ri-shield-check-line"></i> Ödəniş məlumatları AES-256 və TLS ilə qorunan təhlükəsiz infrastrukturda emal olunur.</p>
 
  <div class="topup-form">
  <input type="text" id="topupSenderNameNav" class="topup-input" placeholder="Ad Soyad">
@@ -204,15 +206,27 @@
  const submitBtn = document.getElementById('submitTopupNav');
  const senderInput = document.getElementById('topupSenderNameNav');
  const receiptInput = document.getElementById('topupReceiptNav');
- if (!openBtn || !modal || !packageWrap || !submitBtn || !senderInput || !receiptInput) return;
+ const manualAmountInput = document.getElementById('topupAmountManual');
+ if (!openBtn || !modal || !packageWrap || !submitBtn || !senderInput || !receiptInput || !manualAmountInput) return;
 
  let selectedAmount = 20;
  packageWrap.querySelectorAll('.topup-package-btn').forEach((btn) => {
  if (Number(btn.dataset.amount) === selectedAmount) btn.classList.add('active');
  btn.addEventListener('click', () => {
  selectedAmount = Number(btn.dataset.amount || 0);
+ manualAmountInput.value = String(selectedAmount);
  packageWrap.querySelectorAll('.topup-package-btn').forEach(b => b.classList.remove('active'));
  btn.classList.add('active');
+ });
+ });
+ manualAmountInput.value = String(selectedAmount);
+
+ manualAmountInput.addEventListener('input', () => {
+ const amount = Number(manualAmountInput.value || 0);
+ if (!amount) return;
+ selectedAmount = amount;
+ packageWrap.querySelectorAll('.topup-package-btn').forEach((b) => {
+ b.classList.toggle('active', Number(b.dataset.amount) === amount);
  });
  });
 
@@ -225,13 +239,14 @@
  submitBtn.addEventListener('click', async () => {
  const sender = (senderInput.value || '').trim();
  const receipt = receiptInput.files[0];
- if (!selectedAmount || !sender || !receipt) {
- Toastify({ text: "Paket, Ad Soyad və dekont mütləqdir.", backgroundColor: "#ef4444" }).showToast();
+ const amount = Number(manualAmountInput.value || selectedAmount || 0);
+ if (!amount || amount <= 0 || !sender || !receipt) {
+ Toastify({ text: "Məbləğ, Ad Soyad və dekont mütləqdir.", backgroundColor: "#ef4444" }).showToast();
  return;
  }
 
  const fd = new FormData();
- fd.append('amount', String(selectedAmount));
+ fd.append('amount', String(amount));
  fd.append('sender_name', sender);
  fd.append('receipt', receipt);
 
@@ -243,6 +258,7 @@
  Toastify({ text: data.message || "Sorğu göndərildi.", backgroundColor: "#10b981" }).showToast();
  senderInput.value = '';
  receiptInput.value = '';
+ manualAmountInput.value = String(selectedAmount);
  modal.classList.remove('show');
  } else {
  Toastify({ text: "Xəta: " + (data.error || 'Bilinməyən xəta'), backgroundColor: "#ef4444" }).showToast();
@@ -363,6 +379,14 @@
  border-radius: 10px;
  padding: 10px;
  font-size: 14px;
+ }
+ .topup-security-note {
+ margin: 10px 2px 0;
+ font-size: 12px;
+ color: #64748b;
+ display: flex;
+ align-items: center;
+ gap: 6px;
  }
  @media (max-width: 768px) {
  .topup-packages { grid-template-columns: repeat(2, 1fr); }

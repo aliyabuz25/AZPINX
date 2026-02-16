@@ -101,6 +101,63 @@
  </form>
  </div>
 
+ <div class="profile-section-card mb-4">
+ <div class="card-header-premium">
+ <i class="ri-wallet-3-line"></i>
+ <h3>Balans Artırma Tarixçəsi</h3>
+ </div>
+ <div class="p-0">
+ <% if (topups && topups.length > 0) { %>
+ <div class="table-responsive">
+ <table class="table table-hover-premium mb-0">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>Məbləğ</th>
+ <th>Ad Soyad</th>
+ <th>Tarix</th>
+ <th>Status</th>
+ <th>İade</th>
+ </tr>
+ </thead>
+ <tbody>
+ <% topups.forEach(topup => { %>
+ <tr>
+ <td class="font-weight-bold text-muted">#<%= topup.id %></td>
+ <td class="font-weight-bold text-dark"><%= Number(topup.amount).toFixed(2) %> AZN</td>
+ <td><%= topup.sender_name %></td>
+ <td class="text-muted small"><%= new Date(topup.created_at).toLocaleDateString() %></td>
+ <td>
+ <span class="status-badge-premium <%= (topup.refund_status === 'pending') ? 'pending' : (topup.status === 'approved' ? 'completed' : (topup.status === 'pending' ? 'pending' : 'cancelled')) %>">
+ <i class="<%= (topup.refund_status === 'pending') ? 'ri-refresh-line' : (topup.status === 'approved' ? 'ri-checkbox-circle-line' : (topup.status === 'pending' ? 'ri-time-line' : 'ri-close-circle-line')) %> mr-1"></i>
+ <%= (topup.refund_status === 'pending') ? 'İadeniz işleme alınmıştır' : (topup.status === 'approved' ? 'Təsdiqləndi' : (topup.status === 'pending' ? 'Gözləyir' : 'Rədd edildi')) %>
+ </span>
+ </td>
+ <td>
+ <% if (topup.can_refund) { %>
+ <form action="/profile/topups/<%= topup.id %>/refund-request" method="POST" class="mb-0">
+ <button type="submit" class="btn btn-outline btn-sm">İade talebi</button>
+ </form>
+ <% } else if (topup.refund_status === 'pending') { %>
+ <span class="text-muted small">İşləmdə</span>
+ <% } else { %>
+ <span class="text-muted small">-</span>
+ <% } %>
+ </td>
+ </tr>
+ <% }) %>
+ </tbody>
+ </table>
+ </div>
+ <% } else { %>
+ <div class="text-center py-5">
+ <i class="ri-wallet-3-line icon-3x mb-3 text-light"></i>
+ <p class="text-muted">Hələ balans artırma tələbiniz yoxdur.</p>
+ </div>
+ <% } %>
+ </div>
+ </div>
+
  <div class="profile-section-card">
  <div class="card-header-premium">
  <i class="ri-history-line"></i>
