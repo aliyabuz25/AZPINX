@@ -345,7 +345,7 @@ header .logo img {
     border-radius: 0;
     overflow: hidden;
     position: relative;
-    height: 280px;
+    height: 500px;
 }
 
 .slider-item {
@@ -1777,4 +1777,20 @@ footer {
     background: #1e293b;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+}
+
+@media (max-width: 991px) {
+    .slider-container {
+        height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .slider-container {
+        height: 300px;
+    }
+
+    .slider-content h2 {
+        font-size: 28px;
+    }
 }
