@@ -396,8 +396,9 @@ async function getMappedProducts() {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
+app.use(bodyParser.json({ limit: '100mb' }));
+app.use(express.json({ limit: '100mb' }));
 app.set('trust proxy', 1);
 app.use(session({
     secret: process.env.SESSION_SECRET || 'azpinx_secret_key',
