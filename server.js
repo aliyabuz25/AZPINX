@@ -1059,15 +1059,25 @@ app.get('/admin/categories', isAdmin, async (req, res) => {
 });
 
 // Admin Category Create
-app.post('/admin/categories/create', isAdmin, uploadCategory.single('image'), async (req, res) => {
-    const { name, icon, description } = req.body;
-    const image_path = req.file ? '/uploads/categories/' + req.file.filename : null;
-
+app.post('/admin/categories/create', isAdmin, (req, res, next) => {
+    uploadCategory.single('image')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            console.error('Multer Error during category upload:', err);
+            return res.redirect('/admin/categories?error=Yükləmə xətası (Multer): ' + err.message);
+        } else if (err) {
+            console.error('Unknown Error during category upload:', err);
+            return res.redirect('/admin/categories?error=Bilinməyən xəta: ' + err.message);
+        }
+        next();
+    });
+}, async (req, res) => {
+    const { name, description } = req.body;
     try {
-        await db.execute('INSERT INTO categories (name, icon, description, image_path) VALUES (?, ?, ?, ?)',
-            [name, icon, description, image_path]);
+        const image_path = req.file ? '/uploads/categories/' + req.file.filename : null;
+        await db.execute('INSERT INTO categories (name, description, image_path) VALUES (?, ?, ?)', [name, description, image_path]);
         res.redirect('/admin/categories?success=Kateqoriya yaradıldı');
     } catch (e) {
+        console.error('Database Error during category creation:', e);
         res.redirect('/admin/categories?error=' + encodeURIComponent(e.message));
     }
 });
@@ -1121,18 +1131,39 @@ app.get('/admin/sliders', isAdmin, async (req, res) => {
 });
 
 // Admin Slider Create
-app.post('/admin/sliders/create', isAdmin, uploadSlider.single('image'), async (req, res) => {
-    const { title, description, link } = req.body;
-    const image_path = req.file ? '/uploads/sliders/' + req.file.filename : null;
-
-    if (!image_path) return res.redirect('/admin/sliders?error=Şəkil seçilməyib');
-
+app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
+    uploadSlider.single('image')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            console.error('Multer Error during slider upload:', err);
+            return res.redirect('/admin/sliders?error=Yükləmə xətası (Multer): ' + err.message);
+        } else if (err) {
+            console.error('Unknown Error during slider upload:', err);
+            return res.redirect('/admin/sliders?error=Bilinməyən xəta: ' + err.message);
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
+        const { title, description, link } = req.body;
+        console.log('Slider Create Request Body:', { title, description, link });
+        console.log('Uploaded File Information:', req.file);
+
+        if (!req.file) {
+            console.warn('Slider upload attempt without file.');
+            return res.redirect('/admin/sliders?error=Şəkil seçilməyib və ya yüklənmədi');
+        }
+
+        const image_path = '/uploads/sliders/' + req.file.filename;
+        console.log('Storing slider with image_path:', image_path);
+
         await db.execute('INSERT INTO sliders (image_path, title, description, link) VALUES (?, ?, ?, ?)',
             [image_path, title || '', description || '', link || '#']);
+
+        console.log('Slider successfully inserted into database.');
         res.redirect('/admin/sliders?success=Slayder əlavə edildi');
     } catch (e) {
-        res.redirect('/admin/sliders?error=' + encodeURIComponent(e.message));
+        console.error('Database Error during slider creation:', e);
+        res.redirect('/admin/sliders?error=Bazaya yazılma xətası: ' + encodeURIComponent(e.message));
     }
 });
 
@@ -1218,17 +1249,28 @@ app.get('/admin/products/add', isAdmin, async (req, res) => {
     res.render('admin/product_add', { title: 'Yeni Məhsul', categories });
 });
 
-// Admin Product Create (POST)
-app.post('/admin/products/add', isAdmin, uploadProduct.single('image'), async (req, res) => {
-    const { api_id, name, category, price, description, status } = req.body;
-    const image_path = req.file ? '/uploads/products/' + req.file.filename : '/images/default-product.png';
-
+// Admin Product Add
+app.post('/admin/products/add', isAdmin, (req, res, next) => {
+    uploadProduct.single('image')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            console.error('Multer Error during product add:', err);
+            return res.redirect('/admin/products?error=Yükləmə xətası (Multer): ' + err.message);
+        } else if (err) {
+            console.error('Unknown Error during product add:', err);
+            return res.redirect('/admin/products?error=Bilinməyən xəta: ' + err.message);
+        }
+        next();
+    });
+}, async (req, res) => {
+    const { name, category_id, price, description, api_id } = req.body;
     try {
-        await db.execute('INSERT INTO products (api_id, name, category, price, description, image_path, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [api_id || null, name, category, price, description, image_path, status || 'sale']);
+        const image_path = req.file ? req.file.filename : null;
+        await db.execute('INSERT INTO local_products (name, category_id, price, description, image_path, api_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, category_id, price, description, image_path, api_id || null]);
         res.redirect('/admin/products?success=Məhsul əlavə edildi');
     } catch (e) {
-        res.redirect('/admin/products/add?error=' + encodeURIComponent(e.message));
+        console.error('Database Error during product creation:', e);
+        res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
     }
 });
 
