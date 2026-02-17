@@ -54,10 +54,13 @@
  <thead>
  <tr>
  <th>ID</th>
+ <th>Avatar</th>
  <th>Ad Soyad</th>
  <th>E-poçt</th>
  <th>Bakiye</th>
  <th>Rol</th>
+ <th>Rank</th>
+ <th>Profil</th>
  <th>Əməliyyat</th>
  </tr>
  </thead>
@@ -65,6 +68,15 @@
  <% users.forEach(u=> { %>
  <tr>
  <td>#<%= u.id %>
+ </td>
+ <td>
+ <% if (u.avatar_path) { %>
+ <img src="<%= u.avatar_path %>" alt="avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;">
+ <% } else { %>
+ <div style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;color:#334155;">
+ <%= String(u.full_name || 'U').charAt(0).toUpperCase() %>
+ </div>
+ <% } %>
  </td>
  <td>
  <%= u.full_name %>
@@ -84,6 +96,26 @@
  <span class="badge badge-info">RESELLER</span>
  <% } else { %>
  <span class="badge badge-secondary">USER</span>
+ <% } %>
+ </td>
+ <td>
+ <form action="/admin/users/rank" method="POST" class="d-flex" style="gap:6px; min-width: 220px;">
+ <input type="hidden" name="user_id" value="<%= u.id %>">
+ <select name="rank_key" class="form-control form-control-sm">
+ <% (rankOptions || []).forEach(function(rank){ %>
+ <option value="<%= rank.key %>" <%= String(u.rank_key || 'member') === rank.key ? 'selected' : '' %>>
+ <%= rank.label %>
+ </option>
+ <% }) %>
+ </select>
+ <button type="submit" class="btn btn-xs btn-outline-primary">Yadda saxla</button>
+ </form>
+ </td>
+ <td>
+ <% if (Number(u.public_profile_enabled || 1) === 1) { %>
+ <a href="/u/<%= u.id %>" target="_blank" class="btn btn-xs btn-outline-info">Bax</a>
+ <% } else { %>
+ <span class="text-muted">Gizli</span>
  <% } %>
  </td>
  <td>

@@ -75,6 +75,7 @@
  </div>
  </div>
 </footer>
+<% if (false) { %>
 <div class="language-switcher" id="languageSwitcher">
  <button class="lang-current" id="langCurrentBtn" type="button" aria-label="Dil seçimi">
  <span id="langCurrentFlag">🇦🇿</span>
@@ -86,141 +87,9 @@
  </div>
 </div>
 <script>
- (function () {
- const STORAGE_KEY = 'azpin_lang';
- const CACHE_KEY = 'azpin_lang_cache_v1';
- const FLAGS = { az: '🇦🇿', tr: '🇹🇷', ru: '🇷🇺' };
- const SUPPORTED = ['az', 'tr', 'ru'];
- const langBtn = document.getElementById('langCurrentBtn');
- const langMenu = document.getElementById('langMenu');
- const langFlag = document.getElementById('langCurrentFlag');
- const langOptions = document.querySelectorAll('.lang-option');
- const i18nState = { textNodes: [], attrNodes: [] };
-
- function setLanguageFlag(lang) {
- if (langFlag) langFlag.textContent = FLAGS[lang] || FLAGS.az;
- }
-
- function loadCache() {
- try {
- return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
- } catch (e) {
- return {};
- }
- }
-
- function saveCache(cache) {
- try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
- }
-
- function collectNodes() {
- const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
- acceptNode(node) {
- if (!node || !node.parentElement) return NodeFilter.FILTER_REJECT;
- const text = String(node.nodeValue || '').trim();
- if (!text) return NodeFilter.FILTER_REJECT;
- const p = node.parentElement;
- if (p.closest('#languageSwitcher,script,style,noscript,code,pre,svg')) return NodeFilter.FILTER_REJECT;
- if (/^\d+([.,]\d+)?$/.test(text)) return NodeFilter.FILTER_REJECT;
- return NodeFilter.FILTER_ACCEPT;
- }
- });
-
- let textNode;
- while ((textNode = walker.nextNode())) {
- i18nState.textNodes.push({ node: textNode, original: textNode.nodeValue });
- }
-
- document.querySelectorAll('input[placeholder],textarea[placeholder],button[title],a[title]').forEach((el) => {
- const attrName = el.hasAttribute('placeholder') ? 'placeholder' : 'title';
- i18nState.attrNodes.push({ el, attrName, original: el.getAttribute(attrName) || '' });
- });
- }
-
- async function fetchTranslations(missingTexts, target) {
- const response = await fetch('/api/translate-batch', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ target, texts: missingTexts })
- });
- const payload = await response.json().catch(() => ({ success: false }));
- if (!payload.success) throw new Error(payload.error || 'Tərcümə xətası');
- return payload.translations || {};
- }
-
- async function applyLanguage(lang) {
- const selected = SUPPORTED.includes(lang) ? lang : 'az';
- localStorage.setItem(STORAGE_KEY, selected);
- setLanguageFlag(selected);
- langMenu.classList.remove('open');
-
- if (selected === 'az') {
- i18nState.textNodes.forEach((item) => { item.node.nodeValue = item.original; });
- i18nState.attrNodes.forEach((item) => { item.el.setAttribute(item.attrName, item.original); });
- return;
- }
-
- const cache = loadCache();
- if (!cache[selected]) cache[selected] = {};
-
- const originals = [
- ...i18nState.textNodes.map((i) => String(i.original || '').trim()),
- ...i18nState.attrNodes.map((i) => String(i.original || '').trim())
- ].filter(Boolean);
-
- const uniqueOriginals = [...new Set(originals)];
- const missing = uniqueOriginals.filter((t) => !cache[selected][t]);
-
- if (missing.length) {
- for (let i = 0; i < missing.length; i += 40) {
- const chunk = missing.slice(i, i + 40);
- try {
- const translations = await fetchTranslations(chunk, selected);
- Object.entries(translations).forEach(([key, value]) => {
- cache[selected][key] = value || key;
- });
- } catch (e) {
- console.error('Language translate chunk error:', e.message);
- }
- }
- saveCache(cache);
- }
-
- i18nState.textNodes.forEach((item) => {
- const key = String(item.original || '').trim();
- if (!key) return;
- item.node.nodeValue = cache[selected][key] || item.original;
- });
- i18nState.attrNodes.forEach((item) => {
- const key = String(item.original || '').trim();
- if (!key) return;
- item.el.setAttribute(item.attrName, cache[selected][key] || item.original);
- });
- }
-
- langBtn && langBtn.addEventListener('click', () => {
- langMenu.classList.toggle('open');
- });
-
- document.addEventListener('click', (e) => {
- if (!e.target.closest('#languageSwitcher')) langMenu.classList.remove('open');
- });
-
- langOptions.forEach((btn) => {
- btn.addEventListener('click', async () => {
- const selected = btn.getAttribute('data-lang') || 'az';
- await applyLanguage(selected);
- });
- });
-
- collectNodes();
- const saved = localStorage.getItem(STORAGE_KEY) || 'az';
- setLanguageFlag(saved);
- if (saved !== 'az') {
- setTimeout(() => applyLanguage(saved), 150);
- }
- })();
+ (function () {})();
 </script>
+<% } %>
 
 <!-- <div class="penguin-sprite"></div> -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>

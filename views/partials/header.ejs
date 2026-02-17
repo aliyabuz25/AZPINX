@@ -117,12 +117,18 @@
  <div class="collapse d-lg-flex topbar-actions-wrap" id="topbarActions">
  <div class="auth-buttons">
  <div class="currency-switcher" title="Currency">
+ <span class="currency-chip">
  <i class="ri-exchange-dollar-line"></i>
+ <span class="currency-text">Currency</span>
+ </span>
+ <div class="currency-select-wrap">
  <select id="currencySelector" class="currency-select" aria-label="Currency selector">
  <option value="AZN">AZN</option>
  <option value="TRY">TRY</option>
  <option value="USD">USD</option>
  </select>
+ <i class="ri-arrow-down-s-line currency-caret"></i>
+ </div>
  </div>
  <% if (locals.user) { %>
  <div class="nav-balance-lite">
@@ -140,6 +146,11 @@
  <!-- Tickets -->
  <a href="/tickets" class="nav-btn" title="Dəstək">
  <i class="ri-customer-service-2-line"></i>
+ </a>
+
+ <!-- Community -->
+ <a href="/people" class="nav-btn" title="İcma Profilləri">
+ <i class="ri-team-line"></i>
  </a>
 
  <!-- FAQ -->
@@ -175,6 +186,9 @@
  style="border-color: rgba(255,255,255,0.2); color:white;">Daxil
  ol</a>
  <a href="/register" class="btn btn-primary">Qeydiyyat</a>
+ <a href="/people" class="nav-btn" title="İcma Profilləri">
+ <i class="ri-team-line"></i>
+ </a>
  <% } %>
 
  <!-- Cart Trigger (Always Visible or adjust as needed) -->

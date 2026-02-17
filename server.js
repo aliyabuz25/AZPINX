@@ -138,6 +138,22 @@ const uploadSlider = multer({
  limits: { fileSize: Infinity, files: Infinity }
 });
 
+// Multer setup for user avatars
+const avatarStorage = multer.diskStorage({
+ destination: (req, file, cb) => {
+ const dir = path.join(__dirname, 'public/uploads/avatars');
+ if (!fs.existsSync(dir)) {
+ fs.mkdirSync(dir, { recursive: true });
+ }
+ cb(null, dir);
+ },
+ filename: (req, file, cb) => cb(null, 'avatar-' + Date.now() + path.extname(file.originalname))
+});
+const uploadAvatar = multer({
+ storage: avatarStorage,
+ limits: { fileSize: Infinity, files: Infinity }
+});
+
 
 // API Config
 const API_CONFIG = {
@@ -307,6 +323,14 @@ const requestGuardStore = new Map();
 
 const REFERRAL_TARGET = 5;
 const REFERRAL_REWARD_LABEL = '60 UC';
+const USER_RANK_OPTIONS = [
+ { key: 'member', label: 'Üzv', icon: 'ri-user-star-line', color: '#64748b' },
+ { key: 'bronze', label: 'Bronze Üzv', icon: 'ri-medal-line', color: '#b45309' },
+ { key: 'silver', label: 'Silver Üzv', icon: 'ri-vip-crown-line', color: '#64748b' },
+ { key: 'gold', label: 'Gold Üzv', icon: 'ri-vip-diamond-line', color: '#ca8a04' },
+ { key: 'platinum', label: 'Platinum Üzv', icon: 'ri-vip-crown-2-line', color: '#0f766e' },
+ { key: 'diamond', label: 'Diamond Üzv', icon: 'ri-vip-diamond-fill', color: '#2563eb' }
+];
 const VPN_BLOCK_ENABLED = process.env.VPN_BLOCK_ENABLED !== '0';
 const VPN_CHECK_TIMEOUT_MS = Number(process.env.VPN_CHECK_TIMEOUT_MS || 3500);
 const VPN_CACHE_TTL_MS = Number(process.env.VPN_CACHE_TTL_MS || 10 * 60 * 1000);
@@ -487,6 +511,10 @@ let db;
  { table: 'users', column: 'referred_by', definition: 'INT NULL AFTER referral_code' },
  { table: 'users', column: 'registration_ip', definition: 'VARCHAR(64) NULL AFTER referred_by' },
  { table: 'users', column: 'last_seen_at', definition: 'DATETIME NULL AFTER registration_ip' },
+ { table: 'users', column: 'avatar_path', definition: 'VARCHAR(255) NULL AFTER phone' },
+ { table: 'users', column: 'rank_key', definition: "VARCHAR(30) DEFAULT 'member' AFTER role" },
+ { table: 'users', column: 'public_bio', definition: 'TEXT NULL AFTER rank_key' },
+ { table: 'users', column: 'public_profile_enabled', definition: 'TINYINT(1) DEFAULT 1 AFTER public_bio' },
  { table: 'balance_topups', column: 'refund_status', definition: "ENUM('none', 'pending', 'processed', 'rejected') DEFAULT 'none' AFTER status" },
  { table: 'balance_topups', column: 'refund_requested_at', definition: 'DATETIME NULL AFTER refund_status' },
  { table: 'wishlist', column: 'product_ref', definition: 'VARCHAR(80) NULL AFTER product_id' }
@@ -1083,6 +1111,11 @@ function applyResellerPricing(products, user, discountPercent) {
  price: discounted
  };
  });
+}
+
+function getUserRankMeta(rankKey) {
+ const key = String(rankKey || '').trim().toLowerCase();
+ return USER_RANK_OPTIONS.find((r) => r.key === key) || USER_RANK_OPTIONS[0];
 }
 
 function normalizeAdminReturnPath(value) {
@@ -2416,6 +2449,7 @@ app.get('/profile', async (req, res) => {
  });
  const [userData] = await db.execute('SELECT * FROM users WHERE id = ?', [req.session.user.id]);
  const user = userData[0];
+ const rankMeta = getUserRankMeta(user.rank_key);
  const referralCode = await ensureUserReferralCode(user.id);
  const referredCount = await getReferralCountForUser(user.id);
  const [pendingClaims] = await db.execute('SELECT id, status, created_at FROM referral_reward_requests WHERE user_id = ? AND status = "pending" ORDER BY created_at DESC LIMIT 1', [user.id]);
@@ -2427,7 +2461,8 @@ app.get('/profile', async (req, res) => {
  title: 'Profilim',
  orders,
  topups: enrichedTopups,
- user: { ...user, referral_code: referralCode },
+ user: { ...user, referral_code: referralCode, rank_meta: rankMeta },
+ rankOptions: USER_RANK_OPTIONS,
  referral: {
  target: REFERRAL_TARGET,
  reward: REFERRAL_REWARD_LABEL,
@@ -2438,6 +2473,92 @@ app.get('/profile', async (req, res) => {
  canClaim: referredCount >= REFERRAL_TARGET && pendingClaims.length === 0
  }
  });
+});
+
+app.post('/profile/public/update', uploadAvatar.single('avatar'), async (req, res) => {
+ if (!req.session.user) return res.redirect('/login');
+ try {
+ const bio = normalizeOptionalString(req.body.public_bio);
+ const selectedRank = normalizeOptionalString(req.body.rank_key).toLowerCase();
+ const publicEnabled = req.body.public_profile_enabled ? 1 : 0;
+ const safeRank = USER_RANK_OPTIONS.some((r) => r.key === selectedRank) ? selectedRank : 'member';
+ const avatarPath = req.file ? '/uploads/avatars/' + req.file.filename : null;
+
+ let sql = 'UPDATE users SET public_bio = ?, rank_key = ?, public_profile_enabled = ?';
+ const params = [bio, safeRank, publicEnabled];
+ if (avatarPath) {
+ sql += ', avatar_path = ?';
+ params.push(avatarPath);
+ }
+ sql += ' WHERE id = ?';
+ params.push(req.session.user.id);
+
+ await db.execute(sql, params);
+ req.session.success = 'Profil məlumatları yeniləndi.';
+ return res.redirect('/profile');
+ } catch (e) {
+ req.session.error = 'Profil yenilənmədi.';
+ return res.redirect('/profile');
+ }
+});
+
+app.get('/people', async (req, res) => {
+ try {
+ const q = normalizeOptionalString(req.query.q);
+ const [rows] = await db.execute(
+ `SELECT id, full_name, avatar_path, rank_key, public_bio, role, created_at
+ FROM users
+ WHERE public_profile_enabled = 1
+ ORDER BY created_at DESC
+ LIMIT 500`
+ );
+
+ let users = rows.map((row) => ({
+ ...row,
+ rank_meta: getUserRankMeta(row.rank_key)
+ }));
+
+ if (q) {
+ const needle = q.toLowerCase();
+ users = users.filter((u) => String(u.full_name || '').toLowerCase().includes(needle));
+ }
+
+ return res.render('people', {
+ title: 'İcma Profilləri',
+ users,
+ searchQuery: q || ''
+ });
+ } catch (e) {
+ return res.status(500).send('Server Error');
+ }
+});
+
+app.get('/u/:id', async (req, res) => {
+ const userId = Number(req.params.id);
+ if (!Number.isInteger(userId) || userId <= 0) return res.redirect('/people');
+ try {
+ const [rows] = await db.execute(
+ `SELECT id, full_name, avatar_path, rank_key, public_bio, role, created_at, public_profile_enabled
+ FROM users WHERE id = ? LIMIT 1`,
+ [userId]
+ );
+ if (!rows.length) return res.redirect('/people');
+ const profileUser = rows[0];
+ if (!profileUser.public_profile_enabled) return res.redirect('/people');
+
+ const [publicOrders] = await db.execute(
+ 'SELECT id, product_name, amount, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+ [userId]
+ );
+
+ return res.render('public_profile', {
+ title: `${profileUser.full_name} - Profil`,
+ profileUser: { ...profileUser, rank_meta: getUserRankMeta(profileUser.rank_key) },
+ publicOrders
+ });
+ } catch (e) {
+ return res.redirect('/people');
+ }
 });
 
 app.post('/profile/topups/:id/refund-request', async (req, res) => {
@@ -3131,7 +3252,8 @@ app.post('/admin/topups/:id/update', isAdmin, async (req, res) => {
 
 app.get('/admin/users', isAdmin, async (req, res) => {
  const [users] = await db.execute('SELECT * FROM users ORDER BY created_at DESC');
- res.render('admin/users', { title: 'İstifadəçi İdarəetməsi', users });
+ const enrichedUsers = users.map((u) => ({ ...u, rank_meta: getUserRankMeta(u.rank_key) }));
+ res.render('admin/users', { title: 'İstifadəçi İdarəetməsi', users: enrichedUsers, rankOptions: USER_RANK_OPTIONS });
 });
 
 app.post('/admin/users/create', isAdmin, async (req, res) => {
@@ -3156,6 +3278,24 @@ app.post('/admin/users/delete', isAdmin, async (req, res) => {
  req.session.success = 'İstifadəçi silindi.';
  }
  adminRedirect(req, res, '/admin/users');
+});
+
+app.post('/admin/users/rank', isAdmin, async (req, res) => {
+ const userId = Number(req.body.user_id);
+ const rankKey = normalizeOptionalString(req.body.rank_key).toLowerCase();
+ const allowed = USER_RANK_OPTIONS.map((r) => r.key);
+ if (!Number.isInteger(userId) || userId <= 0 || !allowed.includes(rankKey)) {
+ req.session.error = 'Yanlış rank seçimi.';
+ return adminRedirect(req, res, '/admin/users');
+ }
+
+ try {
+ await db.execute('UPDATE users SET rank_key = ? WHERE id = ?', [rankKey, userId]);
+ req.session.success = 'İstifadəçi rankı yeniləndi.';
+ } catch (e) {
+ req.session.error = 'Rank yenilənmədi.';
+ }
+ return adminRedirect(req, res, '/admin/users');
 });
 
 // Admin Categories (List)
