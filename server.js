@@ -281,6 +281,21 @@ const TRANSLATE_CONFIG = {
  TIMEOUT: Number(process.env.TRANSLATE_TIMEOUT_MS || 9000),
  SUPPORTED: ['az', 'tr', 'ru']
 };
+const FX_CONFIG = {
+ URL: process.env.FX_API_URL || 'https://open.er-api.com/v6/latest/AZN',
+ TIMEOUT_MS: Number(process.env.FX_TIMEOUT_MS || 6000),
+ CACHE_TTL_MS: Number(process.env.FX_CACHE_TTL_MS || 30 * 60 * 1000),
+ FALLBACK_RATES: {
+ AZN: 1,
+ TRY: Number(process.env.FX_FALLBACK_TRY || 21),
+ USD: Number(process.env.FX_FALLBACK_USD || 0.588235)
+ }
+};
+let FX_CACHE = {
+ updatedAt: 0,
+ source: 'fallback',
+ rates: { ...FX_CONFIG.FALLBACK_RATES }
+};
 
 const SECURITY_CONFIG = {
  RATE_LIMIT_WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 1000),
@@ -1832,6 +1847,62 @@ app.post('/api/translate-batch', async (req, res) => {
  } catch (e) {
  console.error('Translate batch error:', e.message);
  return res.status(500).json({ success: false, error: 'Tərcümə servisi xətası.' });
+ }
+});
+
+app.get('/api/fx-rates', async (req, res) => {
+ try {
+ const now = Date.now();
+ if ((now - FX_CACHE.updatedAt) < FX_CONFIG.CACHE_TTL_MS) {
+ return res.json({
+ success: true,
+ base: 'AZN',
+ rates: FX_CACHE.rates,
+ source: FX_CACHE.source,
+ updated_at: new Date(FX_CACHE.updatedAt).toISOString()
+ });
+ }
+
+ const response = await axios.get(FX_CONFIG.URL, { timeout: FX_CONFIG.TIMEOUT_MS });
+ const payload = response?.data || {};
+ const ratesRaw = payload?.rates || {};
+ const azn = Number(ratesRaw.AZN || 1);
+ const tr = Number(ratesRaw.TRY || 0);
+ const usd = Number(ratesRaw.USD || 0);
+
+ if (!Number.isFinite(azn) || azn <= 0 || !Number.isFinite(tr) || tr <= 0 || !Number.isFinite(usd) || usd <= 0) {
+ throw new Error('FX provider returned invalid rates');
+ }
+
+ FX_CACHE = {
+ updatedAt: now,
+ source: 'live',
+ rates: { AZN: 1, TRY: tr / azn, USD: usd / azn }
+ };
+
+ return res.json({
+ success: true,
+ base: 'AZN',
+ rates: FX_CACHE.rates,
+ source: FX_CACHE.source,
+ updated_at: new Date(FX_CACHE.updatedAt).toISOString()
+ });
+ } catch (e) {
+ console.warn('FX rates fetch warning:', e.message);
+ if (!FX_CACHE.updatedAt) {
+ FX_CACHE = {
+ updatedAt: Date.now(),
+ source: 'fallback',
+ rates: { ...FX_CONFIG.FALLBACK_RATES }
+ };
+ }
+ return res.json({
+ success: true,
+ base: 'AZN',
+ rates: FX_CACHE.rates,
+ source: FX_CACHE.source,
+ updated_at: new Date(FX_CACHE.updatedAt).toISOString()
+ });
  }
 });
 

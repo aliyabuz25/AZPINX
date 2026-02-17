@@ -3199,6 +3199,37 @@ header .logo img {
     background: rgba(255, 255, 255, 0.22);
 }
 
+.currency-switcher {
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #cbd5e1;
+}
+
+.currency-switcher i {
+    font-size: 15px;
+}
+
+.currency-select {
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 64px;
+    outline: none;
+}
+
+.currency-select option {
+    color: #0f172a;
+}
+
 @media (max-width: 768px) {
     .top-bar {
         padding: 10px 14px 12px;
