@@ -2674,6 +2674,24 @@ app.post('/wishlist/toggle', async (req, res) => {
 app.get('/profile', async (req, res) => {
  if (!req.session.user) return res.redirect('/login');
  const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
+ let orderProductImages = {};
+ try {
+ const catalog = await getMappedProducts();
+ const byName = new Map();
+ (catalog || []).forEach((p) => {
+  const key = String(p.name || '').trim().toLowerCase();
+  if (!key || byName.has(key)) return;
+  const image = p.image || '/images/default-product.png';
+  byName.set(key, image);
+ });
+ orderProductImages = (orders || []).reduce((acc, order) => {
+  const key = String(order.product_name || '').trim().toLowerCase();
+  acc[String(order.id)] = byName.get(key) || '/images/default-product.png';
+  return acc;
+ }, {});
+ } catch (imgErr) {
+ console.warn('Profile order image map warning:', imgErr.message);
+ }
  const orderIds = (orders || []).map((o) => Number(o.id)).filter((id) => Number.isInteger(id) && id > 0);
  let reviewsByOrderId = {};
  if (orderIds.length) {
@@ -2714,6 +2732,7 @@ app.get('/profile', async (req, res) => {
  res.render('profile', {
  title: 'Profilim',
  orders,
+ orderProductImages,
  reviewsByOrderId,
  topups: enrichedTopups,
  user: { ...user, referral_code: referralCode, rank_meta: rankMeta },
