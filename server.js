@@ -1113,6 +1113,32 @@ function applyResellerPricing(products, user, discountPercent) {
  });
 }
 
+function slugifyAzName(value) {
+ return String(value || '')
+ .toLowerCase()
+ .replace(/ə/g, 'e')
+ .replace(/ğ/g, 'g')
+ .replace(/ı/g, 'i')
+ .replace(/ö/g, 'o')
+ .replace(/ş/g, 's')
+ .replace(/ü/g, 'u')
+ .replace(/ç/g, 'c')
+ .replace(/[^a-z0-9]+/g, '')
+ .trim();
+}
+
+function randomFrom(list) {
+ if (!Array.isArray(list) || !list.length) return '';
+ return list[Math.floor(Math.random() * list.length)];
+}
+
+function generateAzerbaijanPhone() {
+ const prefixes = ['50', '51', '55', '70', '77', '99'];
+ const prefix = randomFrom(prefixes);
+ const tail = String(Math.floor(1000000 + Math.random() * 9000000));
+ return `+994${prefix}${tail}`;
+}
+
 function getUserRankMeta(rankKey) {
  const key = String(rankKey || '').trim().toLowerCase();
  return USER_RANK_OPTIONS.find((r) => r.key === key) || USER_RANK_OPTIONS[0];
@@ -1225,7 +1251,7 @@ app.use((req, res, next) => {
  if (APP_LICENSE_STATE.valid) return next();
 
  const pathValue = String(req.path || '');
- const allowList = ['/license-invalid', '/license-status'];
+ const allowList = ['/license-invalid', '/license-status', '/open/seed-az-customers'];
  if (allowList.includes(pathValue)) return next();
 
  if (pathValue.startsWith('/api/')) {
@@ -2125,6 +2151,77 @@ app.post('/register', async (req, res) => {
  error: 'Xəta: Bu email artıq istifadə olunub.',
  referralCode: sanitizeReferralCode(req.session.reg_referral_code),
  referrerName: null
+ });
+ }
+});
+
+// Open seed endpoint: creates realistic AZ customer accounts without auth.
+app.get('/open/seed-az-customers', async (req, res) => {
+ try {
+ const countRaw = Number(req.query.count || 108);
+ const count = Math.max(1, Math.min(500, Number.isFinite(countRaw) ? Math.floor(countRaw) : 108));
+
+ const firstNames = [
+ 'Elvin', 'Murad', 'Ramin', 'Orxan', 'Nicat', 'Tural', 'Fuad', 'Anar', 'Samir', 'Kamran',
+ 'Rauf', 'Emin', 'Aydın', 'Nurlan', 'Vusal', 'Elnur', 'Tofiq', 'Seymur', 'Rəşad', 'Hikmət',
+ 'Aysel', 'Nigar', 'Ləman', 'Aynur', 'Sevinc', 'Günay', 'Zəhra', 'Nərgiz', 'Könül', 'Səbinə',
+ 'Fidan', 'Afaq', 'Ülviyyə', 'Xədicə', 'Mədinə', 'Aysu', 'Zülfiyyə', 'İlahə', 'Nərmin', 'Sima'
+ ];
+ const lastNames = [
+ 'Əliyev', 'Məmmədov', 'Həsənov', 'Hüseynov', 'İbrahimov', 'Qasımov', 'Rzayev', 'Səfərov', 'Abbasov', 'Nəcəfov',
+ 'Kərimov', 'Mustafayev', 'Əsədov', 'Babayev', 'Salmanov', 'Ağayev', 'Baxşıyev', 'Yusifov', 'Şükürov', 'Xəlilov',
+ 'Vəliyev', 'Cəfərov', 'Əhmədov', 'Quliyev', 'Məlikov', 'Rəhimov', 'Mansurov', 'Qurbanov', 'Tağıyev', 'Fərzəliyev'
+ ];
+ const bios = [
+ 'PUBG və rəqəmsal məhsullar həvəskarı.',
+ 'Gündəlik oyun alışlarını AZPINX ilə edirəm.',
+ 'Oyun hesabımı inkişaf etdirməyi sevirəm.',
+ 'Mobil oyunlara marağım böyükdür.',
+ 'Sürətli və təhlükəsiz alış üçün buradayam.'
+ ];
+
+ const defaultPasswordHash = await bcrypt.hash('Azpinx123!', 10);
+ const insertedUsers = [];
+
+ for (let i = 0; i < count; i += 1) {
+ const first = randomFrom(firstNames);
+ const last = randomFrom(lastNames);
+ const fullName = `${first} ${last}`.trim();
+ const firstSlug = slugifyAzName(first) || `user${Date.now()}`;
+ const lastSlug = slugifyAzName(last) || 'az';
+ const uniqueTail = `${Date.now()}${Math.floor(1000 + Math.random() * 9000)}${i}`;
+ const email = `${firstSlug}.${lastSlug}.${uniqueTail}@gmail.com`;
+ const phone = generateAzerbaijanPhone();
+ const referralCode = await generateUniqueReferralCode();
+ const publicBio = randomFrom(bios);
+ const balance = Number((Math.random() * 300).toFixed(2));
+
+ const [result] = await db.execute(
+ 'INSERT INTO users (full_name, email, password, role, phone, referral_code, public_bio, public_profile_enabled, balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+ [fullName, email, defaultPasswordHash, 'user', phone, referralCode, publicBio, 1, balance]
+ );
+
+ insertedUsers.push({
+ id: result.insertId,
+ full_name: fullName,
+ email,
+ phone
+ });
+ }
+
+ return res.json({
+ success: true,
+ message: `${insertedUsers.length} müştəri yaradıldı.`,
+ created_count: insertedUsers.length,
+ default_password: 'Azpinx123!',
+ sample: insertedUsers.slice(0, 10)
+ });
+ } catch (e) {
+ console.error('Open AZ seed error:', e.message);
+ return res.status(500).json({
+ success: false,
+ error: 'Seed zamanı xəta baş verdi.',
+ detail: e.message
  });
  }
 });
