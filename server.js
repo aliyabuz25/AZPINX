@@ -717,11 +717,39 @@ let db;
 // Helper to fetch products with local overrides
 async function getMappedProducts() {
  try {
+ const apiProducts = [];
+ const seenApiIds = new Set();
+ const limit = 500;
+ let offset = 0;
+ let hasMore = true;
+ let pageGuard = 0;
+
+ while (hasMore && pageGuard < 20) {
  const response = await axios.get(`${API_CONFIG.BASE_URL}/products`, {
- headers: { 'X-API-Key': API_CONFIG.API_KEY }
+ headers: { 'X-API-Key': API_CONFIG.API_KEY },
+ params: { limit, offset }
+ });
+ const payload = response?.data?.data || {};
+ const batch = Array.isArray(payload.products) ? payload.products : [];
+ const pagination = payload.pagination || {};
+
+ batch.forEach((item) => {
+ const id = Number(item?.id || 0);
+ if (id && !seenApiIds.has(id)) {
+ seenApiIds.add(id);
+ apiProducts.push(item);
+ }
  });
 
- const apiProducts = response.data.data.products; // Access the 'data.products' array
+ const hasMoreFlag = Boolean(pagination.has_more);
+ const total = Number(pagination.total || 0);
+ offset += limit;
+ hasMore = hasMoreFlag && (!total || offset < total);
+ pageGuard += 1;
+
+ if (!batch.length) break;
+ }
+
  const [localProducts] = await db.execute('SELECT * FROM products');
 
  // Merge API products with local products
