@@ -425,6 +425,18 @@ let db;
  player_nickname VARCHAR(255),
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
  )`,
+ `CREATE TABLE IF NOT EXISTS order_reviews (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ order_id INT NOT NULL,
+ user_id INT NOT NULL,
+ product_name VARCHAR(255) NOT NULL,
+ rating TINYINT NOT NULL,
+ comment VARCHAR(600) NOT NULL,
+ is_visible TINYINT(1) DEFAULT 1,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY unique_order_review (order_id)
+ )`,
  `CREATE TABLE IF NOT EXISTS home_sections (
  id INT AUTO_INCREMENT PRIMARY KEY,
  title VARCHAR(255) NOT NULL,
@@ -585,6 +597,14 @@ let db;
  } catch (idxErr) {
  if (!String(idxErr.message || '').includes('Duplicate key name')) {
  console.warn('Index Warning idx_balance_topups_status_created:', idxErr.message);
+ }
+ }
+
+ try {
+ await db.execute('CREATE INDEX idx_order_reviews_user_visible_created ON order_reviews (user_id, is_visible, created_at)');
+ } catch (idxErr) {
+ if (!String(idxErr.message || '').includes('Duplicate key name')) {
+ console.warn('Index Warning idx_order_reviews_user_visible_created:', idxErr.message);
  }
  }
 
@@ -1704,6 +1724,26 @@ app.get('/', async (req, res) => {
  `);
  const totalOrders = Number(orderStatsResult[0].total_orders || 0);
  const completedOrders = Number(orderStatsResult[0].completed_orders || 0);
+ const [testimonialRows] = await db.execute(`
+ SELECT
+ r.rating,
+ r.comment,
+ r.product_name,
+ r.created_at,
+ u.full_name,
+ u.avatar_path,
+ u.rank_key
+ FROM order_reviews r
+ INNER JOIN users u ON u.id = r.user_id
+ WHERE r.is_visible = 1
+ ORDER BY r.created_at DESC
+ LIMIT 12
+ `);
+ const testimonials = (testimonialRows || []).map((row) => ({
+ ...row,
+ rank_meta: getUserRankMeta(row.rank_key),
+ short_name: String(row.full_name || '').split(' ').slice(0, 2).join(' ')
+ }));
 
  let deliveryTime = '5-10 dakika';
  try {
@@ -1740,7 +1780,13 @@ app.get('/', async (req, res) => {
  }
 
  const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) : 0;
- const rating = totalOrders > 0 ? `${(3 + (completionRate * 2)).toFixed(1)}/5` : '0.0/5';
+ const reviewCount = testimonials.length;
+ const avgRating = reviewCount > 0
+ ? testimonials.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviewCount
+ : 0;
+ const rating = reviewCount > 0
+ ? `${avgRating.toFixed(1)}/5`
+ : (totalOrders > 0 ? `${(3 + (completionRate * 2)).toFixed(1)}/5` : '0.0/5');
 
  // Statistics data (real backend data)
  const siteStats = {
@@ -1762,7 +1808,8 @@ app.get('/', async (req, res) => {
  totalPages,
  selectedCategory,
  searchQuery: searchQuery || '',
- stats: siteStats
+ stats: siteStats,
+ testimonials
  });
  } catch (e) {
  console.error("Home Route Error:", e);
@@ -2627,6 +2674,19 @@ app.post('/wishlist/toggle', async (req, res) => {
 app.get('/profile', async (req, res) => {
  if (!req.session.user) return res.redirect('/login');
  const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
+ const orderIds = (orders || []).map((o) => Number(o.id)).filter((id) => Number.isInteger(id) && id > 0);
+ let reviewsByOrderId = {};
+ if (orderIds.length) {
+ const placeholders = orderIds.map(() => '?').join(',');
+ const [reviewRows] = await db.execute(
+ `SELECT order_id, rating, comment, created_at, updated_at FROM order_reviews WHERE order_id IN (${placeholders})`,
+ orderIds
+ );
+ reviewsByOrderId = (reviewRows || []).reduce((acc, row) => {
+  acc[String(row.order_id)] = row;
+  return acc;
+ }, {});
+ }
  const [topups] = await db.execute('SELECT * FROM balance_topups WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
  const refundWindowMs = 5 * 24 * 60 * 60 * 1000;
  const now = Date.now();
@@ -2654,6 +2714,7 @@ app.get('/profile', async (req, res) => {
  res.render('profile', {
  title: 'Profilim',
  orders,
+ reviewsByOrderId,
  topups: enrichedTopups,
  user: { ...user, referral_code: referralCode, rank_meta: rankMeta },
  rankOptions: USER_RANK_OPTIONS,
@@ -2667,6 +2728,55 @@ app.get('/profile', async (req, res) => {
  canClaim: referredCount >= REFERRAL_TARGET && pendingClaims.length === 0
  }
  });
+});
+
+app.post('/profile/orders/:id/review', async (req, res) => {
+ if (!req.session.user) return res.redirect('/login');
+ try {
+ const orderId = Number(req.params.id);
+ const rating = Math.max(1, Math.min(5, Number(req.body.rating || 0)));
+ const comment = String(req.body.comment || '').trim();
+ if (!orderId || !Number.isInteger(orderId)) {
+ req.session.error = 'Sifariş tapılmadı.';
+ return res.redirect('/profile');
+ }
+ if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+ req.session.error = 'Reytinq 1-5 arasında olmalıdır.';
+ return res.redirect('/profile');
+ }
+ if (comment.length < 8 || comment.length > 600) {
+ req.session.error = 'Yorum 8-600 simvol aralığında olmalıdır.';
+ return res.redirect('/profile');
+ }
+
+ const [orders] = await db.execute(
+ 'SELECT id, user_id, product_name, status FROM orders WHERE id = ? AND user_id = ? LIMIT 1',
+ [orderId, req.session.user.id]
+ );
+ if (!orders.length) {
+ req.session.error = 'Bu sifariş sizə aid deyil.';
+ return res.redirect('/profile');
+ }
+ const order = orders[0];
+ if (String(order.status || '').toLowerCase() !== 'completed') {
+ req.session.error = 'Yalnız tamamlanan sifarişlər puanlana bilər.';
+ return res.redirect('/profile');
+ }
+
+ await db.execute(
+ `INSERT INTO order_reviews (order_id, user_id, product_name, rating, comment, is_visible)
+ VALUES (?, ?, ?, ?, ?, 1)
+ ON DUPLICATE KEY UPDATE rating = VALUES(rating), comment = VALUES(comment), is_visible = 1`,
+ [order.id, req.session.user.id, order.product_name || 'Məhsul', rating, comment]
+ );
+
+ req.session.success = 'Rəyiniz üçün təşəkkürlər. Puanlamanız qeyd edildi.';
+ return res.redirect('/profile');
+ } catch (e) {
+ console.error('Order review save error:', e.message);
+ req.session.error = 'Rəy göndərilə bilmədi.';
+ return res.redirect('/profile');
+ }
 });
 
 app.post('/profile/public/update', uploadAvatar.single('avatar'), async (req, res) => {
