@@ -1085,6 +1085,49 @@ function applyResellerPricing(products, user, discountPercent) {
  });
 }
 
+function normalizeAdminReturnPath(value) {
+ const raw = String(value || '').trim();
+ if (!raw) return '';
+ try {
+ if (raw.startsWith('/')) {
+ return raw.startsWith('/admin') ? raw : '';
+ }
+ const parsed = new URL(raw);
+ const path = `${parsed.pathname || ''}${parsed.search || ''}`;
+ return path.startsWith('/admin') ? path : '';
+ } catch (e) {
+ return '';
+ }
+}
+
+function buildRedirectWithFallbackQuery(basePath, fallbackPath) {
+ const base = String(basePath || '').trim();
+ const fallback = String(fallbackPath || '').trim();
+ if (!base) return fallback || '/admin';
+ if (!fallback.includes('?')) return base;
+
+ try {
+ const baseUrl = new URL(`http://local${base.startsWith('/') ? base : `/${base}`}`);
+ const fallbackUrl = new URL(`http://local${fallback.startsWith('/') ? fallback : `/${fallback}`}`);
+ for (const [key, value] of fallbackUrl.searchParams.entries()) {
+ baseUrl.searchParams.set(key, value);
+ }
+ return `${baseUrl.pathname}${baseUrl.search}`;
+ } catch (e) {
+ return base;
+ }
+}
+
+function adminRedirect(req, res, fallbackPath = '/admin') {
+ const fromBody = normalizeAdminReturnPath(req?.body?.return_to);
+ const fromQuery = normalizeAdminReturnPath(req?.query?.return_to);
+ const fromReferrer = normalizeAdminReturnPath(req?.get?.('referer'));
+ const preferred = fromBody || fromQuery || fromReferrer || '';
+ const safeFallback = normalizeAdminReturnPath(fallbackPath) || '/admin';
+ if (!preferred) return res.redirect(safeFallback);
+ return res.redirect(buildRedirectWithFallbackQuery(preferred, safeFallback));
+}
+
 // Middleware
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -2720,7 +2763,7 @@ app.get('/admin/ticket/:id', isAdmin, async (req, res) => {
  SELECT t.*, u.full_name as user_name, u.phone as user_phone  FROM tickets t  JOIN users u ON t.user_id = u.id  WHERE t.id = ?
  `, [req.params.id]);
 
- if (!tickets.length) return res.redirect('/admin/tickets');
+ if (!tickets.length) return adminRedirect(req, res, '/admin/tickets');
 
  const [messages] = await db.execute('SELECT * FROM ticket_messages WHERE ticket_id = ? ORDER BY created_at ASC', [req.params.id]);
  res.render('admin/ticket_detail', { title: 'Ticket: ' + tickets[0].subject, ticket: tickets[0], messages });
@@ -2811,7 +2854,7 @@ app.get('/admin/orders/export', isAdmin, async (req, res) => {
  let rows = [];
  if (scope === 'selected') {
  if (!selectedIds.length) {
- return res.redirect('/admin/orders?error=Export üçün sipariş seçilməyib');
+ return adminRedirect(req, res, '/admin/orders?error=Export üçün sipariş seçilməyib');
  }
  const placeholders = selectedIds.map(() => '?').join(',');
  const [selectedRows] = await db.execute(
@@ -2914,7 +2957,7 @@ app.get('/admin/orders/export', isAdmin, async (req, res) => {
  return res.send('\uFEFF' + csvLines.join('\n'));
  } catch (e) {
  console.error('Orders export error:', e.message);
- return res.redirect('/admin/orders?error=' + encodeURIComponent('CSV export xətası: ' + e.message));
+ return adminRedirect(req, res, '/admin/orders?error=' + encodeURIComponent('CSV export xətası: ' + e.message));
  }
 });
 
@@ -2922,7 +2965,7 @@ app.post('/admin/orders/:id/update', isAdmin, async (req, res) => {
  const { status } = req.body;
  await db.execute('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
  req.session.success ="Sifariş statusu yeniləndi.";
- res.redirect('/admin/orders');
+ adminRedirect(req, res, '/admin/orders');
 });
 
 app.post('/admin/orders/:id/approve-notify', isAdmin, async (req, res) => {
@@ -2930,7 +2973,7 @@ app.post('/admin/orders/:id/approve-notify', isAdmin, async (req, res) => {
  const adminMessage = normalizeOptionalString(req.body.admin_message);
  if (!orderId) {
  req.session.error = 'Yanlış sifariş ID.';
- return res.redirect('/admin/orders');
+ return adminRedirect(req, res, '/admin/orders');
  }
 
  try {
@@ -2943,7 +2986,7 @@ app.post('/admin/orders/:id/approve-notify', isAdmin, async (req, res) => {
  );
  if (!rows.length) {
  req.session.error = 'Sifariş tapılmadı.';
- return res.redirect('/admin/orders');
+ return adminRedirect(req, res, '/admin/orders');
  }
  const order = rows[0];
  await db.execute('UPDATE orders SET status = ? WHERE id = ?', ['completed', orderId]);
@@ -2955,11 +2998,11 @@ app.post('/admin/orders/:id/approve-notify', isAdmin, async (req, res) => {
  }
 
  req.session.success = 'Sifariş tamamlandı və istifadəçiyə WhatsApp mesajı göndərildi.';
- return res.redirect('/admin/orders');
+ return adminRedirect(req, res, '/admin/orders');
  } catch (e) {
  console.error('Admin approve notify error:', e.message);
  req.session.error = 'Sifariş təsdiqləmə/mesaj xətası.';
- return res.redirect('/admin/orders');
+ return adminRedirect(req, res, '/admin/orders');
  }
 });
 
@@ -2990,19 +3033,19 @@ app.post('/admin/topups/:id/refund-update', isAdmin, async (req, res) => {
 
  if (!['processed', 'rejected'].includes(nextRefundStatus)) {
  req.session.error = 'Yanlış iade statusu.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 
  try {
  const [rows] = await db.execute('SELECT id, user_id, refund_status FROM balance_topups WHERE id = ? LIMIT 1', [topupId]);
  if (!rows.length) {
  req.session.error = 'Topup tapılmadı.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
  const topup = rows[0];
  if ((topup.refund_status || 'none') !== 'pending') {
  req.session.error = 'Bu iade tələbi artıq işlənib və ya aktiv deyil.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 
  await db.execute(
@@ -3021,11 +3064,11 @@ app.post('/admin/topups/:id/refund-update', isAdmin, async (req, res) => {
  req.session.success = nextRefundStatus === 'processed'
  ? 'İade tələbi işləndi olaraq qeyd edildi.'
  : 'İade tələbi rədd edildi.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  } catch (e) {
  console.error('Admin refund update error:', e.message);
  req.session.error = 'İade statusu yenilənmədi.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 });
 
@@ -3036,7 +3079,7 @@ app.post('/admin/topups/:id/update', isAdmin, async (req, res) => {
 
  if (!['approved', 'rejected'].includes(nextStatus)) {
  req.session.error = 'Yanlış status seçimi.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 
  try {
@@ -3045,14 +3088,14 @@ app.post('/admin/topups/:id/update', isAdmin, async (req, res) => {
  if (!rows.length) {
  await db.rollback();
  req.session.error = 'Balans tələbi tapılmadı.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 
  const topup = rows[0];
  if (topup.status !== 'pending') {
  await db.rollback();
  req.session.error = 'Bu tələb artıq işlənib.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 
  if (nextStatus === 'approved') {
@@ -3077,12 +3120,12 @@ app.post('/admin/topups/:id/update', isAdmin, async (req, res) => {
  req.session.success = nextStatus === 'approved'
  ? 'Balans artırma təsdiqləndi və istifadəçi balansına əlavə olundu.'
  : 'Balans artırma tələbi rədd edildi.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  } catch (e) {
  await db.rollback();
  console.error('Admin topup update error:', e.message);
  req.session.error = 'Topup yenilənmə xətası.';
- return res.redirect('/admin/topups');
+ return adminRedirect(req, res, '/admin/topups');
  }
 });
 
@@ -3100,7 +3143,7 @@ app.post('/admin/users/create', isAdmin, async (req, res) => {
  } catch (e) {
  req.session.error = 'Xəta: Bu email artıq mövcuddur.';
  }
- res.redirect('/admin/users');
+ adminRedirect(req, res, '/admin/users');
 });
 
 app.post('/admin/users/delete', isAdmin, async (req, res) => {
@@ -3112,7 +3155,7 @@ app.post('/admin/users/delete', isAdmin, async (req, res) => {
  await db.execute('DELETE FROM users WHERE id = ?', [user_id]);
  req.session.success = 'İstifadəçi silindi.';
  }
- res.redirect('/admin/users');
+ adminRedirect(req, res, '/admin/users');
 });
 
 // Admin Categories (List)
@@ -3126,10 +3169,10 @@ app.post('/admin/categories/create', isAdmin, (req, res, next) => {
  uploadCategory.single('image')(req, res, (err) => {
  if (err instanceof multer.MulterError) {
  console.error('Multer Error during category upload:', err);
- return res.redirect('/admin/categories?error=Yükləmə xətası (Multer): ' + err.message);
+ return adminRedirect(req, res, '/admin/categories?error=Yükləmə xətası (Multer): ' + err.message);
  } else if (err) {
  console.error('Unknown Error during category upload:', err);
- return res.redirect('/admin/categories?error=Bilinməyən xəta: ' + err.message);
+ return adminRedirect(req, res, '/admin/categories?error=Bilinməyən xəta: ' + err.message);
  }
  next();
  });
@@ -3138,17 +3181,17 @@ app.post('/admin/categories/create', isAdmin, (req, res, next) => {
  try {
  const image_path = req.file ? '/uploads/categories/' + req.file.filename : null;
  await db.execute('INSERT INTO categories (name, description, image_path) VALUES (?, ?, ?)', [name, description, image_path]);
- res.redirect('/admin/categories?success=Kateqoriya yaradıldı');
+ adminRedirect(req, res, '/admin/categories?success=Kateqoriya yaradıldı');
  } catch (e) {
  console.error('Database Error during category creation:', e);
- res.redirect('/admin/categories?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/categories?error=' + encodeURIComponent(e.message));
  }
 });
 
 // Admin Category Edit Page
 app.get('/admin/categories/:id/edit', isAdmin, async (req, res) => {
  const [categories] = await db.execute('SELECT * FROM categories WHERE id = ?', [req.params.id]);
- if (!categories.length) return res.redirect('/admin/categories');
+ if (!categories.length) return adminRedirect(req, res, '/admin/categories');
  res.render('admin/category_edit', { title: 'Kateqoriya Redaktə', category: categories[0] });
 });
 
@@ -3170,9 +3213,9 @@ app.post('/admin/categories/update', isAdmin, uploadCategory.single('image'), as
  params.push(category_id);
 
  await db.execute(query, params);
- res.redirect('/admin/categories?success=Kateqoriya yeniləndi');
+ adminRedirect(req, res, '/admin/categories?success=Kateqoriya yeniləndi');
  } catch (e) {
- res.redirect('/admin/categories?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/categories?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3181,9 +3224,9 @@ app.post('/admin/categories/delete', isAdmin, async (req, res) => {
  const { category_id } = req.body;
  try {
  await db.execute('DELETE FROM categories WHERE id = ?', [category_id]);
- res.redirect('/admin/categories?success=Kateqoriya silindi');
+ adminRedirect(req, res, '/admin/categories?success=Kateqoriya silindi');
  } catch (e) {
- res.redirect('/admin/categories?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/categories?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3199,10 +3242,10 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
  uploadSlider.single('image')(req, res, (err) => {
  if (err instanceof multer.MulterError) {
  console.error('Multer Error during slider upload:', err);
- return res.redirect('/admin/sliders?error=Yükləmə xətası (Multer): ' + err.message);
+ return adminRedirect(req, res, '/admin/sliders?error=Yükləmə xətası (Multer): ' + err.message);
  } else if (err) {
  console.error('Unknown Error during slider upload:', err);
- return res.redirect('/admin/sliders?error=Bilinməyən xəta: ' + err.message);
+ return adminRedirect(req, res, '/admin/sliders?error=Bilinməyən xəta: ' + err.message);
  }
  next();
  });
@@ -3214,7 +3257,7 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
 
  if (!req.file) {
  console.warn('Slider upload attempt without file.');
- return res.redirect('/admin/sliders?error=Şəkil seçilməyib və ya yüklənmədi');
+ return adminRedirect(req, res, '/admin/sliders?error=Şəkil seçilməyib və ya yüklənmədi');
  }
 
  const image_path = '/uploads/sliders/' + req.file.filename;
@@ -3225,10 +3268,10 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
  [image_path, title || '', description || '', resolvedLink || '#']);
 
  console.log('Slider successfully inserted into database.');
- res.redirect('/admin/sliders?success=Slayder əlavə edildi');
+ adminRedirect(req, res, '/admin/sliders?success=Slayder əlavə edildi');
  } catch (e) {
  console.error('Database Error during slider creation:', e);
- res.redirect('/admin/sliders?error=Bazaya yazılma xətası: ' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/sliders?error=Bazaya yazılma xətası: ' + encodeURIComponent(e.message));
  }
 });
 
@@ -3236,7 +3279,7 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
 app.post('/admin/sliders/update', isAdmin, uploadSlider.single('image'), async (req, res) => {
  try {
  const id = Number(req.body.id);
- if (!id) return res.redirect('/admin/sliders?error=Yanlış ID');
+ if (!id) return adminRedirect(req, res, '/admin/sliders?error=Yanlış ID');
 
  const title = normalizeOptionalString(req.body.title) || '';
  const description = normalizeOptionalString(req.body.description) || '';
@@ -3253,10 +3296,10 @@ app.post('/admin/sliders/update', isAdmin, uploadSlider.single('image'), async (
  params.push(id);
 
  await db.execute(sql, params);
- return res.redirect('/admin/sliders?success=Slayder yeniləndi');
+ return adminRedirect(req, res, '/admin/sliders?success=Slayder yeniləndi');
  } catch (e) {
  console.error('Slider update error:', e.message);
- return res.redirect('/admin/sliders?error=' + encodeURIComponent(e.message));
+ return adminRedirect(req, res, '/admin/sliders?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3265,9 +3308,9 @@ app.post('/admin/sliders/delete', isAdmin, async (req, res) => {
  const { id } = req.body;
  try {
  await db.execute('DELETE FROM sliders WHERE id = ?', [id]);
- res.redirect('/admin/sliders?success=Slayder silindi');
+ adminRedirect(req, res, '/admin/sliders?success=Slayder silindi');
  } catch (e) {
- res.redirect('/admin/sliders?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/sliders?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3416,9 +3459,9 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  [s.key, s.value]
  );
  }
- res.redirect('/admin/settings?success=Məlumatlar yeniləndi');
+ adminRedirect(req, res, '/admin/settings?success=Məlumatlar yeniləndi');
  } catch (e) {
- res.redirect('/admin/settings?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/settings?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3430,9 +3473,9 @@ app.post('/admin/home-sections/create', isAdmin, async (req, res) => {
  const isActive = req.body.is_active ? 1 : 0;
  await db.execute('INSERT INTO home_sections (title, category_id, product_ids, order_index, is_active) VALUES (?, ?, ?, ?, ?)',
  [normalizeOptionalString(title), category_id || null, productRefs.join(','), Number(order_index || 0), isActive]);
- res.redirect('/admin/home-sections?success=Bölmə yaradıldı');
+ adminRedirect(req, res, '/admin/home-sections?success=Bölmə yaradıldı');
  } catch (e) {
- res.redirect('/admin/home-sections?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/home-sections?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3440,16 +3483,16 @@ app.post('/admin/home-sections/update', isAdmin, async (req, res) => {
  const { id, title, category_id, order_index } = req.body;
  try {
  const sectionId = Number(id);
- if (!sectionId) return res.redirect('/admin/home-sections?error=Yanlış ID');
+ if (!sectionId) return adminRedirect(req, res, '/admin/home-sections?error=Yanlış ID');
  const productRefs = parseSectionProductRefs(req.body.product_refs);
  const isActive = req.body.is_active ? 1 : 0;
  await db.execute(
  'UPDATE home_sections SET title = ?, category_id = ?, product_ids = ?, order_index = ?, is_active = ? WHERE id = ?',
  [normalizeOptionalString(title), category_id || null, productRefs.join(','), Number(order_index || 0), isActive, sectionId]
  );
- return res.redirect('/admin/home-sections?success=Bölmə yeniləndi');
+ return adminRedirect(req, res, '/admin/home-sections?success=Bölmə yeniləndi');
  } catch (e) {
- return res.redirect('/admin/home-sections?error=' + encodeURIComponent(e.message));
+ return adminRedirect(req, res, '/admin/home-sections?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3458,9 +3501,9 @@ app.post('/admin/home-sections/delete', isAdmin, async (req, res) => {
  const { id } = req.body;
  try {
  await db.execute('DELETE FROM home_sections WHERE id = ?', [id]);
- res.redirect('/admin/home-sections?success=Bölmə silindi');
+ adminRedirect(req, res, '/admin/home-sections?success=Bölmə silindi');
  } catch (e) {
- res.redirect('/admin/home-sections?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/home-sections?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3475,10 +3518,10 @@ app.post('/admin/products/add', isAdmin, (req, res, next) => {
  uploadProduct.single('image')(req, res, (err) => {
  if (err instanceof multer.MulterError) {
  console.error('Multer Error during product add:', err);
- return res.redirect('/admin/products?error=Yükləmə xətası (Multer): ' + err.message);
+ return adminRedirect(req, res, '/admin/products?error=Yükləmə xətası (Multer): ' + err.message);
  } else if (err) {
  console.error('Unknown Error during product add:', err);
- return res.redirect('/admin/products?error=Bilinməyən xəta: ' + err.message);
+ return adminRedirect(req, res, '/admin/products?error=Bilinməyən xəta: ' + err.message);
  }
  next();
  });
@@ -3500,10 +3543,10 @@ app.post('/admin/products/add', isAdmin, (req, res, next) => {
 	 'INSERT INTO products (name, category, price, description, image_path, status, api_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
 	 params
  );
- res.redirect('/admin/products?success=Məhsul əlavə edildi');
+ adminRedirect(req, res, '/admin/products?success=Məhsul əlavə edildi');
  } catch (e) {
  console.error('Database Error during product creation:', e);
- res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3571,7 +3614,7 @@ app.get('/admin/products', isAdmin, async (req, res) => {
 app.get('/admin/products/:id/edit', isAdmin, async (req, res) => {
  const products = await getMappedProducts();
  const product = products.find(p => p.id == req.params.id);
- if (!product) return res.redirect('/admin/products');
+ if (!product) return adminRedirect(req, res, '/admin/products');
  res.render('admin/product_edit', { title: 'Məhsul Redaktə - ' + product.name, product });
 });
 
@@ -3610,10 +3653,10 @@ app.post('/admin/products/update', isAdmin, uploadProduct.single('image'), async
  await db.execute(query, params);
  }
 
- res.redirect('/admin/products?success=Məhsul yeniləndi');
+ adminRedirect(req, res, '/admin/products?success=Məhsul yeniləndi');
  } catch (e) {
  console.error(e);
- res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3623,7 +3666,7 @@ app.post('/admin/products/:id/toggle-active', isAdmin, async (req, res) => {
  const products = await getMappedProducts();
  const product = products.find(p => String(p.id) === String(productIdentifier));
  if (!product) {
- return res.redirect('/admin/products?error=Məhsul tapılmadı');
+ return adminRedirect(req, res, '/admin/products?error=Məhsul tapılmadı');
  }
 
  const nextActive = product.is_active ? 0 : 1;
@@ -3653,10 +3696,10 @@ app.post('/admin/products/:id/toggle-active', isAdmin, async (req, res) => {
  }
 
  const msg = nextActive ? 'Məhsul aktiv edildi' : 'Məhsul deaktiv edildi';
- return res.redirect('/admin/products?success=' + encodeURIComponent(msg));
+ return adminRedirect(req, res, '/admin/products?success=' + encodeURIComponent(msg));
  } catch (e) {
  console.error('Product active toggle error:', e);
- return res.redirect('/admin/products?error=' + encodeURIComponent(e.message));
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3666,7 +3709,7 @@ app.post('/admin/users/balance', isAdmin, async (req, res) => {
  const numericAmount = parseFloat(amount);
 
  if (isNaN(numericAmount)) {
- return res.redirect('/admin/users?error=Düzgün məbləğ daxil edin');
+ return adminRedirect(req, res, '/admin/users?error=Düzgün məbləğ daxil edin');
  }
 
  try {
@@ -3677,9 +3720,9 @@ app.post('/admin/users/balance', isAdmin, async (req, res) => {
  } else {
  await db.execute('UPDATE users SET balance = ? WHERE id = ?', [numericAmount, user_id]);
  }
- res.redirect('/admin/users?success=Bakiye yeniləndi');
+ adminRedirect(req, res, '/admin/users?success=Bakiye yeniləndi');
  } catch (e) {
- res.redirect('/admin/users?error=' + encodeURIComponent(e.message));
+ adminRedirect(req, res, '/admin/users?error=' + encodeURIComponent(e.message));
  }
 });
 
@@ -3692,13 +3735,13 @@ app.get('/admin/hubmsg', isAdmin, async (req, res) => {
 app.post('/admin/hubmsg/create', isAdmin, async (req, res) => {
  const { title, message, type } = req.body;
  await db.execute('INSERT INTO announcements (title, message, type) VALUES (?, ?, ?)', [title, message, type]);
- res.redirect('/admin/hubmsg?success=Bildiriş yaradıldı');
+ adminRedirect(req, res, '/admin/hubmsg?success=Bildiriş yaradıldı');
 });
 
 app.post('/admin/hubmsg/delete', isAdmin, async (req, res) => {
  const { id } = req.body;
  await db.execute('DELETE FROM announcements WHERE id = ?', [id]);
- res.redirect('/admin/hubmsg?success=Bildiriş silindi');
+ adminRedirect(req, res, '/admin/hubmsg?success=Bildiriş silindi');
 });
 
 const HOST = process.env.HOST || '0.0.0.0';
