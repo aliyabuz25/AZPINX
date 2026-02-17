@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" fill="none">
+  <defs>
+    <linearGradient id="g2" x1="30" y1="12" x2="300" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="48" fill="url(#g2)"/>
+  <circle cx="160" cy="116" r="58" fill="#CBD5E1"/>
+  <path d="M70 282C70 237.817 105.817 202 150 202H170C214.183 202 250 237.817 250 282V320H70V282Z" fill="#94A3B8"/>
+  <rect x="170" y="38" width="106" height="34" rx="8" fill="#FACC15"/>
+  <text x="183" y="60" fill="#111827" font-size="18" font-family="Arial" font-weight="700">BATTLER</text>
+</svg>

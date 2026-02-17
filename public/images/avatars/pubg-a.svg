@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="24" y1="16" x2="296" y2="304" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B3B4D"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="48" fill="url(#g1)"/>
+  <circle cx="160" cy="124" r="62" fill="#94A3B8"/>
+  <path d="M76 284C76 236.294 113.294 199 161 199C208.706 199 246 236.294 246 284V320H76V284Z" fill="#64748B"/>
+  <rect x="44" y="36" width="112" height="34" rx="8" fill="#F59E0B"/>
+  <text x="56" y="58" fill="#0F172A" font-size="18" font-family="Arial" font-weight="700">PUBG</text>
+</svg>

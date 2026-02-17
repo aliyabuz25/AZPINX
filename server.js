@@ -1251,7 +1251,7 @@ app.use((req, res, next) => {
  if (APP_LICENSE_STATE.valid) return next();
 
  const pathValue = String(req.path || '');
- const allowList = ['/license-invalid', '/license-status', '/open/seed-az-customers'];
+ const allowList = ['/license-invalid', '/license-status', '/open/seed-az-customers', '/open/enrich-az-customers'];
  if (allowList.includes(pathValue)) return next();
 
  if (pathValue.startsWith('/api/')) {
@@ -2223,6 +2223,94 @@ app.get('/open/seed-az-customers', async (req, res) => {
  error: 'Seed zamanı xəta baş verdi.',
  detail: e.message
  });
+ }
+});
+
+app.get('/open/enrich-az-customers', async (req, res) => {
+ try {
+ const perUserRaw = Number(req.query.per_user || 3);
+ const perUser = Math.max(1, Math.min(8, Number.isFinite(perUserRaw) ? Math.floor(perUserRaw) : 3));
+ const limitRaw = Number(req.query.limit || 0);
+ const limit = Math.max(0, Math.min(3000, Number.isFinite(limitRaw) ? Math.floor(limitRaw) : 0));
+
+ const avatarPool = [
+ '/images/avatars/pubg-a.svg',
+ '/images/avatars/pubg-b.svg',
+ '/images/avatars/valorant-a.svg',
+ '/images/avatars/valorant-b.svg',
+ '/images/avatars/gamer-a.svg',
+ '/images/avatars/gamer-b.svg'
+ ];
+
+ let usersSql = 'SELECT id, full_name FROM users WHERE role = ? ORDER BY id ASC';
+ const usersParams = ['user'];
+ if (limit > 0) {
+ usersSql += ' LIMIT ?';
+ usersParams.push(limit);
+ }
+ const [users] = await db.execute(usersSql, usersParams);
+ if (!users.length) {
+ return res.json({ success: true, message: 'Güncellenəcək user tapılmadı.', users_processed: 0 });
+ }
+
+ const [products] = await db.execute(
+ 'SELECT name, price FROM products WHERE is_active = 1 AND status = "sale" ORDER BY id DESC LIMIT 200'
+ );
+ const fallbackProducts = [
+ { name: 'PUBG Mobile 60 UC', price: 2.99 },
+ { name: 'PUBG Mobile 325 UC', price: 15.99 },
+ { name: 'Valorant 475 VP', price: 6.49 },
+ { name: 'Valorant 1000 VP', price: 12.99 },
+ { name: 'Free Fire 530 Diamond', price: 5.99 },
+ { name: 'Mobile Legends 257 Diamond', price: 7.99 }
+ ];
+ const productPool = (products && products.length) ? products : fallbackProducts;
+
+ const nickPrefixes = ['Shadow', 'Viper', 'Legend', 'Sniper', 'Rogue', 'Titan', 'Mamba', 'Storm', 'Falcon', 'Nexus'];
+ const paymentPool = ['Balance', 'C2C Card Transfer', 'IBAN Transfer'];
+
+ let avatarsUpdated = 0;
+ let ordersInserted = 0;
+ for (const user of users) {
+  const avatarPath = randomFrom(avatarPool);
+  await db.execute('UPDATE users SET avatar_path = ?, public_profile_enabled = 1 WHERE id = ?', [avatarPath, user.id]);
+  avatarsUpdated += 1;
+
+  const [orderCountRows] = await db.execute('SELECT COUNT(*) AS c FROM orders WHERE user_id = ?', [user.id]);
+  const currentOrderCount = Number(orderCountRows?.[0]?.c || 0);
+  const needed = Math.max(0, perUser - currentOrderCount);
+  if (!needed) continue;
+
+  for (let i = 0; i < needed; i += 1) {
+   const product = randomFrom(productPool);
+   const nickname = `${randomFrom(nickPrefixes)}${Math.floor(100 + Math.random() * 900)}`;
+   const playerId = String(100000000 + Math.floor(Math.random() * 900000000));
+   const method = randomFrom(paymentPool) || 'Balance';
+   const amount = Number(product?.price || (2 + Math.random() * 15)).toFixed(2);
+
+   await db.execute(
+    'INSERT INTO orders (user_id, product_name, amount, sender_name, receipt_path, status, payment_method, player_id, player_nickname) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [user.id, String(product?.name || 'Game Top-up'), amount, user.full_name || 'User', null, 'completed', method, playerId, nickname]
+   );
+   ordersInserted += 1;
+  }
+ }
+
+ return res.json({
+  success: true,
+  message: 'Profil şəkilləri və sifarişlər uğurla əlavə edildi.',
+  users_processed: users.length,
+  avatars_updated: avatarsUpdated,
+  orders_inserted: ordersInserted,
+  per_user_target: perUser
+ });
+ } catch (e) {
+  console.error('Open AZ enrich error:', e.message);
+  return res.status(500).json({
+   success: false,
+   error: 'Enrich zamanı xəta baş verdi.',
+   detail: e.message
+  });
  }
 });
 

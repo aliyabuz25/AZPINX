@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" fill="none">
+  <defs>
+    <linearGradient id="g5" x1="24" y1="18" x2="300" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A4B3F"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="48" fill="url(#g5)"/>
+  <circle cx="160" cy="120" r="58" fill="#A7F3D0"/>
+  <path d="M72 286C72 239.608 109.608 202 156 202H164C210.392 202 248 239.608 248 286V320H72V286Z" fill="#10B981"/>
+  <rect x="186" y="36" width="98" height="34" rx="8" fill="#34D399"/>
+  <text x="200" y="58" fill="#064E3B" font-size="18" font-family="Arial" font-weight="700">GAMER</text>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" fill="none">
+  <defs>
+    <linearGradient id="g4" x1="30" y1="20" x2="290" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#7F1D1D"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="48" fill="url(#g4)"/>
+  <circle cx="160" cy="118" r="56" fill="#FECACA"/>
+  <path d="M68 286C68 240.712 104.712 204 150 204H170C215.288 204 252 240.712 252 286V320H68V286Z" fill="#B91C1C"/>
+  <rect x="36" y="36" width="122" height="34" rx="8" fill="#F43F5E"/>
+  <text x="47" y="58" fill="#FFF1F2" font-size="18" font-family="Arial" font-weight="700">V AGENT</text>
+</svg>
