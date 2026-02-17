@@ -7,7 +7,7 @@
   <div class="public-profile-card">
     <div class="public-avatar">
       <% if (profileUser.avatar_path) { %>
-        <img src="<%= profileUser.avatar_path %>" alt="<%= profileUser.full_name %>">
+        <img src="<%= profileUser.avatar_path %>" alt="<%= profileUser.full_name %>" onerror="this.onerror=null;this.src='/images/default-avatar.svg';">
       <% } else { %>
         <span><%= String(profileUser.full_name || 'U').charAt(0).toUpperCase() %></span>
       <% } %>

@@ -4,7 +4,7 @@
  <div class="profile-header">
  <div class="user-avatar">
  <% if (user.avatar_path) { %>
- <img src="<%= user.avatar_path %>" alt="<%= user.full_name %>" class="profile-avatar-image">
+ <img src="<%= user.avatar_path %>" alt="<%= user.full_name %>" class="profile-avatar-image" onerror="this.onerror=null;this.src='/images/default-avatar.svg';">
  <% } else { %>
  <%= ((user.full_name || 'U' ).charAt(0).toUpperCase()) %>
  <% } %>

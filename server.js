@@ -1164,6 +1164,19 @@ function adminRedirect(req, res, fallbackPath = '/admin') {
 // Middleware
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.get('/uploads/avatars/:filename', (req, res, next) => {
+ const filename = path.basename(String(req.params.filename || '').trim());
+ if (!filename) return next();
+ const avatarFile = path.join(__dirname, 'public', 'uploads', 'avatars', filename);
+ if (fs.existsSync(avatarFile)) {
+ return res.sendFile(avatarFile);
+ }
+ const fallbackAvatar = path.join(__dirname, 'public', 'images', 'default-avatar.svg');
+ if (fs.existsSync(fallbackAvatar)) {
+ return res.sendFile(fallbackAvatar);
+ }
+ return res.status(404).end();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 app.use(bodyParser.json({ limit: '100mb' }));

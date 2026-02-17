@@ -71,7 +71,7 @@
  </td>
  <td>
  <% if (u.avatar_path) { %>
- <img src="<%= u.avatar_path %>" alt="avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;">
+ <img src="<%= u.avatar_path %>" alt="avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;" onerror="this.onerror=null;this.src='/images/default-avatar.svg';">
  <% } else { %>
  <div style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;color:#334155;">
  <%= String(u.full_name || 'U').charAt(0).toUpperCase() %>

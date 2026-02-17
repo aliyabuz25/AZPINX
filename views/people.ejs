@@ -13,7 +13,7 @@
       <a href="/u/<%= u.id %>" class="people-card">
         <div class="people-avatar">
           <% if (u.avatar_path) { %>
-            <img src="<%= u.avatar_path %>" alt="<%= u.full_name %>">
+            <img src="<%= u.avatar_path %>" alt="<%= u.full_name %>" onerror="this.onerror=null;this.src='/images/default-avatar.svg';">
           <% } else { %>
             <span><%= String(u.full_name || 'U').charAt(0).toUpperCase() %></span>
           <% } %>
