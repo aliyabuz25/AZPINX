@@ -3237,6 +3237,50 @@ app.get('/admin/sliders', isAdmin, async (req, res) => {
  res.render('admin/sliders', { title: 'Slayder (Banner) İdarəetməsi', sliders, categories });
 });
 
+app.get('/admin/ad-banner', isAdmin, async (req, res) => {
+ try {
+ const [sliderRows] = await db.execute('SELECT image_path FROM sliders WHERE image_path IS NOT NULL AND image_path <> "" ORDER BY created_at DESC');
+ const [categoryRows] = await db.execute('SELECT image_path FROM categories WHERE image_path IS NOT NULL AND image_path <> "" ORDER BY created_at DESC');
+ const [productRows] = await db.execute('SELECT image_path FROM products WHERE image_path IS NOT NULL AND image_path <> "" ORDER BY id DESC LIMIT 120');
+
+ const localPublicImages = [];
+ const publicImageDir = path.join(__dirname, 'public', 'images');
+ if (fs.existsSync(publicImageDir)) {
+ const files = fs.readdirSync(publicImageDir);
+ files.forEach((name) => {
+ const lower = String(name || '').toLowerCase();
+ if (/\.(png|jpe?g|webp|gif|svg)$/.test(lower)) {
+ localPublicImages.push(`/images/${name}`);
+ }
+ });
+ }
+
+ const dbImages = [...sliderRows, ...categoryRows, ...productRows]
+ .map((row) => normalizeOptionalString(row.image_path))
+ .filter((value) => value && value.startsWith('/'))
+ .filter((value) => !value.startsWith('/uploads/receipts/'));
+
+ const uniqueImages = [...new Set([...localPublicImages, ...dbImages])]
+ .filter((value) => /\.(png|jpe?g|webp|gif|svg)$/i.test(value))
+ .slice(0, 200);
+
+ const referralCode = await ensureUserReferralCode(req.session.user.id);
+ const baseUrl = `${req.protocol}://${req.get('host')}`;
+ const inviteLink = `${baseUrl}/invite/${encodeURIComponent(referralCode)}`;
+
+ return res.render('admin/ad_banner', {
+ title: 'Reklam Banner Hazırlayıcı',
+ images: uniqueImages,
+ inviteLink,
+ logoPath: '/images/comp-1_00000.png'
+ });
+ } catch (e) {
+ console.error('Admin ad banner page error:', e.message);
+ req.session.error = 'Banner hazırlayıcı açılmadı.';
+ return adminRedirect(req, res, '/admin?error=' + encodeURIComponent(e.message));
+ }
+});
+
 // Admin Slider Create
 app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
  uploadSlider.single('image')(req, res, (err) => {

@@ -1,0 +1,317 @@
+<%- include('header') %>
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card card-primary">
+      <div class="card-header">
+        <h3 class="card-title">Banner Ayarları</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="bannerTitle">Başlıq</label>
+          <input type="text" id="bannerTitle" class="form-control" value="AZPINX ilə oyunda öndə ol!">
+        </div>
+        <div class="form-group">
+          <label for="bannerSubtitle">Alt mətn</label>
+          <textarea id="bannerSubtitle" class="form-control" rows="3">Rəqəmsal kodları təhlükəsiz və sürətli al. Hədiyyə və endirimlər üçün indi qoşul.</textarea>
+        </div>
+        <div class="form-group">
+          <label for="bannerCta">Düymə mətn</label>
+          <input type="text" id="bannerCta" class="form-control" value="İndi Qeydiyyat Ol">
+        </div>
+        <div class="form-group">
+          <label for="inviteLink">Dəvət linki</label>
+          <input type="text" id="inviteLink" class="form-control" value="<%= inviteLink %>">
+        </div>
+
+        <div class="form-group">
+          <label>Arxa fon şəkli (saytdakı görsellər)</label>
+          <div class="banner-image-grid" id="bannerImageGrid">
+            <% (images || []).forEach(function(img, idx){ %>
+              <button type="button" class="banner-image-tile <%= idx === 0 ? 'active' : '' %>" data-src="<%= img %>">
+                <img src="<%= img %>" alt="banner image <%= idx + 1 %>">
+              </button>
+            <% }) %>
+          </div>
+          <% if (!images || !images.length) { %>
+            <small class="text-muted">Uyğun görsel tapılmadı. Əvvəlcə Banner/Kateqoriya/Məhsul şəkli əlavə edin.</small>
+          <% } %>
+        </div>
+      </div>
+      <div class="card-footer d-flex" style="gap:8px;">
+        <button type="button" id="downloadBannerBtn" class="btn btn-primary"><i class="ri-download-line"></i> PNG Yüklə</button>
+        <button type="button" id="copyInviteBtn" class="btn btn-outline-primary"><i class="ri-file-copy-line"></i> Linki Kopyala</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Paylaşım Mətni</h3>
+      </div>
+      <div class="card-body">
+        <textarea id="shareText" class="form-control" rows="6" readonly></textarea>
+      </div>
+      <div class="card-footer">
+        <button type="button" id="copyShareBtn" class="btn btn-outline-secondary btn-sm"><i class="ri-clipboard-line"></i> Mətni Kopyala</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Canlı Önizləmə (1200x628)</h3>
+      </div>
+      <div class="card-body text-center">
+        <canvas id="adBannerCanvas" width="1200" height="628"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #adBannerCanvas {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #0f172a;
+  }
+
+  .banner-image-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    max-height: 280px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+
+  .banner-image-tile {
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    background: #f8fafc;
+    cursor: pointer;
+  }
+
+  .banner-image-tile.active {
+    border-color: #2563eb;
+  }
+
+  .banner-image-tile img {
+    width: 100%;
+    height: 70px;
+    object-fit: cover;
+    display: block;
+  }
+
+  @media (max-width: 992px) {
+    .banner-image-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>
+
+<script>
+(function(){
+  const canvas = document.getElementById('adBannerCanvas');
+  const ctx = canvas.getContext('2d');
+  const titleInput = document.getElementById('bannerTitle');
+  const subtitleInput = document.getElementById('bannerSubtitle');
+  const ctaInput = document.getElementById('bannerCta');
+  const inviteInput = document.getElementById('inviteLink');
+  const imageGrid = document.getElementById('bannerImageGrid');
+  const shareText = document.getElementById('shareText');
+
+  const logoSrc = '<%= logoPath %>';
+  let currentBgSrc = (imageGrid && imageGrid.querySelector('.banner-image-tile')) ? imageGrid.querySelector('.banner-image-tile').dataset.src : '';
+
+  const bgImg = new Image();
+  bgImg.crossOrigin = 'anonymous';
+  const logoImg = new Image();
+  logoImg.crossOrigin = 'anonymous';
+
+  function wrapText(text, maxWidth, maxLines) {
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+
+    words.forEach((word) => {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width <= maxWidth) {
+        line = test;
+      } else {
+        if (line) lines.push(line);
+        line = word;
+      }
+    });
+    if (line) lines.push(line);
+
+    if (lines.length > maxLines) {
+      const sliced = lines.slice(0, maxLines);
+      sliced[maxLines - 1] = sliced[maxLines - 1].replace(/\s+\S*$/, '') + '...';
+      return sliced;
+    }
+    return lines;
+  }
+
+  function drawCover(image, w, h) {
+    const ir = image.width / image.height;
+    const cr = w / h;
+    let dw = w;
+    let dh = h;
+    let dx = 0;
+    let dy = 0;
+
+    if (ir > cr) {
+      dh = h;
+      dw = dh * ir;
+      dx = (w - dw) / 2;
+    } else {
+      dw = w;
+      dh = dw / ir;
+      dy = (h - dh) / 2;
+    }
+
+    ctx.drawImage(image, dx, dy, dw, dh);
+  }
+
+  function updateShareText() {
+    const t = String(titleInput.value || '').trim();
+    const s = String(subtitleInput.value || '').trim();
+    const l = String(inviteInput.value || '').trim();
+    shareText.value = `${t}\n${s}\n\nQeydiyyat linki: ${l}`.trim();
+  }
+
+  function renderBanner() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (bgImg.complete && bgImg.naturalWidth > 0) {
+      drawCover(bgImg, canvas.width, canvas.height);
+    } else {
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(1, '#1e293b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const overlay = ctx.createLinearGradient(0, 0, canvas.width * 0.85, canvas.height);
+    overlay.addColorStop(0, 'rgba(2, 6, 23, 0.88)');
+    overlay.addColorStop(1, 'rgba(2, 6, 23, 0.20)');
+    ctx.fillStyle = overlay;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const title = String(titleInput.value || '').trim();
+    const subtitle = String(subtitleInput.value || '').trim();
+    const cta = String(ctaInput.value || '').trim() || 'Qeydiyyat';
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 70px Inter, Arial';
+    const titleLines = wrapText(title, 820, 2);
+    let y = 170;
+    titleLines.forEach((line) => {
+      ctx.fillText(line, 70, y);
+      y += 84;
+    });
+
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.96)';
+    ctx.font = '34px Inter, Arial';
+    const subLines = wrapText(subtitle, 860, 3);
+    subLines.forEach((line) => {
+      ctx.fillText(line, 70, y + 20);
+      y += 48;
+    });
+
+    const ctaWidth = Math.max(250, ctx.measureText(cta).width + 80);
+    const ctaY = 470;
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.roundRect(70, ctaY, ctaWidth, 62, 16);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 30px Inter, Arial';
+    ctx.fillText(cta, 105, ctaY + 40);
+
+    const link = String(inviteInput.value || '').trim();
+    ctx.fillStyle = '#93c5fd';
+    ctx.font = '24px Inter, Arial';
+    ctx.fillText(link, 70, 575);
+
+    if (logoImg.complete && logoImg.naturalWidth > 0) {
+      const targetW = 210;
+      const ratio = logoImg.height / logoImg.width;
+      const targetH = targetW * ratio;
+      const lx = (canvas.width - targetW) / 2;
+      const ly = canvas.height - targetH - 14;
+      ctx.drawImage(logoImg, lx, ly, targetW, targetH);
+    }
+  }
+
+  function setBackground(src) {
+    currentBgSrc = src || '';
+    if (!currentBgSrc) {
+      renderBanner();
+      return;
+    }
+    bgImg.onload = renderBanner;
+    bgImg.onerror = renderBanner;
+    bgImg.src = currentBgSrc;
+  }
+
+  if (imageGrid) {
+    imageGrid.addEventListener('click', function(e){
+      const btn = e.target.closest('.banner-image-tile');
+      if (!btn) return;
+      imageGrid.querySelectorAll('.banner-image-tile').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      setBackground(btn.dataset.src || '');
+    });
+  }
+
+  [titleInput, subtitleInput, ctaInput, inviteInput].forEach((el) => {
+    el.addEventListener('input', function(){
+      updateShareText();
+      renderBanner();
+    });
+  });
+
+  document.getElementById('downloadBannerBtn').addEventListener('click', function(){
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'azpinx-reklam-banner.png';
+    a.click();
+  });
+
+  document.getElementById('copyInviteBtn').addEventListener('click', async function(){
+    try {
+      await navigator.clipboard.writeText(String(inviteInput.value || '').trim());
+      Toastify({ text: 'Dəvət linki kopyalandı.', backgroundColor: '#10b981' }).showToast();
+    } catch (e) {
+      Toastify({ text: 'Link kopyalanmadı.', backgroundColor: '#ef4444' }).showToast();
+    }
+  });
+
+  document.getElementById('copyShareBtn').addEventListener('click', async function(){
+    try {
+      await navigator.clipboard.writeText(String(shareText.value || '').trim());
+      Toastify({ text: 'Paylaşım mətni kopyalandı.', backgroundColor: '#10b981' }).showToast();
+    } catch (e) {
+      Toastify({ text: 'Mətn kopyalanmadı.', backgroundColor: '#ef4444' }).showToast();
+    }
+  });
+
+  logoImg.onload = renderBanner;
+  logoImg.onerror = renderBanner;
+  logoImg.src = logoSrc;
+
+  updateShareText();
+  setBackground(currentBgSrc);
+  renderBanner();
+})();
+</script>
+
+<%- include('footer') %>
