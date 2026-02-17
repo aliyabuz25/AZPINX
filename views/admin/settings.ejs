@@ -1,4 +1,21 @@
 <%- include('header') %>
+<%
+ const trBanks = [
+ 'Adabank', 'Akbank', 'Aktif Yatirim Bankasi (Aktif Bank)', 'Albaraka Turk',
+ 'Alternatifbank', 'Anadolubank', 'BankPozitif', 'Burgan Bank',
+ 'DenizBank', 'Diler Yatirim Bankasi', 'Fibabanka', 'Garanti BBVA',
+ 'Hayat Finans Katilim Bankasi', 'ICBC Turkey Bank', 'ING Bank',
+ 'Intesa Sanpaolo', 'Nurol Yatirim Bankasi', 'Odea Bank', 'QNB Bank',
+ 'Rabobank', 'Sehir Yatirim Bankasi', 'Standard Chartered Yatirim Bankasi',
+ 'Turkish Bank', 'Turkland Bank (T-Bank)', 'Turkiye Finans Katilim Bankasi',
+ 'Turkiye Garanti Bankasi', 'Turkiye Halk Bankasi', 'Turkiye Is Bankasi',
+ 'Turkiye Kalkinma ve Yatirim Bankasi', 'Turkiye Sinai Kalkinma Bankasi',
+ 'Turkiye Vakiflar Bankasi', 'Yapi ve Kredi Bankasi (Yapi Kredi)',
+ 'Ziraat Bankasi', 'Ziraat Katilim', 'Vakif Katilim', 'Emlak Katilim',
+ 'Iller Bankasi', 'Dunya Katilim Bankasi'
+ ];
+ const selectedTrBank = String(settings.tr_bank_name || '');
+%>
 
  <div class="row">
  <div class="col-md-6">
@@ -22,6 +39,30 @@
  <label for="bank_name">Bank Adı</label>
  <input type="text" name="bank_name" id="bank_name" class="form-control"
  value="<%= settings.bank_name || '' %>" required>
+ </div>
+ <hr>
+ <h5>Turkiye - IBAN Bilgileri</h5>
+ <div class="form-group">
+ <label for="tr_bank_name">Banka Adi (Dropdown)</label>
+ <select name="tr_bank_name" id="tr_bank_name" class="form-control">
+ <option value="">Banka secin</option>
+ <% trBanks.forEach(function(bank){ %>
+ <option value="<%= bank %>" <%= selectedTrBank === bank ? 'selected' : '' %>><%= bank %></option>
+ <% }) %>
+ <% if (selectedTrBank && !trBanks.includes(selectedTrBank)) { %>
+ <option value="<%= selectedTrBank %>" selected><%= selectedTrBank %></option>
+ <% } %>
+ </select>
+ </div>
+ <div class="form-group">
+ <label for="tr_iban">IBAN</label>
+ <input type="text" name="tr_iban" id="tr_iban" class="form-control"
+ value="<%= settings.tr_iban || '' %>" placeholder="TR00 0000 0000 0000 0000 0000 00">
+ </div>
+ <div class="form-group">
+ <label for="tr_account_holder">Isim Soyisim</label>
+ <input type="text" name="tr_account_holder" id="tr_account_holder" class="form-control"
+ value="<%= settings.tr_account_holder || '' %>">
  </div>
  <div class="form-group">
  <label for="reseller_discount_percent">Bayi Endirimi (%)</label>
@@ -47,6 +88,17 @@
  </div>
  </div>
  </div>
+ <div class="mt-3">
+ <h5>IBAN Onizleme</h5>
+ <div class="bank-card-preview-admin">
+ <p class="card-label-admin">IBAN</p>
+ <p class="card-num-admin iban-num-admin" id="preview_iban"><%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %></p>
+ <div class="card-footer-info-admin">
+ <span id="preview_tr_holder"><%= settings.tr_account_holder || 'ISIM SOYISIM' %></span>
+ <span id="preview_tr_bank"><%= settings.tr_bank_name || 'BANKA' %></span>
+ </div>
+ </div>
+ </div>
  </div>
  <div class="card-footer">
  <button type="submit" class="btn btn-primary">Yadda Saxla</button>
@@ -65,6 +117,9 @@
  <input type="hidden" name="bank_card" value="<%= settings.bank_card || '' %>">
  <input type="hidden" name="bank_holder" value="<%= settings.bank_holder || '' %>">
  <input type="hidden" name="bank_name" value="<%= settings.bank_name || '' %>">
+ <input type="hidden" name="tr_iban" value="<%= settings.tr_iban || '' %>">
+ <input type="hidden" name="tr_bank_name" value="<%= settings.tr_bank_name || '' %>">
+ <input type="hidden" name="tr_account_holder" value="<%= settings.tr_account_holder || '' %>">
  <input type="hidden" name="reseller_discount_percent" value="<%= settings.reseller_discount_percent || '8' %>">
 
  <div class="form-group">
@@ -334,6 +389,11 @@
  font-size: 14px;
  font-weight: 500;
  }
+
+ .iban-num-admin {
+ letter-spacing: 1px;
+ font-size: 17px;
+ }
  </style>
 
  <script>
@@ -345,6 +405,15 @@
  });
  document.getElementById('bank_name').addEventListener('input', function (e) {
  document.getElementById('preview_bank').textContent = e.target.value || 'BANK';
+ });
+ document.getElementById('tr_iban').addEventListener('input', function (e) {
+ document.getElementById('preview_iban').textContent = e.target.value || 'TR00 0000 0000 0000 0000 0000 00';
+ });
+ document.getElementById('tr_account_holder').addEventListener('input', function (e) {
+ document.getElementById('preview_tr_holder').textContent = e.target.value || 'ISIM SOYISIM';
+ });
+ document.getElementById('tr_bank_name').addEventListener('change', function (e) {
+ document.getElementById('preview_tr_bank').textContent = e.target.value || 'BANKA';
  });
  </script>
 

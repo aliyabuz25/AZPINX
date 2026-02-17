@@ -7,10 +7,18 @@
  <!-- Items list -->
  </div>
 
+ <div class="form-group" style="margin: 16px 0;">
+ <label for="paymentCountrySelect">Ödəniş ölkəsi</label>
+ <select id="paymentCountrySelect" class="form-control" style="max-width: 280px;">
+ <option value="AZ" selected>Azərbaycan (C2C)</option>
+ <option value="TR">Türkiye (IBAN)</option>
+ </select>
+ </div>
+
  <div class="payment-selection-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
  <div class="pay-tab active" onclick="switchPayment('c2c')" id="tab-c2c">
  <i class="ri-bank-card-line"></i>
- <span>Kart Köçürməsi</span>
+ <span id="tab-c2c-label">Kart Köçürməsi</span>
  </div>
  <div class="pay-tab" onclick="switchPayment('balance')" id="tab-balance">
  <i class="ri-wallet-3-line"></i>
@@ -18,16 +26,15 @@
  </div>
  <div class="pay-tab" onclick="switchPayment('topup')" id="tab-topup">
  <i class="ri-wallet-2-line"></i>
- <span>Balans Artır (C2C)</span>
+ <span id="tab-topup-label">Balans Artır (C2C)</span>
  </div>
  </div>
 
  <!-- C2C Section -->
  <div id="section-c2c" class="p-price-card payment-section">
- <h4>C2C Kart Köçürməsi (Manual)</h4>
- <p style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Ödənişi aşağıdakı karta
- etdikdən sonra"Ödəniş etdim" düyməsinə basın.</p>
- <div class="bank-card-preview">
+ <h4 id="transferTitle">C2C Kart Köçürməsi (Manual)</h4>
+ <p id="transferInfo" style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Ödənişi aşağıdakı karta etdikdən sonra "Ödəniş etdim" düyməsinə basın.</p>
+ <div class="bank-card-preview account-block account-az">
  <p class="card-label">KART NÖMRƏSİ</p>
  <p class="card-num">
  <%= settings.bank_card || '0000 0000 0000 0000' %>
@@ -41,10 +48,20 @@
  </span>
  </div>
  </div>
+ <div class="bank-card-preview account-block account-tr" style="display: none;">
+ <p class="card-label">IBAN</p>
+ <p class="card-num iban-card-num">
+ <%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %>
+ </p>
+ <div class="card-footer-info">
+ <span><%= settings.tr_account_holder || 'ISIM SOYISIM' %></span>
+ <span><%= settings.tr_bank_name || 'BANKA' %></span>
+ </div>
+ </div>
 
  <div class="form-group" style="margin-top: 15px;">
  <label>Ödəniş edən şəxs (Ad Soyad)</label>
- <input type="text" id="senderName" placeholder="Karta yazılan ad..."
+ <input type="text" id="senderName" placeholder="Hesap sahibi adı..."
  style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
  </div>
 
@@ -91,14 +108,22 @@
  </div>
 
  <div id="section-topup" class="p-price-card payment-section" style="display: none;">
- <h4>Balans Artırma (C2C)</h4>
- <p style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Kart köçürməsini etdikdən sonra məbləği daxil edin, ad-soyad və dekont yükləyin. Sorğu admin təsdiqinə düşəcək.</p>
- <div class="bank-card-preview">
+ <h4 id="topupTitle">Balans Artırma (C2C)</h4>
+ <p id="topupInfo" style="margin: 10px 0; font-size: 14px; color: var(--text-muted);">Kart köçürməsini etdikdən sonra məbləği daxil edin, ad-soyad və dekont yükləyin. Sorğu admin təsdiqinə düşəcək.</p>
+ <div class="bank-card-preview account-block account-az">
  <p class="card-label">KART NÖMRƏSİ</p>
  <p class="card-num"><%= settings.bank_card || '0000 0000 0000 0000' %></p>
  <div class="card-footer-info">
  <span><%= settings.bank_holder || 'ADMIN' %></span>
  <span><%= settings.bank_name || 'BANK' %></span>
+ </div>
+ </div>
+ <div class="bank-card-preview account-block account-tr" style="display: none;">
+ <p class="card-label">IBAN</p>
+ <p class="card-num iban-card-num"><%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %></p>
+ <div class="card-footer-info">
+ <span><%= settings.tr_account_holder || 'ISIM SOYISIM' %></span>
+ <span><%= settings.tr_bank_name || 'BANKA' %></span>
  </div>
  </div>
 
@@ -109,7 +134,7 @@
  </div>
  <div class="form-group" style="margin-top: 15px;">
  <label>Ödəniş edən şəxs (Ad Soyad)</label>
- <input type="text" id="topupSenderName" placeholder="Karta yazılan ad..."
+ <input type="text" id="topupSenderName" placeholder="Hesap sahibi adı..."
  style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
  </div>
  <div class="form-group" style="margin-top: 15px;">
@@ -140,8 +165,43 @@
  <script>
  let currentTotal = 0;
  let userBalance = parseFloat("<%= user ? user.balance : 0 %>");
+ let paymentCountry = 'AZ';
+
+ function getTransferMethodLabel() {
+ return paymentCountry === 'TR' ? 'IBAN Transfer' : 'C2C Card Transfer';
+ }
+
+ function updatePaymentCountryUI() {
+ const isTR = paymentCountry === 'TR';
+ document.querySelectorAll('.account-az').forEach((el) => { el.style.display = isTR ? 'none' : 'block'; });
+ document.querySelectorAll('.account-tr').forEach((el) => { el.style.display = isTR ? 'block' : 'none'; });
+ document.getElementById('tab-c2c-label').textContent = isTR ? 'IBAN Transfer' : 'Kart Köçürməsi';
+ document.getElementById('tab-topup-label').textContent = isTR ? 'Balans Artır (IBAN)' : 'Balans Artır (C2C)';
+ document.getElementById('transferTitle').textContent = isTR ? 'IBAN Köçürməsi (Manual)' : 'C2C Kart Köçürməsi (Manual)';
+ document.getElementById('transferInfo').textContent = isTR
+ ? 'Ödənişi aşağıdakı IBAN hesabına etdikdən sonra "Ödəniş etdim" düyməsinə basın.'
+ : 'Ödənişi aşağıdakı karta etdikdən sonra "Ödəniş etdim" düyməsinə basın.';
+ document.getElementById('topupTitle').textContent = isTR ? 'Balans Artırma (IBAN)' : 'Balans Artırma (C2C)';
+ document.getElementById('topupInfo').textContent = isTR
+ ? 'IBAN köçürməsini etdikdən sonra məbləği daxil edin, ad-soyad və dekont yükləyin. Sorğu admin təsdiqinə düşəcək.'
+ : 'Kart köçürməsini etdikdən sonra məbləği daxil edin, ad-soyad və dekont yükləyin. Sorğu admin təsdiqinə düşəcək.';
+ document.getElementById('senderName').placeholder = isTR ? 'Hesap sahibi adı...' : 'Karta yazılan ad...';
+ document.getElementById('topupSenderName').placeholder = isTR ? 'Hesap sahibi adı...' : 'Karta yazılan ad...';
+ }
 
  document.addEventListener('DOMContentLoaded', () => {
+ const countrySelect = document.getElementById('paymentCountrySelect');
+ const locale = String(navigator.language || '').toLowerCase();
+ if (locale.startsWith('tr')) {
+ paymentCountry = 'TR';
+ countrySelect.value = 'TR';
+ }
+ updatePaymentCountryUI();
+ countrySelect.addEventListener('change', function () {
+ paymentCountry = this.value === 'TR' ? 'TR' : 'AZ';
+ updatePaymentCountryUI();
+ });
+
  const list = document.getElementById('checkoutItems');
  const totalEl = document.getElementById('finalTotal');
  const orderTotalDisplay = document.getElementById('orderTotalDisplay');
@@ -191,7 +251,7 @@ async function confirmPayment(method) {
  }
  const formData = new FormData();
  formData.append('cart', JSON.stringify(cart));
- formData.append('payment_method', method === 'c2c' ? 'C2C Card Transfer' : 'Balance');
+ formData.append('payment_method', method === 'c2c' ? getTransferMethodLabel() : 'Balance');
 
  if (method === 'c2c') {
  const sender = document.getElementById('senderName').value;
@@ -240,6 +300,7 @@ async function confirmPayment(method) {
  formData.append('amount', amount.toFixed(2));
  formData.append('sender_name', sender);
  formData.append('receipt', receiptFile);
+ formData.append('payment_method', getTransferMethodLabel());
 
  const res = await fetch('/balance/topups/request', {
  method: 'POST',
@@ -311,6 +372,11 @@ async function confirmPayment(method) {
  letter-spacing: 3px;
  font-weight: 700;
  font-family: monospace;
+ }
+
+ .iban-card-num {
+ font-size: 18px;
+ letter-spacing: 1px;
  }
 
  .card-footer-info {

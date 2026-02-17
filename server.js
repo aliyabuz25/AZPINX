@@ -591,6 +591,9 @@ let db;
  { key: 'bank_card', value: '4127 0000 1111 2222' },
  { key: 'bank_name', value: 'ABB BANK' },
  { key: 'bank_holder', value: 'AZPINX ADMIN' },
+ { key: 'tr_iban', value: '' },
+ { key: 'tr_bank_name', value: 'Ziraat Bankasi' },
+ { key: 'tr_account_holder', value: '' },
  { key: 'reseller_discount_percent', value: '8' },
  { key: 'seo_meta_title', value: 'AZPINX - Oyun İçi Məhsullar və Pin Satışı' },
  { key: 'seo_meta_description', value: 'AZPINX üzərindən oyun içi məhsullar, UC, VP, pin və rəqəmsal kodları təhlükəsiz və sürətli alın.' },
@@ -2115,8 +2118,13 @@ app.post('/process-order', uploadReceipt.single('receipt'), async (req, res) => 
  const payment_method = req.body.payment_method || 'C2C Card Transfer';
  const sender_name = req.body.sender_name || (payment_method === 'Balance' ? req.session.user.full_name : '');
  const receipt_path = req.file ? '/uploads/receipts/' + req.file.filename : null;
+ const allowedPaymentMethods = ['C2C Card Transfer', 'IBAN Transfer', 'Balance'];
 
- if (payment_method === 'C2C Card Transfer') {
+ if (!allowedPaymentMethods.includes(payment_method)) {
+ return res.status(400).json({ success: false, error: 'Yanlış ödəniş üsulu.' });
+ }
+
+ if (payment_method === 'C2C Card Transfer' || payment_method === 'IBAN Transfer') {
  if (!normalizeOptionalString(sender_name)) {
  return res.status(400).json({ success: false, error: 'Ödəniş edən şəxsin ad-soyadı tələb olunur.' });
  }
@@ -2190,6 +2198,10 @@ app.post('/balance/topups/request', uploadReceipt.single('receipt'), async (req,
  const amount = Number(req.body.amount || 0);
  const senderName = normalizeOptionalString(req.body.sender_name);
  const receiptPath = req.file ? '/uploads/receipts/' + req.file.filename : null;
+ const requestedPaymentMethod = normalizeOptionalString(req.body.payment_method);
+ const paymentMethod = ['C2C Card Transfer', 'IBAN Transfer'].includes(requestedPaymentMethod)
+ ? requestedPaymentMethod
+ : 'C2C Card Transfer';
 
  if (!senderName) {
  return res.status(400).json({ success: false, error: 'Ad Soyad daxil edin.' });
@@ -2203,7 +2215,7 @@ app.post('/balance/topups/request', uploadReceipt.single('receipt'), async (req,
 
  const [result] = await db.execute(
  'INSERT INTO balance_topups (user_id, amount, sender_name, receipt_path, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)',
- [req.session.user.id, Number(amount.toFixed(2)), senderName, receiptPath, 'C2C Card Transfer', 'pending']
+ [req.session.user.id, Number(amount.toFixed(2)), senderName, receiptPath, paymentMethod, 'pending']
  );
 
  const adminMsg = `AZPINX: Yeni balans artırma!\nİstifadəçi: ${req.session.user.full_name}\nNömrə: ${req.session.user.phone || 'Yoxdur'}\nMəbləğ: ${Number(amount).toFixed(2)} AZN\nTalep ID: #${result.insertId}`;
@@ -2761,7 +2773,8 @@ app.get('/admin/orders/export', isAdmin, async (req, res) => {
  };
  const paymentLabelMap = {
  Balance: 'Balans',
- 'C2C Card Transfer': 'Kartdan köçürmə (C2C)'
+ 'C2C Card Transfer': 'Kartdan köçürmə (C2C)',
+ 'IBAN Transfer': 'IBAN köçürməsi'
  };
 
  const escapeCsv = (value) => {
@@ -3220,6 +3233,9 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  bank_card,
  bank_name,
  bank_holder,
+ tr_iban,
+ tr_bank_name,
+ tr_account_holder,
  reseller_discount_percent,
  seo_meta_title,
  seo_meta_description,
@@ -3286,6 +3302,9 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  { key: 'bank_card', value: keep('bank_card', bank_card, '') },
  { key: 'bank_name', value: keep('bank_name', bank_name, '') },
  { key: 'bank_holder', value: keep('bank_holder', bank_holder, '') },
+ { key: 'tr_iban', value: keep('tr_iban', normalizeOptionalString(tr_iban), '') },
+ { key: 'tr_bank_name', value: keep('tr_bank_name', normalizeOptionalString(tr_bank_name), '') },
+ { key: 'tr_account_holder', value: keep('tr_account_holder', normalizeOptionalString(tr_account_holder), '') },
  { key: 'reseller_discount_percent', value: String(clampPercent(keep('reseller_discount_percent', reseller_discount_percent, '8'), 0, 90)) },
  { key: 'seo_meta_title', value: keep('seo_meta_title', normalizeOptionalString(seo_meta_title), '') },
  { key: 'seo_meta_description', value: keep('seo_meta_description', normalizeOptionalString(seo_meta_description), '') },
