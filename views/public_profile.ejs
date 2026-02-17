@@ -1,6 +1,9 @@
 <%- include('partials/header') %>
 
 <div class="product-page-container">
+  <% const totalPublicOrders = (publicOrders || []).length; %>
+  <% const totalPublicSpend = (publicOrders || []).reduce(function(sum, o){ return sum + Number(o.amount || 0); }, 0); %>
+  <% const completedPublicOrders = (publicOrders || []).filter(function(o){ return String(o.status || '').toLowerCase() === 'completed'; }).length; %>
   <div class="public-profile-card">
     <div class="public-avatar">
       <% if (profileUser.avatar_path) { %>
@@ -20,6 +23,21 @@
       <div class="mt-3">
         <a href="/people" class="btn btn-outline btn-sm">İcmaya qayıt</a>
       </div>
+    </div>
+  </div>
+
+  <div class="public-stats-grid mt-4">
+    <div class="public-stat-item">
+      <small>Sifariş sayı</small>
+      <strong><%= totalPublicOrders %></strong>
+    </div>
+    <div class="public-stat-item">
+      <small>Tamamlanan</small>
+      <strong><%= completedPublicOrders %></strong>
+    </div>
+    <div class="public-stat-item">
+      <small>Top alış</small>
+      <strong><%= Number(totalPublicSpend).toFixed(2) %> AZN</strong>
     </div>
   </div>
 
@@ -99,6 +117,40 @@
 .public-main p {
   margin: 0 0 8px;
   color: #475569;
+}
+.public-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.public-stat-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+.public-stat-item small {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 4px;
+}
+.public-stat-item strong {
+  font-size: 20px;
+  color: #0f172a;
+}
+@media (max-width: 768px) {
+  .public-profile-card:first-child {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .public-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 

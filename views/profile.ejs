@@ -31,6 +31,24 @@
  </div>
  </div>
 
+ <% const totalOrderCount = (orders || []).length; %>
+ <% const completedOrderCount = (orders || []).filter(function(o){ return String(o.status || '').toLowerCase() === 'completed'; }).length; %>
+ <% const totalOrderSpend = (orders || []).reduce(function(sum, o){ return sum + Number(o.amount || 0); }, 0); %>
+ <div class="profile-quick-stats mb-4">
+ <div class="profile-stat-card">
+ <small>Ümumi sifariş</small>
+ <strong><%= totalOrderCount %></strong>
+ </div>
+ <div class="profile-stat-card">
+ <small>Tamamlanan</small>
+ <strong><%= completedOrderCount %></strong>
+ </div>
+ <div class="profile-stat-card">
+ <small>Ümumi alış</small>
+ <strong><%= Number(totalOrderSpend).toFixed(2) %> AZN</strong>
+ </div>
+ </div>
+
  <div class="profile-section-card mb-4">
  <div class="card-header-premium">
  <i class="ri-user-settings-line"></i>
@@ -343,6 +361,34 @@
  margin-top: 10px;
  }
 
+ .profile-quick-stats {
+ display: grid;
+ grid-template-columns: repeat(3, minmax(0, 1fr));
+ gap: 12px;
+ }
+
+ .profile-stat-card {
+ background: #fff;
+ border: 1px solid #e2e8f0;
+ border-radius: 12px;
+ padding: 14px 16px;
+ box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+ }
+
+ .profile-stat-card small {
+ display: block;
+ color: #64748b;
+ font-size: 11px;
+ text-transform: uppercase;
+ letter-spacing: .4px;
+ margin-bottom: 4px;
+ }
+
+ .profile-stat-card strong {
+ color: #0f172a;
+ font-size: 20px;
+ }
+
  .form-control-premium {
  border: 1px solid #e2e8f0;
  border-radius: 10px;
@@ -486,6 +532,10 @@
  .referral-link-row {
  flex-direction: column;
  align-items: stretch;
+ }
+
+ .profile-quick-stats {
+ grid-template-columns: 1fr;
  }
  }
  </style>
