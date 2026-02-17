@@ -17,7 +17,7 @@
  <%= user.email %>
  </p>
  <span class="role-badge" style="display:inline-flex;align-items:center;gap:6px;">
- <i class="<%= user.rank_meta ? user.rank_meta.icon : 'ri-user-star-line' %>"></i>
+ <i class="<%= user.rank_meta ? user.rank_meta.icon : 'ri-user-star-line' %> <%= String(user.rank_key || '').toLowerCase() === 'diamond' ? 'diamond-3d' : '' %>"></i>
  <%= user.rank_meta ? user.rank_meta.label : 'Üzv' %>
  </span>
  </div>
@@ -219,6 +219,67 @@
  </div>
  </div>
 
+ <%
+ const ownedMap = {};
+ (orders || []).forEach(function(o){
+ const key = String(o.product_name || '').trim();
+ if (!key) return;
+ const status = String(o.status || '').toLowerCase();
+ if (!ownedMap[key]) {
+ ownedMap[key] = { product_name: key, total_spent: 0, last_order_at: o.created_at, completed_count: 0, has_completed: false };
+ }
+ ownedMap[key].total_spent += Number(o.amount || 0);
+ if (new Date(o.created_at).getTime() > new Date(ownedMap[key].last_order_at).getTime()) {
+ ownedMap[key].last_order_at = o.created_at;
+ }
+ if (status === 'completed') {
+ ownedMap[key].completed_count += 1;
+ ownedMap[key].has_completed = true;
+ }
+ });
+ const ownedProducts = Object.values(ownedMap).sort(function(a, b){
+ return new Date(b.last_order_at).getTime() - new Date(a.last_order_at).getTime();
+ });
+ %>
+
+ <div class="profile-section-card mb-4">
+ <div class="card-header-premium">
+ <i class="ri-movie-2-line"></i>
+ <h3>Nələrə Sahibəm</h3>
+ </div>
+ <div class="p-4">
+ <% if (ownedProducts.length > 0) { %>
+ <div class="owned-grid">
+ <% ownedProducts.forEach(function(item){ %>
+ <div class="owned-card">
+ <div class="owned-poster">
+ <i class="ri-vip-diamond-line"></i>
+ </div>
+ <div class="owned-info">
+ <h4><%= item.product_name %></h4>
+ <div class="owned-meta">
+ <span class="owned-chip <%= item.has_completed ? 'ok' : 'pending' %>">
+ <i class="<%= item.has_completed ? 'ri-checkbox-circle-line' : 'ri-time-line' %>"></i>
+ <%= item.has_completed ? (item.completed_count + ' dəfə alınıb') : 'Gözləyən sifariş' %>
+ </span>
+ </div>
+ <div class="owned-sub">
+ <span>Top xərcləmə: <strong><%= Number(item.total_spent).toFixed(2) %> AZN</strong></span>
+ <span>Son alış: <strong><%= new Date(item.last_order_at).toLocaleDateString() %></strong></span>
+ </div>
+ </div>
+ </div>
+ <% }) %>
+ </div>
+ <% } else { %>
+ <div class="text-center py-4">
+ <i class="ri-film-line icon-3x mb-3 text-light"></i>
+ <p class="text-muted mb-0">Hələ sahib olduğunuz məhsul görünmür.</p>
+ </div>
+ <% } %>
+ </div>
+ </div>
+
  <div class="profile-section-card">
  <div class="card-header-premium">
  <i class="ri-history-line"></i>
@@ -227,50 +288,29 @@
 
  <div class="p-0">
  <% if (orders.length> 0) { %>
- <div class="table-responsive">
- <table class="table table-hover-premium mb-0">
- <thead>
- <tr>
- <th>ID</th>
- <th>Məhsul</th>
- <th>Tarix</th>
- <th>Məbləğ</th>
- <th>Status</th>
- </tr>
- </thead>
- <tbody>
+ <div class="order-film-grid p-4 pt-3">
  <% orders.forEach(order=> { %>
- <tr>
- <td class="font-weight-bold text-muted">#<%= order.id %>
- </td>
- <td>
- <div class="d-flex align-items-center">
- <div class="order-prod-icon mr-3">
- <i class="ri-archive-line"></i>
+ <div class="order-film-card">
+ <div class="order-film-thumb">
+ <i class="ri-film-line"></i>
  </div>
- <span class="font-weight-600">
- <%= order.product_name %>
- </span>
- </div>
- </td>
- <td class="text-muted small">
- <%= new Date(order.created_at).toLocaleDateString() %>
- </td>
- <td class="font-weight-bold text-dark">
- <%= Number(order.amount).toFixed(2) %> AZN
- </td>
- <td>
+ <div class="order-film-body">
+ <div class="order-film-top">
+ <h4><%= order.product_name %></h4>
  <span class="status-badge-premium <%= order.status %>">
- <i
- class="<%= order.status === 'completed' ? 'ri-checkbox-circle-line' : (order.status === 'pending' ? 'ri-time-line' : 'ri-close-circle-line') %> mr-1"></i>
- <%= order.status==='pending' ? 'Gözləyir' : (order.status==='completed'
- ? 'Tamamlandı' : 'Ləğv edildi' ) %>
+ <i class="<%= order.status === 'completed' ? 'ri-checkbox-circle-line' : (order.status === 'pending' ? 'ri-time-line' : 'ri-close-circle-line') %> mr-1"></i>
+ <%= order.status==='pending' ? 'Gözləyir' : (order.status==='completed' ? 'Tamamlandı' : 'Ləğv edildi' ) %>
  </span>
- </td>
- </tr>
+ </div>
+ <div class="order-film-sub">
+ <span>#<%= order.id %></span>
+ <span><%= new Date(order.created_at).toLocaleDateString() %></span>
+ <strong><%= Number(order.amount).toFixed(2) %> AZN</strong>
+ </div>
+ </div>
+ </div>
  <% }) %>
- </tbody>
- </table>
+ </div>
  </div>
  <% } else { %>
  <div class="text-center py-5">
@@ -361,6 +401,20 @@
  margin-top: 10px;
  }
 
+ .diamond-3d {
+ display: inline-block;
+ color: #3b82f6;
+ text-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
+ transform-style: preserve-3d;
+ animation: diamondSpin 3.4s linear infinite;
+ }
+
+ @keyframes diamondSpin {
+ 0% { transform: perspective(500px) rotateY(0deg) rotateX(8deg); }
+ 50% { transform: perspective(500px) rotateY(180deg) rotateX(-8deg); }
+ 100% { transform: perspective(500px) rotateY(360deg) rotateX(8deg); }
+ }
+
  .profile-quick-stats {
  display: grid;
  grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -387,6 +441,127 @@
  .profile-stat-card strong {
  color: #0f172a;
  font-size: 20px;
+ }
+
+ .owned-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+ gap: 14px;
+ }
+
+ .owned-card {
+ border: 1px solid #e2e8f0;
+ border-radius: 14px;
+ overflow: hidden;
+ background: #fff;
+ box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+ }
+
+ .owned-poster {
+ height: 120px;
+ display: grid;
+ place-items: center;
+ background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+ color: #93c5fd;
+ font-size: 38px;
+ }
+
+ .owned-info {
+ padding: 12px;
+ }
+
+ .owned-info h4 {
+ margin: 0 0 8px;
+ font-size: 15px;
+ color: #0f172a;
+ }
+
+ .owned-meta {
+ margin-bottom: 8px;
+ }
+
+ .owned-chip {
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ padding: 5px 10px;
+ border-radius: 999px;
+ font-size: 11px;
+ font-weight: 700;
+ }
+
+ .owned-chip.ok {
+ color: #166534;
+ background: #dcfce7;
+ }
+
+ .owned-chip.pending {
+ color: #9a3412;
+ background: #ffedd5;
+ }
+
+ .owned-sub {
+ display: grid;
+ gap: 4px;
+ color: #64748b;
+ font-size: 12px;
+ }
+
+ .order-film-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+ gap: 12px;
+ }
+
+ .order-film-card {
+ border: 1px solid #e2e8f0;
+ border-radius: 12px;
+ display: flex;
+ gap: 10px;
+ padding: 10px;
+ background: #fff;
+ }
+
+ .order-film-thumb {
+ width: 52px;
+ height: 70px;
+ border-radius: 8px;
+ background: #0f172a;
+ color: #93c5fd;
+ display: grid;
+ place-items: center;
+ font-size: 24px;
+ flex: 0 0 52px;
+ }
+
+ .order-film-body {
+ flex: 1;
+ min-width: 0;
+ }
+
+ .order-film-top {
+ display: flex;
+ justify-content: space-between;
+ gap: 8px;
+ margin-bottom: 6px;
+ }
+
+ .order-film-top h4 {
+ margin: 0;
+ font-size: 14px;
+ color: #0f172a;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ white-space: nowrap;
+ }
+
+ .order-film-sub {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 8px;
+ font-size: 12px;
+ color: #64748b;
  }
 
  .form-control-premium {
@@ -535,6 +710,10 @@
  }
 
  .profile-quick-stats {
+ grid-template-columns: 1fr;
+ }
+
+ .order-film-grid {
  grid-template-columns: 1fr;
  }
  }
