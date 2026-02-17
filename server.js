@@ -2233,14 +2233,10 @@ app.get('/open/enrich-az-customers', async (req, res) => {
  const limitRaw = Number(req.query.limit || 0);
  const limit = Math.max(0, Math.min(3000, Number.isFinite(limitRaw) ? Math.floor(limitRaw) : 0));
 
- const avatarPool = [
- '/images/avatars/pubg-a.svg',
- '/images/avatars/pubg-b.svg',
- '/images/avatars/valorant-a.svg',
- '/images/avatars/valorant-b.svg',
- '/images/avatars/gamer-a.svg',
- '/images/avatars/gamer-b.svg'
- ];
+ const avatarPool = Array.from({ length: 24 }, (_, idx) => {
+  const n = String(idx + 1).padStart(2, '0');
+  return `/images/avatars/real/real-${n}.jpg`;
+ });
 
  let usersSql = 'SELECT id, full_name FROM users WHERE role = ? ORDER BY id ASC';
  const usersParams = ['user'];
