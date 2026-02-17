@@ -62,6 +62,7 @@
         const parent = node.parentElement;
         if (parent.closest('script,style,noscript,textarea,option,select')) return NodeFilter.FILTER_REJECT;
         if (parent.closest('[data-azn-value]')) return NodeFilter.FILTER_REJECT;
+        if (parent.closest('[data-no-currency-convert], .no-auto-currency')) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });

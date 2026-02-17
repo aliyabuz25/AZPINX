@@ -188,24 +188,36 @@
  </header>
  <% if (locals.user) { %>
  <div class="topup-modal" id="topupModal">
- <div class="topup-modal-card">
+ <div class="topup-modal-card" data-no-currency-convert="1">
  <div class="topup-head">
  <h4>Balans artır</h4>
  <button type="button" id="closeTopupModal" class="topup-close"><i class="ri-close-line"></i></button>
  </div>
- <p class="topup-sub">Paket seçin, C2C ödənişi edin, dekont yükləyin. Admin təsdiqdən sonra balans artırılacaq.</p>
+
+ <div class="topup-mode-tabs" id="topupModeTabs">
+ <button type="button" class="topup-mode-btn active" data-mode="c2c">C2C (AZN)</button>
+ <button type="button" class="topup-mode-btn" data-mode="tr">TR IBAN (TRY)</button>
+ </div>
+ <p class="topup-sub" id="topupSubText">Paket seçin, C2C ödənişi edin, dekont yükləyin. Admin təsdiqdən sonra balans artırılacaq.</p>
 
  <div class="topup-packages" id="topupPackages">
  <% [20,40,60,80,100,120,140,160].forEach(function(pkg){ %>
- <button type="button" class="topup-package-btn" data-amount="<%= pkg %>"><%= pkg %> AZN</button>
+ <button type="button" class="topup-package-btn no-auto-currency" data-amount="<%= pkg %>" data-azn="<%= pkg %>"><%= pkg %> AZN</button>
  <% }) %>
  </div>
+ <label for="topupAmountManual" id="topupAmountLabel" class="topup-input-label">Məbləğ (AZN)</label>
  <input type="number" id="topupAmountManual" class="topup-input mt-2" min="1" step="0.01" placeholder="və ya məbləği əl ilə daxil edin">
+ <small class="topup-input-hint" id="topupAmountHint">TR IBAN seçiləndə daxil etdiyiniz TRY məbləği sistemdə avtomatik AZN-ə çevrilir.</small>
 
- <div class="topup-c2c-box">
+ <div class="topup-c2c-box topup-pay-box topup-pay-c2c">
  <div class="topup-bank-row"><span>Kart</span><strong><%= settings.bank_card || '0000 0000 0000 0000' %></strong></div>
  <div class="topup-bank-row"><span>Sahib</span><strong><%= settings.bank_holder || 'AZPINX ADMIN' %></strong></div>
  <div class="topup-bank-row"><span>Bank</span><strong><%= settings.bank_name || 'BANK' %></strong></div>
+ </div>
+ <div class="topup-c2c-box topup-pay-box topup-pay-tr" style="display:none;">
+ <div class="topup-bank-row"><span>IBAN</span><strong><%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %></strong></div>
+ <div class="topup-bank-row"><span>Sahib</span><strong><%= settings.tr_account_holder || 'ISIM SOYISIM' %></strong></div>
+ <div class="topup-bank-row"><span>Banka</span><strong><%= settings.tr_bank_name || 'BANKA' %></strong></div>
  </div>
  <p class="topup-security-note"><i class="ri-shield-check-line"></i> Ödəniş məlumatları AES-256 və TLS ilə qorunan təhlükəsiz infrastrukturda emal olunur.</p>
 
@@ -219,39 +231,124 @@
  <% } %>
 
  <script>
- (function () {
+(function () {
  const openBtn = document.getElementById('openTopupModal');
  const closeBtn = document.getElementById('closeTopupModal');
  const modal = document.getElementById('topupModal');
+ const modeTabs = document.getElementById('topupModeTabs');
  const packageWrap = document.getElementById('topupPackages');
  const submitBtn = document.getElementById('submitTopupNav');
  const senderInput = document.getElementById('topupSenderNameNav');
  const receiptInput = document.getElementById('topupReceiptNav');
  const manualAmountInput = document.getElementById('topupAmountManual');
- if (!openBtn || !modal || !packageWrap || !submitBtn || !senderInput || !receiptInput || !manualAmountInput) return;
+ const amountLabel = document.getElementById('topupAmountLabel');
+ const amountHint = document.getElementById('topupAmountHint');
+ const subText = document.getElementById('topupSubText');
+ const c2cBox = modal ? modal.querySelector('.topup-pay-c2c') : null;
+ const trBox = modal ? modal.querySelector('.topup-pay-tr') : null;
+ if (!openBtn || !modal || !modeTabs || !packageWrap || !submitBtn || !senderInput || !receiptInput || !manualAmountInput || !amountLabel || !amountHint || !subText || !c2cBox || !trBox) return;
 
- let selectedAmount = 20;
+ let paymentMode = 'c2c';
+ let selectedAmountAzn = 20;
+ let fxRates = { AZN: 1, TRY: 21, USD: 0.588235 };
+
+ const toNum = (value) => {
+ const n = Number(String(value || '').replace(',', '.').trim());
+ return Number.isFinite(n) ? n : 0;
+ };
+
+ const format2 = (value) => new Intl.NumberFormat(undefined, {
+ minimumFractionDigits: 2,
+ maximumFractionDigits: 2
+ }).format(Number(value || 0));
+
+ const getTryRate = () => {
+ const r = Number(fxRates.TRY || 0);
+ return (Number.isFinite(r) && r > 0) ? r : 21;
+ };
+
+ function displayedFromAzn(aznAmount) {
+ return paymentMode === 'tr' ? (aznAmount * getTryRate()) : aznAmount;
+ }
+
+ function aznFromDisplayed(displayedAmount) {
+ return paymentMode === 'tr' ? (displayedAmount / getTryRate()) : displayedAmount;
+ }
+
+ function updatePackageLabels() {
  packageWrap.querySelectorAll('.topup-package-btn').forEach((btn) => {
- if (Number(btn.dataset.amount) === selectedAmount) btn.classList.add('active');
+ const azn = toNum(btn.dataset.azn || btn.dataset.amount);
+ const value = displayedFromAzn(azn);
+ btn.textContent = paymentMode === 'tr'
+ ? `${format2(value)} TRY`
+ : `${format2(value)} AZN`;
+ });
+ }
+
+ function syncManualFromSelected() {
+ manualAmountInput.value = String(displayedFromAzn(selectedAmountAzn).toFixed(2));
+ }
+
+ function syncActivePackageFromAzn() {
+ packageWrap.querySelectorAll('.topup-package-btn').forEach((btn) => {
+ const azn = toNum(btn.dataset.azn || btn.dataset.amount);
+ btn.classList.toggle('active', Math.abs(azn - selectedAmountAzn) < 0.0001);
+ });
+ }
+
+ function setPaymentMode(nextMode) {
+ paymentMode = nextMode === 'tr' ? 'tr' : 'c2c';
+ modeTabs.querySelectorAll('.topup-mode-btn').forEach((btn) => {
+ btn.classList.toggle('active', btn.dataset.mode === paymentMode);
+ });
+ c2cBox.style.display = paymentMode === 'c2c' ? 'block' : 'none';
+ trBox.style.display = paymentMode === 'tr' ? 'block' : 'none';
+ subText.textContent = paymentMode === 'tr'
+ ? 'Paket seçin, TR IBAN köçürməsi edin, dekont yükləyin. Admin təsdiqdən sonra balans artırılacaq.'
+ : 'Paket seçin, C2C ödənişi edin, dekont yükləyin. Admin təsdiqdən sonra balans artırılacaq.';
+ amountLabel.textContent = paymentMode === 'tr' ? 'Məbləğ (TRY)' : 'Məbləğ (AZN)';
+ amountHint.style.display = paymentMode === 'tr' ? 'block' : 'none';
+ updatePackageLabels();
+ syncManualFromSelected();
+ syncActivePackageFromAzn();
+ }
+
+ modeTabs.addEventListener('click', (e) => {
+ const btn = e.target.closest('.topup-mode-btn');
+ if (!btn) return;
+ setPaymentMode(btn.dataset.mode);
+ });
+
+ packageWrap.querySelectorAll('.topup-package-btn').forEach((btn) => {
+ const azn = toNum(btn.dataset.azn || btn.dataset.amount);
+ if (Math.abs(azn - selectedAmountAzn) < 0.0001) btn.classList.add('active');
  btn.addEventListener('click', () => {
- selectedAmount = Number(btn.dataset.amount || 0);
- manualAmountInput.value = String(selectedAmount);
- packageWrap.querySelectorAll('.topup-package-btn').forEach(b => b.classList.remove('active'));
- btn.classList.add('active');
+ selectedAmountAzn = azn;
+ syncManualFromSelected();
+ syncActivePackageFromAzn();
  });
  });
- manualAmountInput.value = String(selectedAmount);
 
  manualAmountInput.addEventListener('input', () => {
- const amount = Number(manualAmountInput.value || 0);
- if (!amount) return;
- selectedAmount = amount;
- packageWrap.querySelectorAll('.topup-package-btn').forEach((b) => {
- b.classList.toggle('active', Number(b.dataset.amount) === amount);
- });
+ const displayedAmount = toNum(manualAmountInput.value);
+ if (!displayedAmount || displayedAmount <= 0) return;
+ selectedAmountAzn = Number(aznFromDisplayed(displayedAmount).toFixed(2));
+ syncActivePackageFromAzn();
  });
 
- openBtn.addEventListener('click', () => modal.classList.add('show'));
+ window.addEventListener('azpin:currency-change', (e) => {
+ if (e && e.detail && e.detail.rates) fxRates = e.detail.rates;
+ if (paymentMode === 'tr') {
+ updatePackageLabels();
+ syncManualFromSelected();
+ }
+ });
+
+ openBtn.addEventListener('click', () => {
+ const selectedCurrency = String((document.getElementById('currencySelector') || {}).value || 'AZN').toUpperCase();
+ setPaymentMode(selectedCurrency === 'TRY' ? 'tr' : 'c2c');
+ modal.classList.add('show');
+ });
  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('show'));
  modal.addEventListener('click', (e) => {
  if (e.target === modal) modal.classList.remove('show');
@@ -260,15 +357,17 @@
  submitBtn.addEventListener('click', async () => {
  const sender = (senderInput.value || '').trim();
  const receipt = receiptInput.files[0];
- const amount = Number(manualAmountInput.value || selectedAmount || 0);
- if (!amount || amount <= 0 || !sender || !receipt) {
+ const displayedAmount = toNum(manualAmountInput.value);
+ const amountAzn = Number(aznFromDisplayed(displayedAmount).toFixed(2));
+ if (!displayedAmount || displayedAmount <= 0 || !amountAzn || amountAzn <= 0 || !sender || !receipt) {
  Toastify({ text: "Məbləğ, Ad Soyad və dekont mütləqdir.", backgroundColor: "#ef4444" }).showToast();
  return;
  }
 
  const fd = new FormData();
- fd.append('amount', String(amount));
+ fd.append('amount', String(amountAzn));
  fd.append('sender_name', sender);
+ fd.append('payment_method', paymentMode === 'tr' ? 'IBAN Transfer' : 'C2C Card Transfer');
  fd.append('receipt', receipt);
 
  submitBtn.disabled = true;
@@ -279,7 +378,7 @@
  Toastify({ text: data.message || "Sorğu göndərildi.", backgroundColor: "#10b981" }).showToast();
  senderInput.value = '';
  receiptInput.value = '';
- manualAmountInput.value = String(selectedAmount);
+ syncManualFromSelected();
  modal.classList.remove('show');
  } else {
  Toastify({ text: "Xəta: " + (data.error || 'Bilinməyən xəta'), backgroundColor: "#ef4444" }).showToast();
@@ -290,6 +389,8 @@
  submitBtn.disabled = false;
  }
  });
+
+ setPaymentMode('c2c');
  })();
 
  function createFloatingGlyph() {
@@ -359,6 +460,26 @@
  .topup-head h4 { margin: 0; font-size: 18px; font-weight: 700; }
  .topup-close { background: transparent; border: 0; font-size: 22px; }
  .topup-sub { margin: 8px 0 12px; font-size: 13px; color: #64748b; }
+ .topup-mode-tabs {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 8px;
+ margin: 10px 0 8px;
+ }
+ .topup-mode-btn {
+ border: 1px solid #e2e8f0;
+ background: #f8fafc;
+ border-radius: 10px;
+ padding: 8px 10px;
+ font-size: 13px;
+ font-weight: 700;
+ color: #334155;
+ }
+ .topup-mode-btn.active {
+ border-color: #2563eb;
+ background: #eff6ff;
+ color: #1d4ed8;
+ }
  .topup-packages {
  display: grid;
  grid-template-columns: repeat(4, 1fr);
@@ -376,6 +497,20 @@
  border-color: #38bdf8;
  background: #ecfeff;
  color: #0369a1;
+ }
+ .topup-input-label {
+ display: block;
+ margin-top: 10px;
+ margin-bottom: 2px;
+ font-size: 12px;
+ font-weight: 700;
+ color: #334155;
+ }
+ .topup-input-hint {
+ display: none;
+ margin-top: 6px;
+ font-size: 11px;
+ color: #64748b;
  }
  .topup-c2c-box {
  margin-top: 12px;
