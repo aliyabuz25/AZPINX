@@ -48,15 +48,11 @@
  </span>
  </div>
  </div>
- <div class="bank-card-preview account-block account-tr" style="display: none;">
- <p class="card-label">IBAN</p>
- <p class="card-num iban-card-num">
- <%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %>
- </p>
- <div class="card-footer-info">
- <span><%= settings.tr_account_holder || 'ISIM SOYISIM' %></span>
- <span><%= settings.tr_bank_name || 'BANKA' %></span>
- </div>
+ <div class="iban-info-box account-block account-tr" style="display: none;">
+ <h5 class="iban-title">IBAN Məlumatları</h5>
+ <p class="iban-line"><strong>IBAN:</strong> <span class="iban-value"><%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %></span></p>
+ <p class="iban-line"><strong>Ad Soyad:</strong> <%= settings.tr_account_holder || 'ISIM SOYISIM' %></p>
+ <p class="iban-line"><strong>Banka:</strong> <%= settings.tr_bank_name || 'BANKA' %></p>
  </div>
 
  <div class="form-group" style="margin-top: 15px;">
@@ -118,13 +114,11 @@
  <span><%= settings.bank_name || 'BANK' %></span>
  </div>
  </div>
- <div class="bank-card-preview account-block account-tr" style="display: none;">
- <p class="card-label">IBAN</p>
- <p class="card-num iban-card-num"><%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %></p>
- <div class="card-footer-info">
- <span><%= settings.tr_account_holder || 'ISIM SOYISIM' %></span>
- <span><%= settings.tr_bank_name || 'BANKA' %></span>
- </div>
+ <div class="iban-info-box account-block account-tr" style="display: none;">
+ <h5 class="iban-title">IBAN Məlumatları</h5>
+ <p class="iban-line"><strong>IBAN:</strong> <span class="iban-value"><%= settings.tr_iban || 'TR00 0000 0000 0000 0000 0000 00' %></span></p>
+ <p class="iban-line"><strong>Ad Soyad:</strong> <%= settings.tr_account_holder || 'ISIM SOYISIM' %></p>
+ <p class="iban-line"><strong>Banka:</strong> <%= settings.tr_bank_name || 'BANKA' %></p>
  </div>
 
  <div class="form-group" style="margin-top: 15px;">
@@ -374,10 +368,32 @@ async function confirmPayment(method) {
  font-family: monospace;
  }
 
- .iban-card-num {
- font-size: 18px;
- letter-spacing: 1px;
- }
+.iban-info-box {
+ background: #f8fafc;
+ border: 1px solid #e2e8f0;
+ border-radius: 12px;
+ padding: 16px;
+ margin: 16px 0;
+ color: #0f172a;
+}
+
+.iban-title {
+ margin: 0 0 10px;
+ font-size: 16px;
+ font-weight: 700;
+}
+
+.iban-line {
+ margin: 6px 0;
+ font-size: 14px;
+ color: #334155;
+}
+
+.iban-value {
+ font-family: monospace;
+ font-weight: 700;
+ letter-spacing: 0.4px;
+}
 
  .card-footer-info {
  display: flex;
