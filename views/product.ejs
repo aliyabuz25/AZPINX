@@ -55,7 +55,7 @@
  </span>
  </div>
 
- <% if (product.category.toUpperCase().includes('PUBG')) { %>
+ <% if (requiresPlayerId) { %>
  <div class="mb-3">
  <label for="player_id" class="small text-muted d-block mb-2">Player ID</label>
  <div class="d-flex align-items-center">
@@ -136,7 +136,7 @@
 
  <script>
  function handleAddToCart() {
- const isPubg ="<%= product.category.toUpperCase().includes('PUBG') %>" ==="true";
+ const isPubg = "<%= requiresPlayerId ? 'true' : 'false' %>" === "true";
  let extra = {};
  if (isPubg) {
  const pid = (document.getElementById('player_id').value || '').trim();

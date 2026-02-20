@@ -186,6 +186,36 @@ document.addEventListener('DOMContentLoaded', () => {
  });
  });
 
+ // --- Category quick actions horizontal scroll controls ---
+ const quickIconsRow = document.getElementById('quickIconsRow');
+ const quickIconsPrev = document.querySelector('.quick-icons-prev');
+ const quickIconsNext = document.querySelector('.quick-icons-next');
+
+ if (quickIconsRow && quickIconsPrev && quickIconsNext) {
+ const scrollStep = () => Math.max(220, Math.round(quickIconsRow.clientWidth * 0.7));
+ const updateQuickIconsButtons = () => {
+ const maxScrollLeft = Math.max(0, quickIconsRow.scrollWidth - quickIconsRow.clientWidth);
+ const hasOverflow = maxScrollLeft > 5;
+
+ quickIconsPrev.classList.toggle('is-hidden', !hasOverflow);
+ quickIconsNext.classList.toggle('is-hidden', !hasOverflow);
+
+ quickIconsPrev.disabled = !hasOverflow || quickIconsRow.scrollLeft <= 2;
+ quickIconsNext.disabled = !hasOverflow || quickIconsRow.scrollLeft >= (maxScrollLeft - 2);
+ };
+
+ quickIconsPrev.addEventListener('click', () => {
+ quickIconsRow.scrollBy({ left: -scrollStep(), behavior: 'smooth' });
+ });
+ quickIconsNext.addEventListener('click', () => {
+ quickIconsRow.scrollBy({ left: scrollStep(), behavior: 'smooth' });
+ });
+
+ quickIconsRow.addEventListener('scroll', updateQuickIconsButtons, { passive: true });
+ window.addEventListener('resize', updateQuickIconsButtons);
+ updateQuickIconsButtons();
+ }
+
  // --- Working Hours Popup (only off-hours: 00:00 – 07:00) ---
  (function showWorkingHoursPopup() {
  const hour = new Date().getHours();

@@ -131,12 +131,21 @@ const sliderStorage = multer.diskStorage({
  }
  cb(null, dir);
  },
- filename: (req, file, cb) => cb(null, 'slider-' + Date.now() + path.extname(file.originalname))
+ filename: (req, file, cb) => {
+ const safeField = String(file.fieldname || 'image').replace(/[^a-z0-9_-]/gi, '');
+ const uniqueId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+ cb(null, `slider-${safeField}-${uniqueId}${path.extname(file.originalname)}`);
+ }
 });
 const uploadSlider = multer({
  storage: sliderStorage,
  limits: { fileSize: Infinity, files: Infinity }
 });
+const uploadSliderImages = uploadSlider.fields([
+ { name: 'image_web', maxCount: 1 },
+ { name: 'image_mobile', maxCount: 1 },
+ { name: 'image', maxCount: 1 }
+]);
 
 // Multer setup for user avatars
 const avatarStorage = multer.diskStorage({
@@ -450,6 +459,8 @@ let db;
  `CREATE TABLE IF NOT EXISTS sliders (
  id INT AUTO_INCREMENT PRIMARY KEY,
  image_path VARCHAR(255) NOT NULL,
+ image_path_web VARCHAR(255) NULL,
+ image_path_mobile VARCHAR(255) NULL,
  title VARCHAR(255),
  description TEXT,
  link VARCHAR(255),
@@ -512,6 +523,8 @@ let db;
  { table: 'home_sections', column: 'category_id', definition: 'INT NULL AFTER title' },
  { table: 'home_sections', column: 'order_index', definition: 'INT DEFAULT 0 AFTER product_ids', oldColumn: 'sort_order' },
  { table: 'sliders', column: 'description', definition: 'TEXT AFTER title' },
+ { table: 'sliders', column: 'image_path_web', definition: 'VARCHAR(255) NULL AFTER image_path' },
+ { table: 'sliders', column: 'image_path_mobile', definition: 'VARCHAR(255) NULL AFTER image_path_web' },
  { table: 'sliders', column: 'order_index', definition: 'INT DEFAULT 0 AFTER link', oldColumn: 'sort_order' },
  { table: 'products', column: 'category_id', definition: 'INT NULL AFTER category' },
  { table: 'orders', column: 'player_id', definition: 'VARCHAR(100) AFTER payment_method' },
@@ -864,6 +877,33 @@ function normalizeWishlistProductRef(value) {
  const ref = String(normalized).trim();
  if (!ref) return null;
  return ref;
+}
+
+function getSliderUploadedFile(req, fieldName) {
+ const files = req?.files || {};
+ const list = Array.isArray(files[fieldName]) ? files[fieldName] : [];
+ return list.length ? list[0] : null;
+}
+
+function resolveSliderImagePaths(req) {
+ const desktopFile = getSliderUploadedFile(req, 'image_web') || getSliderUploadedFile(req, 'image');
+ const mobileFile = getSliderUploadedFile(req, 'image_mobile');
+
+ const imagePathWeb = desktopFile ? `/uploads/sliders/${desktopFile.filename}` : null;
+ const imagePathMobile = mobileFile ? `/uploads/sliders/${mobileFile.filename}` : null;
+ const fallbackImagePath = imagePathWeb || imagePathMobile;
+
+ return {
+ imagePathWeb,
+ imagePathMobile,
+ fallbackImagePath
+ };
+}
+
+function productRequiresPubgPlayerId(product = {}) {
+ const bag = `${String(product.category || '')} ${String(product.name || '')}`.toLowerCase();
+ if (!bag.includes('pubg')) return false;
+ return true;
 }
 
 async function findUserByLoginIdentifier(identifier) {
@@ -1727,17 +1767,36 @@ app.get('/', async (req, res) => {
  const products = allProducts.slice(startIndex, endIndex);
 
  const [dbSliders] = await db.execute('SELECT * FROM sliders ORDER BY created_at DESC');
- const sliders = dbSliders.map(s => ({
- image: s.image_path,
+ const sliders = dbSliders
+ .map((s) => {
+ const webImage = normalizeOptionalString(s.image_path_web) || normalizeOptionalString(s.image_path) || '';
+ const mobileImage = normalizeOptionalString(s.image_path_mobile) || webImage;
+ return {
+ image: webImage,
+ image_mobile: mobileImage,
  title: s.title || '',
  description: s.description || '',
  link: s.link || '#'
- }));
+ };
+ })
+ .filter((slider) => Boolean(slider.image));
 
  if (sliders.length === 0) {
  sliders.push(
- { image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80', title: 'Ən Yeni Oyunlar', description: 'Bütün rəqəmsal kodlar ən ucuz qiymətə!', link: '#' },
- { image: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=1200&q=80', title: 'PUBG Mobile UC', description: 'Anında çatdırılma və sərfəli paketlər.', link: '#' }
+ {
+ image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80',
+ image_mobile: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=900&q=80',
+ title: 'Ən Yeni Oyunlar',
+ description: 'Bütün rəqəmsal kodlar ən ucuz qiymətə!',
+ link: '#'
+ },
+ {
+ image: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=1200&q=80',
+ image_mobile: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=900&q=80',
+ title: 'PUBG Mobile UC',
+ description: 'Anında çatdırılma və sərfəli paketlər.',
+ link: '#'
+ }
  );
  }
 
@@ -2108,7 +2167,8 @@ app.get('/product/:id', async (req, res) => {
  const similarProducts = products
  .filter(p => p.category === product.category && p.id != product.id && p.status === 'sale' && p.is_active)
  .slice(0, 4);
- res.render('product', { title: product.name, product, similarProducts });
+ const requiresPlayerId = productRequiresPubgPlayerId(product);
+ res.render('product', { title: product.name, product, similarProducts, requiresPlayerId });
 });
 
 // --- Auth Routes ---
@@ -3730,7 +3790,15 @@ app.get('/admin/sliders', isAdmin, async (req, res) => {
 
 app.get('/admin/ad-banner', isAdmin, async (req, res) => {
  try {
- const [sliderRows] = await db.execute('SELECT image_path FROM sliders WHERE image_path IS NOT NULL AND image_path <> "" ORDER BY created_at DESC');
+ const [sliderRows] = await db.execute(`
+ SELECT image_path, image_path_web, image_path_mobile
+ FROM sliders
+ WHERE
+ (image_path IS NOT NULL AND image_path <> '')
+ OR (image_path_web IS NOT NULL AND image_path_web <> '')
+ OR (image_path_mobile IS NOT NULL AND image_path_mobile <> '')
+ ORDER BY created_at DESC
+ `);
  const [categoryRows] = await db.execute('SELECT image_path FROM categories WHERE image_path IS NOT NULL AND image_path <> "" ORDER BY created_at DESC');
  const [productRows] = await db.execute('SELECT image_path FROM products WHERE image_path IS NOT NULL AND image_path <> "" ORDER BY id DESC LIMIT 120');
 
@@ -3746,8 +3814,9 @@ app.get('/admin/ad-banner', isAdmin, async (req, res) => {
  });
  }
 
- const dbImages = [...sliderRows, ...categoryRows, ...productRows]
- .map((row) => normalizeOptionalString(row.image_path))
+ const sliderImages = sliderRows.flatMap((row) => [row.image_path, row.image_path_web, row.image_path_mobile]);
+ const dbImages = [...sliderImages, ...categoryRows.map((row) => row.image_path), ...productRows.map((row) => row.image_path)]
+ .map((value) => normalizeOptionalString(value))
  .filter((value) => value && value.startsWith('/'))
  .filter((value) => !value.startsWith('/uploads/receipts/'));
 
@@ -3774,7 +3843,7 @@ app.get('/admin/ad-banner', isAdmin, async (req, res) => {
 
 // Admin Slider Create
 app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
- uploadSlider.single('image')(req, res, (err) => {
+ uploadSliderImages(req, res, (err) => {
  if (err instanceof multer.MulterError) {
  console.error('Multer Error during slider upload:', err);
  return adminRedirect(req, res, '/admin/sliders?error=Yükləmə xətası (Multer): ' + err.message);
@@ -3787,20 +3856,21 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
 }, async (req, res) => {
  try {
  const { title, description } = req.body;
- console.log('Slider Create Request Body:', req.body);
- console.log('Uploaded File Information:', req.file);
+ const { imagePathWeb, imagePathMobile, fallbackImagePath } = resolveSliderImagePaths(req);
 
- if (!req.file) {
+ if (!fallbackImagePath) {
  console.warn('Slider upload attempt without file.');
  return adminRedirect(req, res, '/admin/sliders?error=Şəkil seçilməyib və ya yüklənmədi');
  }
 
- const image_path = '/uploads/sliders/' + req.file.filename;
- console.log('Storing slider with image_path:', image_path);
+ const imagePath = imagePathWeb || fallbackImagePath;
+ const imagePathWebFinal = imagePathWeb || imagePath;
 
  const resolvedLink = resolveSliderLink(req.body);
- await db.execute('INSERT INTO sliders (image_path, title, description, link) VALUES (?, ?, ?, ?)',
- [image_path, title || '', description || '', resolvedLink || '#']);
+ await db.execute(
+ 'INSERT INTO sliders (image_path, image_path_web, image_path_mobile, title, description, link) VALUES (?, ?, ?, ?, ?, ?)',
+ [imagePath, imagePathWebFinal, imagePathMobile || null, title || '', description || '', resolvedLink || '#']
+ );
 
  console.log('Slider successfully inserted into database.');
  adminRedirect(req, res, '/admin/sliders?success=Slayder əlavə edildi');
@@ -3811,7 +3881,19 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
 });
 
 // Admin Slider Update
-app.post('/admin/sliders/update', isAdmin, uploadSlider.single('image'), async (req, res) => {
+app.post('/admin/sliders/update', isAdmin, (req, res, next) => {
+ uploadSliderImages(req, res, (err) => {
+ if (err instanceof multer.MulterError) {
+ console.error('Multer Error during slider upload:', err);
+ return adminRedirect(req, res, '/admin/sliders?error=Yükləmə xətası (Multer): ' + err.message);
+ }
+ if (err) {
+ console.error('Unknown Error during slider upload:', err);
+ return adminRedirect(req, res, '/admin/sliders?error=Bilinməyən xəta: ' + err.message);
+ }
+ next();
+ });
+}, async (req, res) => {
  try {
  const id = Number(req.body.id);
  if (!id) return adminRedirect(req, res, '/admin/sliders?error=Yanlış ID');
@@ -3819,13 +3901,17 @@ app.post('/admin/sliders/update', isAdmin, uploadSlider.single('image'), async (
  const title = normalizeOptionalString(req.body.title) || '';
  const description = normalizeOptionalString(req.body.description) || '';
  const link = resolveSliderLink(req.body) || '#';
- const imagePath = req.file ? '/uploads/sliders/' + req.file.filename : null;
+ const { imagePathWeb, imagePathMobile } = resolveSliderImagePaths(req);
 
  let sql = 'UPDATE sliders SET title = ?, description = ?, link = ?';
  const params = [title, description, link];
- if (imagePath) {
- sql += ', image_path = ?';
- params.push(imagePath);
+ if (imagePathWeb) {
+ sql += ', image_path = ?, image_path_web = ?';
+ params.push(imagePathWeb, imagePathWeb);
+ }
+ if (imagePathMobile) {
+ sql += ', image_path_mobile = ?';
+ params.push(imagePathMobile);
  }
  sql += ' WHERE id = ?';
  params.push(id);

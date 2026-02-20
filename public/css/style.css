@@ -491,15 +491,29 @@ header .logo img {
     width: 100%;
     height: 100%;
     min-height: 520px;
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
+    background-color: #020617;
     border-radius: 0;
     transform: scale(1.04);
     transition: transform 7s ease;
     display: flex;
     align-items: center;
+    overflow: hidden;
     will-change: transform;
+}
+
+.slider-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+}
+
+.slider-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center center;
+    display: block;
 }
 
 .slider-item[data-has-link="true"] {
@@ -742,14 +756,60 @@ header .logo img {
     color: #64748b;
 }
 
+.quick-icons-scroll {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .quick-icons-row {
     margin: 0;
     padding: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex: 1;
     overflow-x: auto;
     gap: 20px;
+    scroll-behavior: smooth;
     scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.quick-icons-row::-webkit-scrollbar {
+    display: none;
+}
+
+.quick-icons-nav {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid #d7deea;
+    background: #ffffff;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s ease;
+    flex: 0 0 auto;
+}
+
+.quick-icons-nav i {
+    font-size: 20px;
+}
+
+.quick-icons-nav:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+.quick-icons-nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.quick-icons-nav.is-hidden {
+    display: none;
 }
 
 .quick-icon-card {
@@ -758,6 +818,7 @@ header .logo img {
     align-items: center;
     gap: 10px;
     min-width: 100px;
+    flex: 0 0 auto;
     cursor: pointer;
 }
 
@@ -790,6 +851,25 @@ header .logo img {
 .quick-icon-card span {
     font-size: 12px;
     font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .quick-icons-scroll {
+        gap: 8px;
+    }
+
+    .quick-icons-nav {
+        width: 32px;
+        height: 32px;
+    }
+
+    .quick-icons-nav i {
+        font-size: 18px;
+    }
+
+    .quick-icons-row {
+        gap: 14px;
+    }
 }
 
 /* Products Section */

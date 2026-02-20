@@ -9,13 +9,15 @@
       <form action="/admin/sliders/create" method="POST" enctype="multipart/form-data">
         <div class="card-body">
           <div class="form-group">
-            <label>Banner Şəkli</label>
-            <div class="input-group">
-              <div class="custom-file">
-                <input type="file" class="custom-file-input" name="image" accept="image/*" required id="sliderImageNew">
-                <label class="custom-file-label" for="sliderImageNew">Fayl seçin</label>
-              </div>
-            </div>
+            <label>Web Banner Şəkli</label>
+            <input type="file" class="form-control" name="image_web" accept="image/*" required>
+            <small class="text-muted">Desktop/Web görünüş üçün istifadə olunur.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Mobil Banner Şəkli (opsional)</label>
+            <input type="file" class="form-control" name="image_mobile" accept="image/*">
+            <small class="text-muted">Yüklənməzsə web şəkli mobil üçün də istifadə ediləcək.</small>
           </div>
 
           <div class="form-group">
@@ -87,7 +89,16 @@
             <tr>
               <td><%= slider.id %></td>
               <td>
-                <img src="<%= slider.image_path %>" alt="Banner" style="height: 60px; border-radius: 4px;">
+                <% const webImage = slider.image_path_web || slider.image_path; %>
+                <% const mobileImage = slider.image_path_mobile || webImage; %>
+                <div class="mb-2">
+                  <small class="text-muted d-block">Web</small>
+                  <img src="<%= webImage %>" alt="Web Banner" style="height: 60px; border-radius: 4px; max-width: 150px; object-fit: cover;">
+                </div>
+                <div>
+                  <small class="text-muted d-block">Mobil</small>
+                  <img src="<%= mobileImage %>" alt="Mobil Banner" style="height: 60px; border-radius: 4px; max-width: 150px; object-fit: cover;">
+                </div>
               </td>
               <td>
                 <% if (slider.title) { %>
@@ -113,8 +124,12 @@
                       <textarea name="description" class="form-control form-control-sm" rows="2" placeholder="Təsvir"><%= slider.description || '' %></textarea>
                     </div>
                     <div class="form-group mb-2">
-                      <label class="small mb-1">Yeni şəkil (opsional)</label>
-                      <input type="file" class="form-control form-control-sm" name="image" accept="image/*">
+                      <label class="small mb-1">Yeni web şəkli (opsional)</label>
+                      <input type="file" class="form-control form-control-sm" name="image_web" accept="image/*">
+                    </div>
+                    <div class="form-group mb-2">
+                      <label class="small mb-1">Yeni mobil şəkli (opsional)</label>
+                      <input type="file" class="form-control form-control-sm" name="image_mobile" accept="image/*">
                     </div>
                     <div class="form-group mb-2">
                       <select name="destination_type" class="form-control form-control-sm slider-destination-type" data-prefix="edit_<%= slider.id %>">
@@ -179,15 +194,6 @@
     toggleDestinationFields(prefix, el.value);
     el.addEventListener('change', () => toggleDestinationFields(prefix, el.value));
   });
-
-  const sliderImageNew = document.getElementById('sliderImageNew');
-  if (sliderImageNew) {
-    sliderImageNew.addEventListener('change', function (e) {
-      const fileName = (e.target.files && e.target.files[0] && e.target.files[0].name) ? e.target.files[0].name : 'Fayl seçin';
-      const label = e.target.nextElementSibling;
-      if (label) label.innerText = fileName;
-    });
-  }
 </script>
 
 <%- include('footer') %>

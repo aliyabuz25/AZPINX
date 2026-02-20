@@ -9,8 +9,13 @@
  <% sliders.forEach(function(slider) { %>
  <div class="slider-item swiper-slide"
  data-link="<%= slider.link || '' %>"
- data-has-link="<%= !!(slider.link && slider.link !== '#') %>"
- style="background-image: url('<%= slider.image %>');">
+ data-has-link="<%= !!(slider.link && slider.link !== '#') %>">
+ <picture class="slider-media">
+ <% if (slider.image_mobile) { %>
+ <source media="(max-width: 768px)" srcset="<%= slider.image_mobile %>">
+ <% } %>
+ <img src="<%= slider.image %>" alt="<%= slider.title || 'AZPINX Banner' %>" loading="lazy" decoding="async">
+ </picture>
  <% if (slider.title || slider.description || (slider.link && slider.link !== '#')) { %>
  <div class="slider-content">
  <% if (slider.title) { %>
@@ -46,7 +51,11 @@
  <h3>Kateqoriyalar</h3>
  <p>Ən populyar kateqoriyalara bir kliklə keçid edin.</p>
  </div>
- <div class="quick-icons-row">
+ <div class="quick-icons-scroll">
+ <button type="button" class="quick-icons-nav quick-icons-prev" aria-label="Kateqoriyaları sola sürüşdür">
+ <i class="ri-arrow-left-s-line"></i>
+ </button>
+ <div class="quick-icons-row" id="quickIconsRow">
  <% quickActions.forEach(function(action) { %>
  <a href="/?category=<%= encodeURIComponent(action.name) %>" class="quick-icon-card">
  <div class="img-box d-flex align-items-center justify-content-center">
@@ -62,6 +71,10 @@
  </span>
  </a>
  <% }) %>
+ </div>
+ <button type="button" class="quick-icons-nav quick-icons-next" aria-label="Kateqoriyaları sağa sürüşdür">
+ <i class="ri-arrow-right-s-line"></i>
+ </button>
  </div>
  </section>
 
