@@ -167,7 +167,10 @@ const uploadAvatar = multer({
 // API Config
 const API_CONFIG = {
  BASE_URL: 'https://bayi.lisansofisi.com/api',
- API_KEY: 'ak_803b789e6aed8a50f21fb6b6a9bddaa5_1769965145'
+ API_KEY: 'ak_803b789e6aed8a50f21fb6b6a9bddaa5_1769965145',
+ TIMEOUT_MS: Number(process.env.BAYI_API_TIMEOUT_MS || 8000),
+ PAGE_LIMIT: Math.max(50, Number(process.env.BAYI_API_PAGE_LIMIT || 500)),
+ MAX_PAGES: Math.max(1, Number(process.env.BAYI_API_MAX_PAGES || 20))
 };
 
 const PUBG_CHECKER_CONFIG = {
@@ -180,6 +183,27 @@ const PUBG_CHECKER_CONFIG = {
 };
 const pubgCheckCache = new Map();
 const pubgCheckInflight = new Map();
+
+const APP_CACHE_TTL = {
+ PRODUCTS_MS: Number(process.env.PRODUCTS_CACHE_TTL_MS || 30000),
+ SETTINGS_MS: Number(process.env.SETTINGS_CACHE_TTL_MS || 30000),
+ ANNOUNCEMENTS_MS: Number(process.env.ANNOUNCEMENTS_CACHE_TTL_MS || 20000),
+ RESELLER_DISCOUNT_MS: Number(process.env.RESELLER_DISCOUNT_CACHE_TTL_MS || 30000),
+ CATEGORIES_MS: Number(process.env.CATEGORIES_CACHE_TTL_MS || 45000),
+ SLIDERS_MS: Number(process.env.SLIDERS_CACHE_TTL_MS || 45000),
+ HOME_STATS_MS: Number(process.env.HOME_STATS_CACHE_TTL_MS || 30000),
+ USER_BALANCE_TOUCH_MS: Number(process.env.USER_BALANCE_TOUCH_MS || 15000)
+};
+
+const runtimeCache = {
+ products: { value: null, expiresAt: 0, inflight: null },
+ settings: { value: null, expiresAt: 0, inflight: null },
+ announcements: { value: null, expiresAt: 0, inflight: null },
+ resellerDiscount: { value: null, expiresAt: 0, inflight: null },
+ categories: { value: null, expiresAt: 0, inflight: null },
+ sliders: { value: null, expiresAt: 0, inflight: null },
+ homeStats: { value: null, expiresAt: 0, inflight: null }
+};
 
 const LICENSE_CONFIG = {
  CODES_PATH: process.env.LICENSE_CODES_PATH || path.join(__dirname, 'data', 'license_codes.json'),
@@ -727,32 +751,268 @@ let db;
  }
 })();
 
-// Helper to fetch products with local overrides
-async function getMappedProducts() {
+function cloneRows(rows = []) {
+ return rows.map((row) => ({ ...row }));
+}
+
+function cloneProducts(products = []) {
+ return products.map((product) => ({ ...product }));
+}
+
+function cloneSettingsMap(settings = {}) {
+ return { ...settings };
+}
+
+async function withRuntimeCache(entry, ttlMs, loader, cloneFn = (value) => value) {
+ const now = Date.now();
+ if (entry.value !== null && entry.expiresAt > now) {
+ return cloneFn(entry.value);
+ }
+
+ if (entry.inflight) {
+ try {
+ const inflightValue = await entry.inflight;
+ return cloneFn(inflightValue);
+ } catch (e) {
+ // Fallback to stale value below.
+ }
+ }
+
+ entry.inflight = (async () => {
+ const value = await loader();
+ entry.value = value;
+ entry.expiresAt = Date.now() + ttlMs;
+ return value;
+ })().finally(() => {
+ entry.inflight = null;
+ });
+
+ try {
+ const value = await entry.inflight;
+ return cloneFn(value);
+ } catch (e) {
+ if (entry.value !== null) return cloneFn(entry.value);
+ throw e;
+ }
+}
+
+function invalidateRuntimeCaches(...keys) {
+ keys.forEach((key) => {
+ const entry = runtimeCache[key];
+ if (!entry) return;
+ entry.value = null;
+ entry.expiresAt = 0;
+ entry.inflight = null;
+ });
+}
+
+function mapRowsToHomeSliders(dbRows = []) {
+ const sliders = dbRows
+ .map((s) => {
+ const webImage = normalizeOptionalString(s.image_path_web) || normalizeOptionalString(s.image_path) || '';
+ const mobileImage = normalizeOptionalString(s.image_path_mobile) || webImage;
+ return {
+ image: webImage,
+ image_mobile: mobileImage,
+ title: s.title || '',
+ description: s.description || '',
+ link: s.link || '#'
+ };
+ })
+ .filter((slider) => Boolean(slider.image));
+
+ if (sliders.length === 0) {
+ sliders.push(
+ {
+ image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80',
+ image_mobile: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=900&q=80',
+ title: 'Ən Yeni Oyunlar',
+ description: 'Bütün rəqəmsal kodlar ən ucuz qiymətə!',
+ link: '#'
+ },
+ {
+ image: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=1200&q=80',
+ image_mobile: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=900&q=80',
+ title: 'PUBG Mobile UC',
+ description: 'Anında çatdırılma və sərfəli paketlər.',
+ link: '#'
+ }
+ );
+ }
+
+ return sliders;
+}
+
+async function getCachedCategoriesRows() {
+ return withRuntimeCache(
+ runtimeCache.categories,
+ APP_CACHE_TTL.CATEGORIES_MS,
+ async () => {
+ const [rows] = await db.execute('SELECT * FROM categories');
+ return rows;
+ },
+ cloneRows
+ );
+}
+
+async function getCachedAnnouncementsRows() {
+ return withRuntimeCache(
+ runtimeCache.announcements,
+ APP_CACHE_TTL.ANNOUNCEMENTS_MS,
+ async () => {
+ const [rows] = await db.execute('SELECT * FROM announcements WHERE is_active = 1 ORDER BY created_at DESC');
+ return rows;
+ },
+ cloneRows
+ );
+}
+
+async function getCachedSettingsMap() {
+ return withRuntimeCache(
+ runtimeCache.settings,
+ APP_CACHE_TTL.SETTINGS_MS,
+ async () => {
+ const [rows] = await db.execute('SELECT * FROM settings');
+ const settingsMap = {};
+ rows.forEach((row) => {
+ settingsMap[row.setting_key] = row.setting_value;
+ });
+ return settingsMap;
+ },
+ cloneSettingsMap
+ );
+}
+
+async function getCachedHomeSliders() {
+ return withRuntimeCache(
+ runtimeCache.sliders,
+ APP_CACHE_TTL.SLIDERS_MS,
+ async () => {
+ const [rows] = await db.execute('SELECT * FROM sliders ORDER BY created_at DESC');
+ return mapRowsToHomeSliders(rows);
+ },
+ (sliders) => sliders.map((slider) => ({ ...slider }))
+ );
+}
+
+async function getCachedHomeStatsCore() {
+ return withRuntimeCache(
+ runtimeCache.homeStats,
+ APP_CACHE_TTL.HOME_STATS_MS,
+ async () => {
+ const [userCountResult, orderStatsResult, testimonialRows] = await Promise.all([
+ db.execute('SELECT COUNT(*) as total FROM users'),
+ db.execute(`
+ SELECT
+ COUNT(*) as total_orders,
+ SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_orders
+ FROM orders
+ `),
+ db.execute(`
+ SELECT
+ r.rating,
+ r.comment,
+ r.product_name,
+ r.created_at,
+ u.full_name,
+ u.avatar_path,
+ u.rank_key
+ FROM order_reviews r
+ INNER JOIN users u ON u.id = r.user_id
+ WHERE r.is_visible = 1
+ ORDER BY r.created_at DESC
+ LIMIT 12
+ `)
+ ]);
+
+ const userCount = Number(userCountResult[0][0]?.total || 0);
+ const totalOrders = Number(orderStatsResult[0][0]?.total_orders || 0);
+ const completedOrders = Number(orderStatsResult[0][0]?.completed_orders || 0);
+ const testimonials = (testimonialRows[0] || []).map((row) => ({
+ ...row,
+ rank_meta: getUserRankMeta(row.rank_key),
+ short_name: String(row.full_name || '').split(' ').slice(0, 2).join(' ')
+ }));
+
+ let deliveryTime = '5-10 dakika';
+ try {
+ const [avgDeliveryResult] = await db.execute(`
+ SELECT AVG(TIMESTAMPDIFF(SECOND, created_at, updated_at)) as avg_seconds
+ FROM orders
+ WHERE status = 'completed'
+ AND updated_at IS NOT NULL
+ AND updated_at >= created_at
+ `);
+
+ const avgSeconds = Number(avgDeliveryResult[0]?.avg_seconds || 0);
+ if (avgSeconds > 0) {
+ if (avgSeconds < 60) {
+ deliveryTime = `${Math.round(avgSeconds)} Saniyə`;
+ } else if (avgSeconds < 3600) {
+ deliveryTime = `${Math.round(avgSeconds / 60)} Dəqiqə`;
+ } else {
+ deliveryTime = `${Math.round(avgSeconds / 3600)} Saat`;
+ }
+ }
+ } catch (statsErr) {
+ console.error('Stats deliveryTime error:', statsErr.message);
+ }
+
+ const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) : 0;
+ const reviewCount = testimonials.length;
+ const avgRating = reviewCount > 0
+ ? testimonials.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviewCount
+ : 0;
+ const rating = reviewCount > 0
+ ? `${avgRating.toFixed(1)}/5`
+ : (totalOrders > 0 ? `${(3 + (completionRate * 2)).toFixed(1)}/5` : '0.0/5');
+
+ return {
+ userCount,
+ totalOrders,
+ completedOrders,
+ deliveryTime,
+ rating,
+ testimonials
+ };
+ },
+ (value) => ({
+ ...value,
+ testimonials: (value.testimonials || []).map((item) => ({
+ ...item,
+ rank_meta: item.rank_meta ? { ...item.rank_meta } : item.rank_meta
+ }))
+ })
+ );
+}
+
+async function loadMappedProductsFromSource() {
  try {
  const apiProducts = [];
  const seenApiIds = new Set();
- const limit = 500;
+ const limit = API_CONFIG.PAGE_LIMIT;
  let offset = 0;
  let hasMore = true;
  let pageGuard = 0;
+ const localProductsPromise = db.execute('SELECT * FROM products');
 
- while (hasMore && pageGuard < 20) {
+ while (hasMore && pageGuard < API_CONFIG.MAX_PAGES) {
  const response = await axios.get(`${API_CONFIG.BASE_URL}/products`, {
  headers: { 'X-API-Key': API_CONFIG.API_KEY },
- params: { limit, offset }
+ params: { limit, offset },
+ timeout: API_CONFIG.TIMEOUT_MS
  });
  const payload = response?.data?.data || {};
  const batch = Array.isArray(payload.products) ? payload.products : [];
  const pagination = payload.pagination || {};
 
- batch.forEach((item) => {
+ for (const item of batch) {
  const id = Number(item?.id || 0);
  if (id && !seenApiIds.has(id)) {
  seenApiIds.add(id);
  apiProducts.push(item);
  }
- });
+ }
 
  const hasMoreFlag = Boolean(pagination.has_more);
  const total = Number(pagination.total || 0);
@@ -763,91 +1023,102 @@ async function getMappedProducts() {
  if (!batch.length) break;
  }
 
- const [localProducts] = await db.execute('SELECT * FROM products');
-
- // Merge API products with local products
- // Local products with api_id should override or supplement API data
- // Any product in MySQL without api_id is a"Custom Product"
-
- let finalProducts = [];
-
- // 1. Process API products
-	 apiProducts.forEach(apiProd => {
-	 const localOverride = localProducts.find(lp => lp.api_id == apiProd.id);
-	 if (localOverride) {
-	 finalProducts.push({
-	 id: apiProd.id,
-	 db_id: localOverride.id,
-	 name: localOverride.name || apiProd.name,
-	 category: localOverride.category || apiProd.category_name,
-	 category_id: localOverride.category_id || null,
-	 price: parseFloat(localOverride.price || apiProd.price),
-	 description: localOverride.description || apiProd.description,
-	 image: localOverride.image_path ? localOverride.image_path : apiProd.image,
-	 status: localOverride.status || 'sale',
-	 is_active: Number(localOverride.is_active ?? 1) === 1,
-	 is_local: true,
-	 api_id: apiProd.id,
-	 badge: apiProd.in_stock ?"Stokda" :"Bitib"
-	 });
-	 } else {
-	 finalProducts.push({
-	 id: apiProd.id,
-	 name: apiProd.name,
-	 category: apiProd.category_name,
-	 category_id: null,
-	 price: parseFloat(apiProd.price),
-	 description: apiProd.description,
-	 image: apiProd.image ||"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
-	 status: 'sale',
-	 is_active: true,
-	 is_local: false,
-	 api_id: apiProd.id,
-	 badge: apiProd.in_stock ?"Stokda" :"Bitib"
-	 });
+ const [localProducts] = await localProductsPromise;
+ const localByApiId = new Map();
+ localProducts.forEach((lp) => {
+ if (lp.api_id) {
+ localByApiId.set(String(lp.api_id), lp);
  }
  });
 
- // 2. Add local-only products (without api_id)
- localProducts.filter(lp => !lp.api_id).forEach(lp => {
-	 finalProducts.push({
-	 id: 'local_' + lp.id,
-	 db_id: lp.id,
-	 name: lp.name,
-	 category: lp.category,
-	 category_id: lp.category_id || null,
-	 price: parseFloat(lp.price),
-	 description: lp.description,
-	 image: lp.image_path ||"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
-	 status: lp.status || 'sale',
-	 is_active: Number(lp.is_active ?? 1) === 1,
-	 is_local: true,
-	 api_id: null,
-	 badge:"Lokal"
-	 });
+ const finalProducts = [];
+
+ for (const apiProd of apiProducts) {
+ const localOverride = localByApiId.get(String(apiProd.id));
+ if (localOverride) {
+ finalProducts.push({
+ id: apiProd.id,
+ db_id: localOverride.id,
+ name: localOverride.name || apiProd.name,
+ category: localOverride.category || apiProd.category_name,
+ category_id: localOverride.category_id || null,
+ price: parseFloat(localOverride.price || apiProd.price),
+ description: localOverride.description || apiProd.description,
+ image: localOverride.image_path || apiProd.image,
+ status: localOverride.status || 'sale',
+ is_active: Number(localOverride.is_active ?? 1) === 1,
+ is_local: true,
+ api_id: apiProd.id,
+ badge: apiProd.in_stock ? 'Stokda' : 'Bitib'
+ });
+ } else {
+ finalProducts.push({
+ id: apiProd.id,
+ name: apiProd.name,
+ category: apiProd.category_name,
+ category_id: null,
+ price: parseFloat(apiProd.price),
+ description: apiProd.description,
+ image: apiProd.image || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+ status: 'sale',
+ is_active: true,
+ is_local: false,
+ api_id: apiProd.id,
+ badge: apiProd.in_stock ? 'Stokda' : 'Bitib'
+ });
+ }
+ }
+
+ localProducts
+ .filter((lp) => !lp.api_id)
+ .forEach((lp) => {
+ finalProducts.push({
+ id: `local_${lp.id}`,
+ db_id: lp.id,
+ name: lp.name,
+ category: lp.category,
+ category_id: lp.category_id || null,
+ price: parseFloat(lp.price),
+ description: lp.description,
+ image: lp.image_path || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+ status: lp.status || 'sale',
+ is_active: Number(lp.is_active ?? 1) === 1,
+ is_local: true,
+ api_id: null,
+ badge: 'Lokal'
+ });
  });
 
  return finalProducts;
  } catch (error) {
- console.error("API Fetch Error:", error.message);
- // If API fails, return whatever we have in DB
+ console.error('API Fetch Error:', error.message);
  const [local] = await db.execute('SELECT * FROM products');
-	 return local.map(lp => ({
-	 id: lp.api_id || 'local_' + lp.id,
-	 db_id: lp.id,
-	 name: lp.name,
-	 category: lp.category,
-	 category_id: lp.category_id || null,
-	 price: parseFloat(lp.price),
-	 description: lp.description,
-	 image: lp.image_path ? '/uploads/products/' + lp.image_path : '/images/default-product.png',
-	 status: lp.status || 'sale',
-	 is_active: Number(lp.is_active ?? 1) === 1,
-	 is_local: true,
-	 api_id: lp.api_id,
-	 badge:"Stokda"
-	 }));
-	 }
+ return local.map((lp) => ({
+ id: lp.api_id || `local_${lp.id}`,
+ db_id: lp.id,
+ name: lp.name,
+ category: lp.category,
+ category_id: lp.category_id || null,
+ price: parseFloat(lp.price),
+ description: lp.description,
+ image: lp.image_path ? '/uploads/products/' + lp.image_path : '/images/default-product.png',
+ status: lp.status || 'sale',
+ is_active: Number(lp.is_active ?? 1) === 1,
+ is_local: true,
+ api_id: lp.api_id,
+ badge: 'Stokda'
+ }));
+ }
+}
+
+// Helper to fetch products with local overrides
+async function getMappedProducts() {
+ return withRuntimeCache(
+ runtimeCache.products,
+ APP_CACHE_TTL.PRODUCTS_MS,
+ loadMappedProductsFromSource,
+ cloneProducts
+ );
 }
 
 function normalizeOptionalString(value) {
@@ -1176,6 +1447,10 @@ function clampPercent(value, min = 0, max = 90) {
 }
 
 async function getResellerDiscountPercent() {
+ return withRuntimeCache(
+ runtimeCache.resellerDiscount,
+ APP_CACHE_TTL.RESELLER_DISCOUNT_MS,
+ async () => {
  try {
  const [rows] = await db.execute('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1', ['reseller_discount_percent']);
  if (!rows.length) return 0;
@@ -1184,6 +1459,9 @@ async function getResellerDiscountPercent() {
  console.error('Reseller discount fetch error:', e.message);
  return 0;
  }
+ },
+ (value) => Number(value || 0)
+ );
 }
 
 function applyResellerPricing(products, user, discountPercent) {
@@ -1291,10 +1569,22 @@ app.get('/uploads/avatars/:filename', (req, res, next) => {
  }
  return res.status(404).end();
 });
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
-app.use(bodyParser.json({ limit: '100mb' }));
-app.use(express.json({ limit: '100mb' }));
+const REQUEST_BODY_LIMIT = process.env.REQUEST_BODY_LIMIT || '4mb';
+app.use(express.static(path.join(__dirname, 'public'), {
+ etag: true,
+ lastModified: true,
+ maxAge: '7d',
+ setHeaders: (res, filePath) => {
+ const normalizedPath = String(filePath || '');
+ if (normalizedPath.includes(`${path.sep}uploads${path.sep}`)) {
+ res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+ return;
+ }
+ res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+ }
+}));
+app.use(bodyParser.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
+app.use(bodyParser.json({ limit: REQUEST_BODY_LIMIT }));
 app.set('trust proxy', 1);
 
 app.get('/license-status', (req, res) => {
@@ -1443,13 +1733,19 @@ app.use(async (req, res, next) => {
 
  // Fetch user balance if logged in
  if (req.session.user && db) {
+ const now = Date.now();
+ const shouldRefreshBalance = !req.session.balance_touch_at || (now - req.session.balance_touch_at) > APP_CACHE_TTL.USER_BALANCE_TOUCH_MS;
+ if (shouldRefreshBalance) {
  const [userData] = await db.execute('SELECT balance FROM users WHERE id = ?', [req.session.user.id]);
  if (userData.length > 0) {
- req.session.user.balance = userData[0].balance; // Update session
+ req.session.user.balance = userData[0].balance;
  res.locals.user.balance = userData[0].balance;
  }
+ req.session.balance_touch_at = now;
+ } else if (typeof req.session.user.balance !== 'undefined') {
+ res.locals.user.balance = req.session.user.balance;
+ }
 
- const now = Date.now();
  const shouldTouchLastSeen = !req.session.last_seen_touch_at || (now - req.session.last_seen_touch_at) > 120000;
  if (shouldTouchLastSeen) {
  await db.execute('UPDATE users SET last_seen_at = NOW() WHERE id = ?', [req.session.user.id]);
@@ -1459,13 +1755,11 @@ app.use(async (req, res, next) => {
 
  // Fetch active announcements (HubMsg)
  if (db) {
- const [announcements] = await db.execute('SELECT * FROM announcements WHERE is_active = 1 ORDER BY created_at DESC').catch(() => [[]]);
+ const [announcements, settingsMap] = await Promise.all([
+ getCachedAnnouncementsRows().catch(() => []),
+ getCachedSettingsMap().catch(() => ({}))
+ ]);
  res.locals.announcements = announcements;
-
- // Fetch Bank Settings
- const [settings] = await db.execute('SELECT * FROM settings');
- const settingsMap = {};
- settings.forEach(s => settingsMap[s.setting_key] = s.setting_value);
  res.locals.settings = settingsMap;
  } else {
  res.locals.announcements = [];
@@ -1499,14 +1793,15 @@ app.use(async (req, res, next) => {
  } catch (err) {
  console.error("Middleware Error:", err.message);
  res.locals.announcements = [];
+ res.locals.settings = {};
  }
  next();
 });
 
 app.get('/robots.txt', async (req, res) => {
  try {
- const [rows] = await db.execute('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1', ['seo_robots']);
- const robotsSetting = rows.length ? String(rows[0].setting_value || '').trim().toLowerCase() : 'index,follow';
+ const settingsMap = await getCachedSettingsMap().catch(() => ({}));
+ const robotsSetting = String(settingsMap.seo_robots || 'index,follow').trim().toLowerCase();
  const disallowAll = robotsSetting === 'noindex,nofollow';
  const lines = [
  'User-agent: *',
@@ -1580,7 +1875,21 @@ app.use(async (req, res, next) => {
 
 app.get('/', async (req, res) => {
  try {
- const [dbCategories] = await db.execute('SELECT * FROM categories');
+ const [
+ dbCategories,
+ mappedProducts,
+ resellerDiscountPercent,
+ sections,
+ sliders,
+ homeStatsCore
+ ] = await Promise.all([
+ getCachedCategoriesRows(),
+ getMappedProducts(),
+ getResellerDiscountPercent(),
+ db.execute('SELECT * FROM home_sections WHERE is_active = TRUE ORDER BY order_index ASC').then(([rows]) => rows),
+ getCachedHomeSliders(),
+ getCachedHomeStatsCore()
+ ]);
 
  // Manual Icon Mapping
  const CATEGORY_ICONS = {
@@ -1606,14 +1915,20 @@ app.get('/', async (req, res) => {
  image_path: c.image_path
  }));
 
- let allProducts = await getMappedProducts();
- const resellerDiscountPercent = await getResellerDiscountPercent();
- allProducts = applyResellerPricing(allProducts, req.session.user, resellerDiscountPercent);
+ let allProducts = applyResellerPricing(mappedProducts, req.session.user, resellerDiscountPercent);
 
  // Filter by Status (Only Sale)
  allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
  const homeCatalogProducts = [...allProducts];
  const saleProductCount = allProducts.length;
+ const homeProductByRef = new Map();
+ homeCatalogProducts.forEach((product) => {
+ homeProductByRef.set(String(product.id), product);
+ if (product.db_id) {
+ homeProductByRef.set(`db:${String(product.db_id)}`, product);
+ }
+ });
+ const categoryNameById = new Map(categories.map((category) => [Number(category.id), category.name]));
 
  // Filter by Category if provided
  const selectedCategory = req.query.category;
@@ -1622,7 +1937,6 @@ app.get('/', async (req, res) => {
  }
 
  // Fetch Home Sections
- const [sections] = await db.execute('SELECT * FROM home_sections WHERE is_active = TRUE ORDER BY order_index ASC');
 
  const sectionsWithProducts = await Promise.all(sections.map(async (section) => {
  const productRefs = parseSectionProductRefs(section.product_ids);
@@ -1630,10 +1944,9 @@ app.get('/', async (req, res) => {
  const seenRefs = new Set();
 
  for (const ref of productRefs) {
- const found = homeCatalogProducts.find((p) =>
- String(p.id) === String(ref) ||
- String(p.db_id || '') === String(ref).replace(/^db:/, '')
- );
+ const normalizedRef = String(ref || '').trim();
+ const dbRef = `db:${normalizedRef.replace(/^db:/, '')}`;
+ const found = homeProductByRef.get(normalizedRef) || homeProductByRef.get(dbRef);
  if (!found) continue;
  const key = String(found.id);
  if (seenRefs.has(key)) continue;
@@ -1656,7 +1969,7 @@ app.get('/', async (req, res) => {
  selectedProducts.push(...homeCatalogProducts.slice(0, 8));
  }
 
- const categoryName = categories.find((c) => Number(c.id) === Number(section.category_id))?.name || section.category_name || null;
+ const categoryName = categoryNameById.get(Number(section.category_id)) || section.category_name || null;
  const link = categoryName ? `/all-products?category=${encodeURIComponent(categoryName)}` : null;
 
  return { ...section, category_name: categoryName, link, products: selectedProducts.slice(0, 8), productRefs };
@@ -1766,121 +2079,12 @@ app.get('/', async (req, res) => {
  const totalPages = Math.ceil(allProducts.length / limit);
  const products = allProducts.slice(startIndex, endIndex);
 
- const [dbSliders] = await db.execute('SELECT * FROM sliders ORDER BY created_at DESC');
- const sliders = dbSliders
- .map((s) => {
- const webImage = normalizeOptionalString(s.image_path_web) || normalizeOptionalString(s.image_path) || '';
- const mobileImage = normalizeOptionalString(s.image_path_mobile) || webImage;
- return {
- image: webImage,
- image_mobile: mobileImage,
- title: s.title || '',
- description: s.description || '',
- link: s.link || '#'
- };
- })
- .filter((slider) => Boolean(slider.image));
-
- if (sliders.length === 0) {
- sliders.push(
- {
- image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80',
- image_mobile: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=900&q=80',
- title: 'Ən Yeni Oyunlar',
- description: 'Bütün rəqəmsal kodlar ən ucuz qiymətə!',
- link: '#'
- },
- {
- image: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=1200&q=80',
- image_mobile: 'https://images.unsplash.com/photo-1552824236-07779189d995?w=900&q=80',
- title: 'PUBG Mobile UC',
- description: 'Anında çatdırılma və sərfəli paketlər.',
- link: '#'
- }
- );
- }
-
- const [userCountResult] = await db.execute('SELECT COUNT(*) as total FROM users');
- const userCount = Number(userCountResult[0].total || 0);
-
- const [orderStatsResult] = await db.execute(`
- SELECT
- COUNT(*) as total_orders,
- SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_orders
- FROM orders
- `);
- const totalOrders = Number(orderStatsResult[0].total_orders || 0);
- const completedOrders = Number(orderStatsResult[0].completed_orders || 0);
- const [testimonialRows] = await db.execute(`
- SELECT
- r.rating,
- r.comment,
- r.product_name,
- r.created_at,
- u.full_name,
- u.avatar_path,
- u.rank_key
- FROM order_reviews r
- INNER JOIN users u ON u.id = r.user_id
- WHERE r.is_visible = 1
- ORDER BY r.created_at DESC
- LIMIT 12
- `);
- const testimonials = (testimonialRows || []).map((row) => ({
- ...row,
- rank_meta: getUserRankMeta(row.rank_key),
- short_name: String(row.full_name || '').split(' ').slice(0, 2).join(' ')
- }));
-
- let deliveryTime = '5-10 dakika';
- try {
- const [updatedAtColumn] = await db.execute(`
- SELECT COUNT(*) as cnt
- FROM INFORMATION_SCHEMA.COLUMNS
- WHERE TABLE_SCHEMA = DATABASE()
- AND TABLE_NAME = 'orders'
- AND COLUMN_NAME = 'updated_at'
- `);
-
- if (Number(updatedAtColumn[0].cnt || 0) > 0) {
- const [avgDeliveryResult] = await db.execute(`
- SELECT AVG(TIMESTAMPDIFF(SECOND, created_at, updated_at)) as avg_seconds
- FROM orders
- WHERE status = 'completed'
- AND updated_at IS NOT NULL
- AND updated_at >= created_at
- `);
-
- const avgSeconds = Number(avgDeliveryResult[0].avg_seconds || 0);
- if (avgSeconds > 0) {
- if (avgSeconds < 60) {
- deliveryTime = `${Math.round(avgSeconds)} Saniyə`;
- } else if (avgSeconds < 3600) {
- deliveryTime = `${Math.round(avgSeconds / 60)} Dəqiqə`;
- } else {
- deliveryTime = `${Math.round(avgSeconds / 3600)} Saat`;
- }
- }
- }
- } catch (statsErr) {
- console.error('Stats deliveryTime error:', statsErr.message);
- }
-
- const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) : 0;
- const reviewCount = testimonials.length;
- const avgRating = reviewCount > 0
- ? testimonials.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviewCount
- : 0;
- const rating = reviewCount > 0
- ? `${avgRating.toFixed(1)}/5`
- : (totalOrders > 0 ? `${(3 + (completionRate * 2)).toFixed(1)}/5` : '0.0/5');
-
- // Statistics data (real backend data)
+ const testimonials = homeStatsCore.testimonials || [];
  const siteStats = {
- users: userCount,
+ users: Number(homeStatsCore.userCount || 0),
  products: saleProductCount,
- deliveryTime,
- rating
+ deliveryTime: homeStatsCore.deliveryTime || '5-10 dakika',
+ rating: homeStatsCore.rating || '0.0/5'
  };
 
  res.render('index', {
@@ -1906,7 +2110,11 @@ app.get('/', async (req, res) => {
 
 app.get(['/all-products', '/allproducts'], async (req, res) => {
  try {
- const [dbCategories] = await db.execute('SELECT * FROM categories');
+ const [dbCategories, mappedProducts, resellerDiscountPercent] = await Promise.all([
+ getCachedCategoriesRows(),
+ getMappedProducts(),
+ getResellerDiscountPercent()
+ ]);
 
  const CATEGORY_ICONS = {
  'PUBG ID': 'ri-id-card-line',
@@ -1931,9 +2139,7 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  image_path: c.image_path
  }));
 
- let allProducts = await getMappedProducts();
- const resellerDiscountPercent = await getResellerDiscountPercent();
- allProducts = applyResellerPricing(allProducts, req.session.user, resellerDiscountPercent);
+ let allProducts = applyResellerPricing(mappedProducts, req.session.user, resellerDiscountPercent);
  allProducts = allProducts.filter(p => p.status === 'sale' && p.is_active);
 
  const selectedCategory = req.query.category;
@@ -3732,6 +3938,7 @@ app.post('/admin/categories/create', isAdmin, (req, res, next) => {
  try {
  const image_path = req.file ? '/uploads/categories/' + req.file.filename : null;
  await db.execute('INSERT INTO categories (name, description, image_path) VALUES (?, ?, ?)', [name, description, image_path]);
+ invalidateRuntimeCaches('categories');
  adminRedirect(req, res, '/admin/categories?success=Kateqoriya yaradıldı');
  } catch (e) {
  console.error('Database Error during category creation:', e);
@@ -3764,6 +3971,7 @@ app.post('/admin/categories/update', isAdmin, uploadCategory.single('image'), as
  params.push(category_id);
 
  await db.execute(query, params);
+ invalidateRuntimeCaches('categories');
  adminRedirect(req, res, '/admin/categories?success=Kateqoriya yeniləndi');
  } catch (e) {
  adminRedirect(req, res, '/admin/categories?error=' + encodeURIComponent(e.message));
@@ -3775,6 +3983,7 @@ app.post('/admin/categories/delete', isAdmin, async (req, res) => {
  const { category_id } = req.body;
  try {
  await db.execute('DELETE FROM categories WHERE id = ?', [category_id]);
+ invalidateRuntimeCaches('categories');
  adminRedirect(req, res, '/admin/categories?success=Kateqoriya silindi');
  } catch (e) {
  adminRedirect(req, res, '/admin/categories?error=' + encodeURIComponent(e.message));
@@ -3873,6 +4082,7 @@ app.post('/admin/sliders/create', isAdmin, (req, res, next) => {
  );
 
  console.log('Slider successfully inserted into database.');
+ invalidateRuntimeCaches('sliders');
  adminRedirect(req, res, '/admin/sliders?success=Slayder əlavə edildi');
  } catch (e) {
  console.error('Database Error during slider creation:', e);
@@ -3917,6 +4127,7 @@ app.post('/admin/sliders/update', isAdmin, (req, res, next) => {
  params.push(id);
 
  await db.execute(sql, params);
+ invalidateRuntimeCaches('sliders');
  return adminRedirect(req, res, '/admin/sliders?success=Slayder yeniləndi');
  } catch (e) {
  console.error('Slider update error:', e.message);
@@ -3929,6 +4140,7 @@ app.post('/admin/sliders/delete', isAdmin, async (req, res) => {
  const { id } = req.body;
  try {
  await db.execute('DELETE FROM sliders WHERE id = ?', [id]);
+ invalidateRuntimeCaches('sliders');
  adminRedirect(req, res, '/admin/sliders?success=Slayder silindi');
  } catch (e) {
  adminRedirect(req, res, '/admin/sliders?error=' + encodeURIComponent(e.message));
@@ -4080,6 +4292,7 @@ app.post('/admin/settings', isAdmin, async (req, res) => {
  [s.key, s.value]
  );
  }
+ invalidateRuntimeCaches('settings', 'resellerDiscount');
  adminRedirect(req, res, '/admin/settings?success=Məlumatlar yeniləndi');
  } catch (e) {
  adminRedirect(req, res, '/admin/settings?error=' + encodeURIComponent(e.message));
@@ -4164,6 +4377,7 @@ app.post('/admin/products/add', isAdmin, (req, res, next) => {
 	 'INSERT INTO products (name, category, price, description, image_path, status, api_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
 	 params
  );
+ invalidateRuntimeCaches('products');
  adminRedirect(req, res, '/admin/products?success=Məhsul əlavə edildi');
  } catch (e) {
  console.error('Database Error during product creation:', e);
@@ -4274,6 +4488,7 @@ app.post('/admin/products/update', isAdmin, uploadProduct.single('image'), async
  await db.execute(query, params);
  }
 
+ invalidateRuntimeCaches('products');
  adminRedirect(req, res, '/admin/products?success=Məhsul yeniləndi');
  } catch (e) {
  console.error(e);
@@ -4317,6 +4532,7 @@ app.post('/admin/products/:id/toggle-active', isAdmin, async (req, res) => {
  }
 
  const msg = nextActive ? 'Məhsul aktiv edildi' : 'Məhsul deaktiv edildi';
+ invalidateRuntimeCaches('products');
  return adminRedirect(req, res, '/admin/products?success=' + encodeURIComponent(msg));
  } catch (e) {
  console.error('Product active toggle error:', e);
@@ -4356,12 +4572,14 @@ app.get('/admin/hubmsg', isAdmin, async (req, res) => {
 app.post('/admin/hubmsg/create', isAdmin, async (req, res) => {
  const { title, message, type } = req.body;
  await db.execute('INSERT INTO announcements (title, message, type) VALUES (?, ?, ?)', [title, message, type]);
+ invalidateRuntimeCaches('announcements');
  adminRedirect(req, res, '/admin/hubmsg?success=Bildiriş yaradıldı');
 });
 
 app.post('/admin/hubmsg/delete', isAdmin, async (req, res) => {
  const { id } = req.body;
  await db.execute('DELETE FROM announcements WHERE id = ?', [id]);
+ invalidateRuntimeCaches('announcements');
  adminRedirect(req, res, '/admin/hubmsg?success=Bildiriş silindi');
 });
 

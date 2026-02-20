@@ -10,6 +10,8 @@
  <div class="slider-item swiper-slide"
  data-link="<%= slider.link || '' %>"
  data-has-link="<%= !!(slider.link && slider.link !== '#') %>">
+ <div class="slider-media-blur"
+ style="--slider-bg-desktop: url('<%= slider.image %>'); --slider-bg-mobile: url('<%= slider.image_mobile || slider.image %>');"></div>
  <picture class="slider-media">
  <% if (slider.image_mobile) { %>
  <source media="(max-width: 768px)" srcset="<%= slider.image_mobile %>">
