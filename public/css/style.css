@@ -3090,7 +3090,8 @@ body {
 }
 
 .slider-container {
-    min-height: 440px;
+    height: clamp(520px, 68vh, 860px);
+    min-height: 520px;
     border-radius: 0;
     border: 0;
     box-shadow: none;
@@ -3105,7 +3106,8 @@ body {
 }
 
 .slider-item {
-    min-height: 440px;
+    height: 100%;
+    min-height: 520px;
     transform: none !important;
     transition: none;
     align-items: flex-end;
@@ -3171,7 +3173,8 @@ body {
 @media (max-width: 768px) {
     .slider-container,
     .slider-item {
-        min-height: 270px;
+        height: clamp(340px, 60vh, 520px);
+        min-height: 340px;
     }
 
     .slider-content {
