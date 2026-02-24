@@ -1534,7 +1534,11 @@ function createSeoMeta(req, settingsMap = {}, overrides = {}) {
  merged.hreflangs = collectSeoHreflangs(merged.canonicalUrl);
  }
 
- merged.title = limitSeoText(merged.title || base.title, 70) || base.title;
+ const titleMaxLengthRaw = Number(overrides.titleMaxLength);
+ const titleMaxLength = Number.isFinite(titleMaxLengthRaw)
+ ? Math.max(50, Math.min(180, Math.round(titleMaxLengthRaw)))
+ : 70;
+ merged.title = limitSeoText(merged.title || base.title, titleMaxLength) || base.title;
  merged.description = limitSeoText(merged.description || base.description, 170) || base.description;
  merged.robots = normalizeOptionalString(merged.robots) || base.robots;
  merged.og.title = merged.og.title || merged.title;
@@ -1545,6 +1549,7 @@ function createSeoMeta(req, settingsMap = {}, overrides = {}) {
 
  delete merged.canonicalPath;
  delete merged.extraStructuredData;
+ delete merged.titleMaxLength;
  return merged;
 }
 
@@ -2364,6 +2369,11 @@ app.get('/robots.txt', async (req, res) => {
  }
 });
 
+app.get('/favicon.ico', (req, res) => {
+ const faviconPath = path.join(__dirname, 'public', 'favicon-48x48.png');
+ return res.type('image/png').sendFile(faviconPath);
+});
+
 app.get(/^\/google([a-zA-Z0-9_-]+)\.html$/, (req, res, next) => {
  const requestedToken = String(req.params?.[0] || '').trim();
  const configuredToken = String(GOOGLE_VERIFICATION_TOKEN || '').trim();
@@ -2716,6 +2726,8 @@ app.get('/', async (req, res) => {
  rating: homeStatsCore.rating || '0.0/5'
  };
  const homePubgIntent = hasPubgClickbaitIntent(selectedCategory, searchQuery);
+ const isPrimaryHome = !searchQuery && !selectedCategory && Number(page) === 1;
+ const homePrimaryTitle = 'AZPINX | AZƏRBAYCANDA ƏN UCUZ E-PINLƏR, PUBG UC, VALORANT VP, FREE FIRE DIAMOND VƏ RƏQƏMSAL KOD SATIŞI';
 
  const homeSeoOverrides = {
  title: selectedCategory
@@ -2740,11 +2752,23 @@ app.get('/', async (req, res) => {
  buildBreadcrumbSchema([{ name: 'Ana Səhifə', url: '/' }])
  ].filter(Boolean)
  };
+ if (isPrimaryHome) {
+ homeSeoOverrides.title = homePrimaryTitle;
+ homeSeoOverrides.titleMaxLength = 160;
+ homeSeoOverrides.og = {
+ ...(homeSeoOverrides.og || {}),
+ title: homePrimaryTitle
+ };
+ homeSeoOverrides.twitter = {
+ ...(homeSeoOverrides.twitter || {}),
+ title: homePrimaryTitle
+ };
+ }
  if (searchQuery) homeSeoOverrides.robots = 'noindex,follow';
  const seo = createSeoMeta(req, res.locals.settings || {}, homeSeoOverrides);
 
  res.render('index', {
- title: 'Ana Səhifə',
+ title: seo.title || 'Ana Səhifə',
  seo,
  categories,
  sliders,
