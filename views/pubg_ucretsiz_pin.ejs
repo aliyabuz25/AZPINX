@@ -1,0 +1,138 @@
+<%- include('partials/header') %>
+
+<main class="pubg-seo-page smooth-enter">
+ <section class="section-container pubg-seo-hero">
+ <span class="pubg-seo-badge">Trend Axtarış: PUBG Ücretsiz Pin</span>
+ <h1>PUBG Ücretsiz Pin 2026: Real Kampaniya və Bonus Rehberi</h1>
+ <p>
+  PUBG ücretsiz pin axtaranlar üçün riskli saxta təkliflərdən qaçın, real kampaniya və bonus imkanlarını izləyin.
+  AZPINX-də təhlükəsiz ödəniş, sürətli çatdırılma və ən çox klik alan UC paketləri mövcuddur.
+ </p>
+ <div class="pubg-seo-cta">
+  <a href="/all-products?search=pubg" class="btn btn-primary">PUBG Məhsullarına Bax</a>
+  <a href="/all-products?search=uc" class="btn btn-outline">UC Paketlərini Aç</a>
+ </div>
+ <ul class="pubg-seo-notes">
+  <li>Saxta “100% bedava pin” təkliflərinə qarşı diqqətli olun.</li>
+  <li>Kampaniya dövrlərində bonus və endirimlərdən faydalanın.</li>
+  <li>Sifariş sonrası çatdırılma statusunu hesabınızdan izləyin.</li>
+ </ul>
+ </section>
+
+ <section class="section-container">
+ <div class="section-header">
+  <h3>Populyar PUBG / UC Paketləri</h3>
+  <a href="/all-products?search=pubg" class="view-all">Hamısına bax <i class="ri-arrow-right-line"></i></a>
+ </div>
+
+ <% if (pubgProducts && pubgProducts.length > 0) { %>
+ <div class="product-grid">
+  <% pubgProducts.forEach(function(product) { %>
+  <%- include('partials/product_card', { product: product }) %>
+  <% }) %>
+ </div>
+ <% } else { %>
+ <div class="text-center py-5">
+  <i class="ri-gamepad-line icon-3x text-muted mb-3"></i>
+  <p class="text-muted">Hazırda PUBG məhsulu tapılmadı. Bütün məhsulları yoxlayın.</p>
+  <a href="/all-products" class="btn btn-primary">Bütün Məhsullar</a>
+ </div>
+ <% } %>
+ </section>
+
+ <section class="section-container pubg-seo-faq">
+ <div class="section-header">
+  <h3>PUBG Ücretsiz Pin FAQ</h3>
+ </div>
+ <div class="pubg-seo-faq-grid">
+  <article>
+   <h4>PUBG ücretsiz pin həqiqətən var?</h4>
+   <p>Çox “tam bedava” iddia saxtadır. Etibarlı yol kampaniya və bonus takibini düzgün platformadan etməkdir.</p>
+  </article>
+  <article>
+   <h4>UC nə qədər vaxta gəlir?</h4>
+   <p>Əksər sifarişlərdə çatdırılma çox qısa müddətdə tamamlanır və paneldə görünür.</p>
+  </article>
+  <article>
+   <h4>Hansı sözlərlə axtarış daha yaxşıdır?</h4>
+   <p>“pubg uc”, “pubg pin”, “uc kampaniya”, “uc bonus” axtarışları daha uyğun nəticə verir.</p>
+  </article>
+ </div>
+ </section>
+</main>
+
+<%- include('partials/footer') %>
+
+<style>
+.pubg-seo-hero {
+ border: 1px solid rgba(148, 163, 184, 0.2);
+ border-radius: 16px;
+ background: linear-gradient(140deg, rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.98));
+ color: #f8fafc;
+}
+
+.pubg-seo-badge {
+ display: inline-flex;
+ padding: 6px 12px;
+ border-radius: 999px;
+ font-size: 12px;
+ font-weight: 700;
+ background: rgba(16, 185, 129, 0.2);
+ border: 1px solid rgba(16, 185, 129, 0.55);
+ margin-bottom: 14px;
+}
+
+.pubg-seo-hero h1 {
+ font-size: clamp(24px, 4vw, 36px);
+ margin-bottom: 12px;
+}
+
+.pubg-seo-hero p {
+ color: #dbeafe;
+ max-width: 820px;
+ line-height: 1.6;
+}
+
+.pubg-seo-cta {
+ margin-top: 20px;
+ display: flex;
+ gap: 10px;
+ flex-wrap: wrap;
+}
+
+.pubg-seo-notes {
+ margin: 18px 0 0;
+ padding-left: 20px;
+ color: #bfdbfe;
+}
+
+.pubg-seo-notes li {
+ margin-bottom: 6px;
+}
+
+.pubg-seo-faq-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+ gap: 12px;
+}
+
+.pubg-seo-faq-grid article {
+ border: 1px solid rgba(148, 163, 184, 0.25);
+ border-radius: 12px;
+ padding: 14px;
+ background: rgba(15, 23, 42, 0.85);
+}
+
+.pubg-seo-faq-grid h4 {
+ margin: 0 0 8px;
+ font-size: 15px;
+ color: #e2e8f0;
+}
+
+.pubg-seo-faq-grid p {
+ margin: 0;
+ color: #cbd5e1;
+ font-size: 13px;
+ line-height: 1.55;
+}
+</style>

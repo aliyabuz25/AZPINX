@@ -4,20 +4,54 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>
- <%= title %>
- </title>
- <% const seoTitle = (settings && settings.seo_meta_title) ? settings.seo_meta_title : 'AZPINX'; %>
- <% const seoDescription = (settings && settings.seo_meta_description) ? settings.seo_meta_description : 'AZPINX rəqəmsal məhsul platforması'; %>
- <% const seoKeywords = (settings && settings.seo_meta_keywords) ? settings.seo_meta_keywords : 'azpinx, oyun, pin'; %>
- <% const seoRobots = (settings && settings.seo_robots) ? settings.seo_robots : 'index,follow'; %>
+ <% const seoData = locals.seo || {}; %>
+ <% const defaultSeoTitle = (settings && settings.seo_meta_title) ? settings.seo_meta_title : 'AZPINX'; %>
+ <% const routeTitle = (typeof title === 'string' && title.trim()) ? title.trim() : ''; %>
+ <% const pageTitle = seoData.title || (routeTitle ? `${routeTitle} | AZPINX` : defaultSeoTitle); %>
+ <% const seoDescription = seoData.description || ((settings && settings.seo_meta_description) ? settings.seo_meta_description : 'AZPINX rəqəmsal məhsul platforması'); %>
+ <% const seoKeywords = seoData.keywords || ((settings && settings.seo_meta_keywords) ? settings.seo_meta_keywords : 'azpinx, oyun, pin'); %>
+ <% const seoRobots = seoData.robots || ((settings && settings.seo_robots) ? settings.seo_robots : 'index,follow'); %>
+ <% const canonicalUrl = seoData.canonicalUrl || ''; %>
+ <% const hreflangs = Array.isArray(seoData.hreflangs) ? seoData.hreflangs : []; %>
+ <% const ogData = seoData.og || {}; %>
+ <% const twitterData = seoData.twitter || {}; %>
+ <% const structuredData = Array.isArray(seoData.structuredData) ? seoData.structuredData : []; %>
+ <% const googleSiteVerification = locals.googleSiteVerification || ''; %>
+ <title><%= pageTitle %></title>
+ <% if (googleSiteVerification) { %>
+ <meta name="google-site-verification" content="<%= googleSiteVerification %>">
+ <% } %>
  <meta name="description" content="<%= seoDescription %>">
  <meta name="keywords" content="<%= seoKeywords %>">
  <meta name="robots" content="<%= seoRobots %>">
- <meta property="og:site_name" content="AZPINX">
- <meta property="og:title" content="<%= seoTitle %>">
- <meta property="og:description" content="<%= seoDescription %>">
- <meta property="og:type" content="website">
+ <% if (canonicalUrl) { %>
+ <link rel="canonical" href="<%= canonicalUrl %>">
+ <% } %>
+ <% hreflangs.forEach(function(link) { if (link && link.lang && link.url) { %>
+ <link rel="alternate" hreflang="<%= link.lang %>" href="<%= link.url %>">
+ <% } }); %>
+ <meta property="og:site_name" content="<%= ogData.siteName || 'AZPINX' %>">
+ <meta property="og:title" content="<%= ogData.title || pageTitle %>">
+ <meta property="og:description" content="<%= ogData.description || seoDescription %>">
+ <meta property="og:type" content="<%= ogData.type || 'website' %>">
+ <% if (ogData.url || canonicalUrl) { %>
+ <meta property="og:url" content="<%= ogData.url || canonicalUrl %>">
+ <% } %>
+ <% if (ogData.locale) { %>
+ <meta property="og:locale" content="<%= ogData.locale %>">
+ <% } %>
+ <% if (ogData.image) { %>
+ <meta property="og:image" content="<%= ogData.image %>">
+ <% } %>
+ <meta name="twitter:card" content="<%= twitterData.card || 'summary_large_image' %>">
+ <meta name="twitter:title" content="<%= twitterData.title || pageTitle %>">
+ <meta name="twitter:description" content="<%= twitterData.description || seoDescription %>">
+ <% if (twitterData.image || ogData.image) { %>
+ <meta name="twitter:image" content="<%= twitterData.image || ogData.image %>">
+ <% } %>
+ <% structuredData.forEach(function(schemaItem) { if (schemaItem) { %>
+ <script type="application/ld+json"><%- JSON.stringify(schemaItem).replace(/</g, '\\u003c') %></script>
+ <% } }); %>
  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
  rel="stylesheet">
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css">

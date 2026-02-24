@@ -12,6 +12,26 @@ const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SEO_SITE_NAME = process.env.SEO_SITE_NAME || 'AZPINX';
+const SEO_SITE_ORIGIN = normalizeSiteOrigin(process.env.SITE_URL || process.env.PUBLIC_SITE_URL || 'https://azpinx.com');
+const SEO_DEFAULT_LANG = process.env.SEO_DEFAULT_LANG || 'az-AZ';
+const SEO_DEFAULT_LOCALE = process.env.SEO_DEFAULT_LOCALE || 'az_AZ';
+const SEO_DEFAULT_OG_IMAGE = process.env.SEO_DEFAULT_OG_IMAGE || '/images/comp-1_00000.png';
+const GOOGLE_SITE_VERIFICATION = String(process.env.GOOGLE_SITE_VERIFICATION || '').trim();
+const GOOGLE_VERIFICATION_TOKEN = String(process.env.GOOGLE_VERIFICATION_TOKEN || '').trim();
+const SEO_HREFLANGS = (process.env.SEO_HREFLANGS || `${SEO_DEFAULT_LANG},x-default`)
+ .split(',')
+ .map((item) => String(item || '').trim())
+ .filter(Boolean);
+
+const SEO_NOINDEX_PATH_REGEX = /^\/(admin|reseller|login|register|verify-otp|forgot-password|profile|checkout|cart|tickets|wishlist|api|balance|license-status|license-invalid|vpn-blocked)/i;
+const SEO_SEARCH_QUERY_KEYS = ['q', 'search'];
+const SEO_CANONICAL_QUERY_ALLOWLIST = {
+ '/': ['category', 'page'],
+ '/all-products': ['category', 'page'],
+ '/allproducts': ['category', 'page'],
+ '/people': ['page']
+};
 
 // HubMSG API Config
 const HUBMSG_CONFIG = {
@@ -72,6 +92,49 @@ async function sendSMS(phone, message) {
 async function sendWhatsApp(phone, message) {
  return sendSMS(phone, message);
 }
+
+const AVATAR_UPLOAD_DIR = process.env.AVATAR_UPLOAD_DIR
+ ? path.resolve(process.env.AVATAR_UPLOAD_DIR)
+ : path.join(__dirname, 'public', 'uploads', 'avatars');
+const AVATAR_URL_PREFIX = '/uploads/avatars/';
+const AVATAR_BACKFILL_BATCH_SIZE = Math.max(1, Number(process.env.AVATAR_BACKFILL_BATCH_SIZE || 200));
+const AVATAR_BACKFILL_MAX_ROWS = Math.max(0, Number(process.env.AVATAR_BACKFILL_MAX_ROWS || 5000));
+
+function ensureDirectorySync(dirPath) {
+ const dir = String(dirPath || '').trim();
+ if (!dir) return;
+ try {
+ if (!fs.existsSync(dir)) {
+ fs.mkdirSync(dir, { recursive: true });
+ }
+ } catch (err) {
+ console.warn(`Directory create warning (${dir}):`, err.message);
+ }
+}
+
+function buildAvatarFilename(originalName) {
+ const extension = String(path.extname(String(originalName || '')).toLowerCase() || '').slice(0, 10);
+ const safeExt = extension || '.jpg';
+ return `avatar-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
+}
+
+function getAvatarFilePath(fileName) {
+ const safeFileName = path.basename(String(fileName || '').trim());
+ if (!safeFileName) return '';
+ return path.join(AVATAR_UPLOAD_DIR, safeFileName);
+}
+
+function getMimeTypeForAvatarFilename(fileName) {
+ const ext = String(path.extname(String(fileName || '')).toLowerCase() || '');
+ if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+ if (ext === '.png') return 'image/png';
+ if (ext === '.gif') return 'image/gif';
+ if (ext === '.webp') return 'image/webp';
+ if (ext === '.svg') return 'image/svg+xml';
+ return 'application/octet-stream';
+}
+
+ensureDirectorySync(AVATAR_UPLOAD_DIR);
 
 // Multer Config
 // Multer setup for receipts
@@ -150,13 +213,10 @@ const uploadSliderImages = uploadSlider.fields([
 // Multer setup for user avatars
 const avatarStorage = multer.diskStorage({
  destination: (req, file, cb) => {
- const dir = path.join(__dirname, 'public/uploads/avatars');
- if (!fs.existsSync(dir)) {
- fs.mkdirSync(dir, { recursive: true });
- }
- cb(null, dir);
+ ensureDirectorySync(AVATAR_UPLOAD_DIR);
+ cb(null, AVATAR_UPLOAD_DIR);
  },
- filename: (req, file, cb) => cb(null, 'avatar-' + Date.now() + path.extname(file.originalname))
+ filename: (req, file, cb) => cb(null, buildAvatarFilename(file.originalname))
 });
 const uploadAvatar = multer({
  storage: avatarStorage,
@@ -371,6 +431,115 @@ const vpnCheckCache = new Map();
 
 // Database Connection
 let db;
+
+async function upsertAvatarBackup(userId, fileName, mimeType, fileBuffer) {
+ const numericUserId = Number(userId);
+ const safeFileName = path.basename(String(fileName || '').trim());
+ if (!db || !Number.isInteger(numericUserId) || numericUserId <= 0 || !safeFileName) return;
+
+ const buffer = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer || '');
+ if (!buffer.length) return;
+
+ const normalizedMime = String(mimeType || '').trim().slice(0, 100) || getMimeTypeForAvatarFilename(safeFileName);
+ try {
+ await db.execute(
+ `INSERT INTO user_avatars (user_id, file_name, mime_type, file_data)
+ VALUES (?, ?, ?, ?)
+ ON DUPLICATE KEY UPDATE
+  file_name = VALUES(file_name),
+  mime_type = VALUES(mime_type),
+  file_data = VALUES(file_data),
+  updated_at = CURRENT_TIMESTAMP`,
+ [numericUserId, safeFileName, normalizedMime, buffer]
+ );
+ } catch (err) {
+ console.warn('Avatar backup upsert warning:', err.message);
+ }
+}
+
+async function restoreAvatarFromBackup(fileName, destinationPath = '') {
+ const safeFileName = path.basename(String(fileName || '').trim());
+ if (!db || !safeFileName) return null;
+
+ try {
+ const [rows] = await db.execute('SELECT mime_type, file_data FROM user_avatars WHERE file_name = ? LIMIT 1', [safeFileName]);
+ const row = rows && rows[0] ? rows[0] : null;
+ if (!row || !row.file_data) return null;
+
+ const buffer = Buffer.isBuffer(row.file_data) ? row.file_data : Buffer.from(row.file_data);
+ if (!buffer.length) return null;
+
+ if (destinationPath) {
+ ensureDirectorySync(path.dirname(destinationPath));
+ fs.writeFileSync(destinationPath, buffer);
+ }
+
+ return {
+ mimeType: String(row.mime_type || '').trim() || getMimeTypeForAvatarFilename(safeFileName),
+ buffer
+ };
+ } catch (err) {
+ console.warn('Avatar restore warning:', err.message);
+ return null;
+ }
+}
+
+async function backfillAvatarBackupsFromDisk() {
+ if (!db || AVATAR_BACKFILL_MAX_ROWS <= 0) return;
+
+ let totalChecked = 0;
+ let totalBackfilled = 0;
+ let lastUserId = 0;
+ while (totalChecked < AVATAR_BACKFILL_MAX_ROWS) {
+ const remain = AVATAR_BACKFILL_MAX_ROWS - totalChecked;
+ const batchSize = Math.max(1, Math.min(AVATAR_BACKFILL_BATCH_SIZE, remain));
+
+ const [rows] = await db.execute(
+ `SELECT u.id AS user_id, u.avatar_path
+ FROM users u
+ LEFT JOIN user_avatars ua ON ua.user_id = u.id
+ WHERE u.id > ?
+  AND ua.user_id IS NULL
+  AND u.avatar_path IS NOT NULL
+  AND u.avatar_path <> ''
+  AND u.avatar_path LIKE ?
+ ORDER BY u.id ASC
+ LIMIT ?`,
+ [lastUserId, `${AVATAR_URL_PREFIX}%`, batchSize]
+ );
+
+ if (!rows.length) break;
+
+ for (const row of rows) {
+ const userId = Number(row.user_id || 0);
+ const avatarPath = String(row.avatar_path || '').trim();
+ const fileName = path.basename(avatarPath);
+ if (userId <= 0 || !fileName) continue;
+
+ const avatarDiskPath = getAvatarFilePath(fileName);
+ if (!avatarDiskPath || !fs.existsSync(avatarDiskPath)) continue;
+
+ try {
+ const fileBuffer = fs.readFileSync(avatarDiskPath);
+ if (!fileBuffer.length) continue;
+ await upsertAvatarBackup(userId, fileName, getMimeTypeForAvatarFilename(fileName), fileBuffer);
+ totalBackfilled += 1;
+ } catch (err) {
+ console.warn(`Avatar backfill warning (${userId}):`, err.message);
+ }
+ }
+
+ totalChecked += rows.length;
+ const tailUserId = Number(rows[rows.length - 1]?.user_id || 0);
+ if (tailUserId <= lastUserId) break;
+ lastUserId = tailUserId;
+ }
+
+ if (totalBackfilled > 0) {
+ console.log(`Avatar backfill complete. ${totalBackfilled} avatar backup row(s) synced from disk.`);
+ }
+}
+
 (async () => {
  try {
  db = await mysql.createConnection({
@@ -534,6 +703,14 @@ let db;
  required_count INT DEFAULT 5,
  reward_label VARCHAR(100) DEFAULT '60 UC',
  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`,
+ `CREATE TABLE IF NOT EXISTS user_avatars (
+ user_id INT PRIMARY KEY,
+ file_name VARCHAR(255) NOT NULL UNIQUE,
+ mime_type VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
+ file_data LONGBLOB NOT NULL,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
  )`
  ];
@@ -745,6 +922,8 @@ let db;
  ['Admin User', 'admin@azpinx.com', hashedPw, 'admin']);
  console.log("Default Admin user created: admin@azpinx.com / admin123");
  }
+
+ await backfillAvatarBackupsFromDisk();
 
  } catch (err) {
  console.error("Database Error:", err.message);
@@ -1126,6 +1305,342 @@ function normalizeOptionalString(value) {
  if (typeof value !== 'string') return value;
  const trimmed = value.trim();
  return trimmed === '' ? null : trimmed;
+}
+
+function normalizeSiteOrigin(rawValue) {
+ const fallback = 'https://azpinx.com';
+ const raw = String(rawValue || '').trim();
+ const candidate = raw || fallback;
+ try {
+ const parsed = new URL(/^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`);
+ return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, '');
+ } catch (e) {
+ return fallback;
+ }
+}
+
+function normalizeSeoPath(pathValue) {
+ const raw = String(pathValue || '/').trim();
+ if (!raw) return '/';
+ let pathname = raw.startsWith('/') ? raw : `/${raw}`;
+ pathname = pathname.replace(/\/{2,}/g, '/');
+ if (pathname.length > 1 && pathname.endsWith('/')) {
+ pathname = pathname.slice(0, -1);
+ }
+ return pathname || '/';
+}
+
+function toAbsoluteUrl(pathOrUrl) {
+ const raw = String(pathOrUrl || '').trim();
+ if (!raw) return `${SEO_SITE_ORIGIN}/`;
+ if (/^https?:\/\//i.test(raw)) return raw;
+ if (raw.startsWith('//')) return `https:${raw}`;
+ const normalizedPath = raw.startsWith('/') ? raw : `/${raw}`;
+ return `${SEO_SITE_ORIGIN}${normalizedPath}`;
+}
+
+function extractPlainText(value) {
+ return String(value || '')
+ .replace(/<[^>]*>/g, ' ')
+ .replace(/\s+/g, ' ')
+ .trim();
+}
+
+function limitSeoText(value, maxLength = 160) {
+ const text = extractPlainText(value);
+ if (!text) return '';
+ if (text.length <= maxLength) return text;
+ return `${text.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+}
+
+function collectSeoHreflangs(canonicalUrl) {
+ const fallback = canonicalUrl || `${SEO_SITE_ORIGIN}/`;
+ const entries = [];
+ const seen = new Set();
+ SEO_HREFLANGS.forEach((langCode) => {
+ const normalizedLang = String(langCode || '').trim();
+ if (!normalizedLang || seen.has(normalizedLang)) return;
+ seen.add(normalizedLang);
+ entries.push({ lang: normalizedLang, url: fallback });
+ });
+ if (!seen.has('x-default')) {
+ entries.push({ lang: 'x-default', url: fallback });
+ }
+ return entries;
+}
+
+function resolveCanonicalPath(req) {
+ const rawPath = normalizeSeoPath(req?.path || '/');
+ const canonicalPath = rawPath === '/allproducts' ? '/all-products' : rawPath;
+ const query = req?.query || {};
+ const allowList = SEO_CANONICAL_QUERY_ALLOWLIST[rawPath]
+ || SEO_CANONICAL_QUERY_ALLOWLIST[canonicalPath]
+ || [];
+ const params = new URLSearchParams();
+
+ allowList.forEach((key) => {
+ const rawValue = normalizeOptionalString(query[key]);
+ if (!rawValue) return;
+
+ if (key === 'page') {
+ const page = Number(rawValue);
+ if (!Number.isInteger(page) || page <= 1) return;
+ params.set('page', String(page));
+ return;
+ }
+
+ if (key === 'category') {
+ params.set('category', String(rawValue).slice(0, 120));
+ return;
+ }
+
+ params.set(key, String(rawValue));
+ });
+
+ const paramString = params.toString();
+ return paramString ? `${canonicalPath}?${paramString}` : canonicalPath;
+}
+
+function resolveSeoRobots(req, settingsMap = {}) {
+ const configured = String(settingsMap.seo_robots || 'index,follow').trim().toLowerCase();
+ if (configured === 'noindex,nofollow') return 'noindex,nofollow';
+
+ const pathValue = normalizeSeoPath(req?.path || '/');
+ if (SEO_NOINDEX_PATH_REGEX.test(pathValue)) return 'noindex,nofollow,noarchive';
+
+ const hasInternalSearch = SEO_SEARCH_QUERY_KEYS.some((key) => normalizeOptionalString(req?.query?.[key]));
+ if (hasInternalSearch) return 'noindex,follow';
+
+ return 'index,follow';
+}
+
+function buildBaseStructuredData(settingsMap = {}) {
+ const whatsapp = normalizeOptionalString(settingsMap.footer_whatsapp_value);
+ const email = normalizeOptionalString(settingsMap.footer_email_value);
+ const logoUrl = toAbsoluteUrl('/images/comp-1_00000.png');
+
+ const website = {
+ '@context': 'https://schema.org',
+ '@type': 'WebSite',
+ name: SEO_SITE_NAME,
+ url: `${SEO_SITE_ORIGIN}/`,
+ inLanguage: 'az',
+ potentialAction: {
+ '@type': 'SearchAction',
+ target: `${SEO_SITE_ORIGIN}/all-products?search={search_term_string}`,
+ 'query-input': 'required name=search_term_string'
+ }
+ };
+
+ const organization = {
+ '@context': 'https://schema.org',
+ '@type': 'Organization',
+ name: SEO_SITE_NAME,
+ url: SEO_SITE_ORIGIN,
+ logo: logoUrl
+ };
+
+ if (email) organization.email = email;
+ if (whatsapp) {
+ organization.contactPoint = [{
+ '@type': 'ContactPoint',
+ contactType: 'customer support',
+ telephone: String(whatsapp),
+ areaServed: 'AZ',
+ availableLanguage: ['az', 'tr', 'ru', 'en']
+ }];
+ }
+
+ return [website, organization];
+}
+
+function buildDefaultSeo(req, settingsMap = {}) {
+ const titleFromSettings = normalizeOptionalString(settingsMap.seo_meta_title)
+ || `${SEO_SITE_NAME} - Oyun Ici Mehsullar ve Pin Satisi`;
+ const descriptionFromSettings = normalizeOptionalString(settingsMap.seo_meta_description)
+ || `${SEO_SITE_NAME} uzarinden oyun ici mehsullar, UC, VP, pin ve reqemsal kodlari tehlukesiz ve suretli alin.`;
+ const keywordsFromSettings = normalizeOptionalString(settingsMap.seo_meta_keywords)
+ || 'azpinx, pubg uc, valorant vp, oyun ici mehsullar, pin satisi';
+
+ const canonicalPath = resolveCanonicalPath(req);
+ const canonicalUrl = toAbsoluteUrl(canonicalPath);
+ const title = limitSeoText(titleFromSettings, 70) || titleFromSettings;
+ const description = limitSeoText(descriptionFromSettings, 170) || descriptionFromSettings;
+ const ogImage = toAbsoluteUrl(SEO_DEFAULT_OG_IMAGE);
+
+ return {
+ title,
+ description,
+ keywords: keywordsFromSettings,
+ robots: resolveSeoRobots(req, settingsMap),
+ canonicalUrl,
+ hreflangs: collectSeoHreflangs(canonicalUrl),
+ og: {
+ siteName: SEO_SITE_NAME,
+ title,
+ description,
+ type: 'website',
+ url: canonicalUrl,
+ locale: SEO_DEFAULT_LOCALE,
+ image: ogImage
+ },
+ twitter: {
+ card: 'summary_large_image',
+ title,
+ description,
+ image: ogImage
+ },
+ structuredData: buildBaseStructuredData(settingsMap)
+ };
+}
+
+function createSeoMeta(req, settingsMap = {}, overrides = {}) {
+ const base = buildDefaultSeo(req, settingsMap);
+ const merged = {
+ ...base,
+ ...overrides
+ };
+
+ if (overrides.canonicalPath) {
+ merged.canonicalUrl = toAbsoluteUrl(overrides.canonicalPath);
+ } else if (overrides.canonicalUrl) {
+ merged.canonicalUrl = toAbsoluteUrl(overrides.canonicalUrl);
+ } else {
+ merged.canonicalUrl = base.canonicalUrl;
+ }
+
+ merged.og = {
+ ...base.og,
+ ...(overrides.og || {})
+ };
+
+ merged.twitter = {
+ ...base.twitter,
+ ...(overrides.twitter || {})
+ };
+
+ if (Array.isArray(overrides.structuredData)) {
+ merged.structuredData = overrides.structuredData.filter(Boolean);
+ } else {
+ const extras = Array.isArray(overrides.extraStructuredData)
+ ? overrides.extraStructuredData.filter(Boolean)
+ : [];
+ merged.structuredData = extras.length
+ ? [...(base.structuredData || []), ...extras]
+ : (base.structuredData || []);
+ }
+
+ if (!Array.isArray(overrides.hreflangs) || !overrides.hreflangs.length) {
+ merged.hreflangs = collectSeoHreflangs(merged.canonicalUrl);
+ }
+
+ merged.title = limitSeoText(merged.title || base.title, 70) || base.title;
+ merged.description = limitSeoText(merged.description || base.description, 170) || base.description;
+ merged.robots = normalizeOptionalString(merged.robots) || base.robots;
+ merged.og.title = merged.og.title || merged.title;
+ merged.og.description = merged.og.description || merged.description;
+ merged.og.url = merged.og.url || merged.canonicalUrl;
+ merged.twitter.title = merged.twitter.title || merged.title;
+ merged.twitter.description = merged.twitter.description || merged.description;
+
+ delete merged.canonicalPath;
+ delete merged.extraStructuredData;
+ return merged;
+}
+
+function buildBreadcrumbSchema(items = []) {
+ const itemListElement = items
+ .filter((item) => item && item.name && item.url)
+ .map((item, index) => ({
+ '@type': 'ListItem',
+ position: index + 1,
+ name: String(item.name),
+ item: toAbsoluteUrl(item.url)
+ }));
+
+ if (!itemListElement.length) return null;
+ return {
+ '@context': 'https://schema.org',
+ '@type': 'BreadcrumbList',
+ itemListElement
+ };
+}
+
+function buildCollectionItemListSchema(name, products = []) {
+ const itemListElement = products
+ .slice(0, 20)
+ .map((product, index) => {
+ const id = normalizeOptionalString(product?.id);
+ if (!id && id !== 0) return null;
+ return {
+ '@type': 'ListItem',
+ position: index + 1,
+ url: toAbsoluteUrl(`/product/${encodeURIComponent(String(id))}`)
+ };
+ })
+ .filter(Boolean);
+
+ if (!itemListElement.length) return null;
+ return {
+ '@context': 'https://schema.org',
+ '@type': 'ItemList',
+ name: limitSeoText(name || `${SEO_SITE_NAME} mehsullari`, 80),
+ itemListElement
+ };
+}
+
+function buildProductSchema(product = {}, canonicalUrl) {
+ const productId = normalizeOptionalString(product.id);
+ if (!productId && productId !== 0) return null;
+ const url = toAbsoluteUrl(canonicalUrl || `/product/${encodeURIComponent(String(productId))}`);
+ const availability = String(product.badge || '').toLowerCase() === 'bitib' || !product.is_active
+ ? 'https://schema.org/OutOfStock'
+ : 'https://schema.org/InStock';
+ const description = limitSeoText(product.description || '', 250);
+ const image = normalizeOptionalString(product.image);
+ const price = Number(product.price);
+
+ const schema = {
+ '@context': 'https://schema.org',
+ '@type': 'Product',
+ name: String(product.name || SEO_SITE_NAME),
+ url,
+ offers: {
+ '@type': 'Offer',
+ priceCurrency: 'AZN',
+ availability,
+ price: Number.isFinite(price) ? price.toFixed(2) : '0.00',
+ url
+ }
+ };
+
+ if (description) schema.description = description;
+ if (image) schema.image = [toAbsoluteUrl(image)];
+ if (normalizeOptionalString(product.category)) schema.category = String(product.category);
+ if (normalizeOptionalString(product.api_id)) schema.sku = String(product.api_id);
+ return schema;
+}
+
+function escapeXml(value) {
+ return String(value || '')
+ .replace(/&/g, '&amp;')
+ .replace(/</g, '&lt;')
+ .replace(/>/g, '&gt;')
+ .replace(/"/g, '&quot;')
+ .replace(/'/g, '&apos;');
+}
+
+function formatSitemapDate(value) {
+ const date = value ? new Date(value) : new Date();
+ if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+ return date.toISOString().slice(0, 10);
+}
+
+function hasPubgClickbaitIntent(...values) {
+ const bag = values
+ .map((value) => String(value || '').toLowerCase())
+ .join(' ');
+ return /(pubg|uc|ucretsiz pin|ücretsiz pin|bedava pin|free pin|free uc)/i.test(bag);
 }
 
 function normalizeFooterLink(value, fallback = '#') {
@@ -1556,13 +2071,22 @@ function adminRedirect(req, res, fallbackPath = '/admin') {
 // Middleware
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.get('/uploads/avatars/:filename', (req, res, next) => {
+app.get('/uploads/avatars/:filename', async (req, res, next) => {
  const filename = path.basename(String(req.params.filename || '').trim());
  if (!filename) return next();
- const avatarFile = path.join(__dirname, 'public', 'uploads', 'avatars', filename);
- if (fs.existsSync(avatarFile)) {
+ const avatarFile = getAvatarFilePath(filename);
+ if (avatarFile && fs.existsSync(avatarFile)) {
  return res.sendFile(avatarFile);
  }
+
+ const restored = await restoreAvatarFromBackup(filename, avatarFile);
+ if (restored?.buffer?.length) {
+ if (restored.mimeType) {
+ res.type(restored.mimeType);
+ }
+ return res.send(restored.buffer);
+ }
+
  const fallbackAvatar = path.join(__dirname, 'public', 'images', 'default-avatar.svg');
  if (fs.existsSync(fallbackAvatar)) {
  return res.sendFile(fallbackAvatar);
@@ -1649,7 +2173,7 @@ app.use((req, res, next) => {
  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
  res.setHeader('X-XSS-Protection', '1; mode=block');
- const noindexPaths = /^\/(admin|login|register|verify-otp|forgot-password|profile|checkout|cart|tickets|wishlist|api|balance)/i;
+ const noindexPaths = /^\/(admin|reseller|login|register|verify-otp|forgot-password|profile|checkout|cart|tickets|wishlist|api|balance|license-status|license-invalid|vpn-blocked)/i;
  if (noindexPaths.test(String(req.path || ''))) {
  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
  }
@@ -1766,6 +2290,10 @@ app.use(async (req, res, next) => {
  res.locals.settings = {};
  }
 
+ res.locals.siteOrigin = SEO_SITE_ORIGIN;
+ res.locals.googleSiteVerification = GOOGLE_SITE_VERIFICATION;
+ res.locals.seo = createSeoMeta(req, res.locals.settings || {});
+
  const isTrackableMethod = req.method === 'GET';
  const pathValue = String(req.path || '');
  const skipPathPrefixes = ['/uploads/', '/css/', '/js/', '/images/', '/favicon', '/adminlte', '/cdn-cgi'];
@@ -1794,6 +2322,9 @@ app.use(async (req, res, next) => {
  console.error("Middleware Error:", err.message);
  res.locals.announcements = [];
  res.locals.settings = {};
+ res.locals.siteOrigin = SEO_SITE_ORIGIN;
+ res.locals.googleSiteVerification = GOOGLE_SITE_VERIFICATION;
+ res.locals.seo = createSeoMeta(req, {});
  }
  next();
 });
@@ -1803,9 +2334,18 @@ app.get('/robots.txt', async (req, res) => {
  const settingsMap = await getCachedSettingsMap().catch(() => ({}));
  const robotsSetting = String(settingsMap.seo_robots || 'index,follow').trim().toLowerCase();
  const disallowAll = robotsSetting === 'noindex,nofollow';
+ const hostName = (() => {
+ try {
+ return new URL(SEO_SITE_ORIGIN).host;
+ } catch (err) {
+ return 'azpinx.com';
+ }
+ })();
  const lines = [
  'User-agent: *',
- disallowAll ? 'Disallow: /' : 'Disallow: /admin',
+ disallowAll ? 'Disallow: /' : 'Allow: /',
+ disallowAll ? '' : 'Disallow: /admin',
+ disallowAll ? '' : 'Disallow: /reseller',
  disallowAll ? '' : 'Disallow: /login',
  disallowAll ? '' : 'Disallow: /register',
  disallowAll ? '' : 'Disallow: /profile',
@@ -1813,12 +2353,101 @@ app.get('/robots.txt', async (req, res) => {
  disallowAll ? '' : 'Disallow: /cart',
  disallowAll ? '' : 'Disallow: /tickets',
  disallowAll ? '' : 'Disallow: /wishlist',
- disallowAll ? '' : 'Disallow: /api'
+ disallowAll ? '' : 'Disallow: /api',
+ `Sitemap: ${toAbsoluteUrl('/sitemap.xml')}`,
+ `Host: ${hostName}`
  ].filter(Boolean);
 
  return res.type('text/plain').send(lines.join('\n'));
  } catch (e) {
- return res.type('text/plain').send('User-agent: *\nDisallow: /admin\nDisallow: /api');
+ return res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: ${toAbsoluteUrl('/sitemap.xml')}`);
+ }
+});
+
+app.get(/^\/google([a-zA-Z0-9_-]+)\.html$/, (req, res, next) => {
+ const requestedToken = String(req.params?.[0] || '').trim();
+ const configuredToken = String(GOOGLE_VERIFICATION_TOKEN || '').trim();
+ if (!configuredToken || !requestedToken || requestedToken !== configuredToken) {
+ return next();
+ }
+ const fileName = `google${configuredToken}.html`;
+ return res.type('text/html').send(`google-site-verification: ${fileName}`);
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+ try {
+ const [categories, mappedProducts] = await Promise.all([
+ getCachedCategoriesRows().catch(() => []),
+ getMappedProducts().catch(() => [])
+ ]);
+
+ const seen = new Set();
+ const entries = [];
+ const pushEntry = (urlPath, options = {}) => {
+ const loc = toAbsoluteUrl(urlPath);
+ if (seen.has(loc)) return;
+ seen.add(loc);
+ entries.push({
+ loc,
+ lastmod: formatSitemapDate(options.lastmod),
+ changefreq: options.changefreq || 'weekly',
+ priority: options.priority || '0.5'
+ });
+ };
+
+ pushEntry('/', { priority: '1.0', changefreq: 'hourly' });
+ pushEntry('/all-products', { priority: '0.9', changefreq: 'hourly' });
+ pushEntry('/pubg-ucretsiz-pin', { priority: '0.85', changefreq: 'daily' });
+ pushEntry('/azerbaycanda-alisveris', { priority: '0.88', changefreq: 'daily' });
+ pushEntry('/faq', { priority: '0.6', changefreq: 'monthly' });
+ pushEntry('/terms', { priority: '0.4', changefreq: 'monthly' });
+ pushEntry('/people', { priority: '0.5', changefreq: 'daily' });
+
+ categories.forEach((category) => {
+ const categoryName = normalizeOptionalString(category?.name);
+ if (!categoryName) return;
+ pushEntry(`/all-products?category=${encodeURIComponent(categoryName)}`, {
+ changefreq: 'daily',
+ priority: '0.7',
+ lastmod: category?.updated_at || category?.created_at
+ });
+ });
+
+ mappedProducts
+ .filter((product) => product.status === 'sale' && product.is_active)
+ .slice(0, 5000)
+ .forEach((product) => {
+ const id = normalizeOptionalString(product.id);
+ if (!id && id !== 0) return;
+ pushEntry(`/product/${encodeURIComponent(String(id))}`, {
+ changefreq: 'daily',
+ priority: '0.8',
+ lastmod: product?.updated_at || product?.created_at
+ });
+ });
+
+ const xmlItems = entries.map((entry) => {
+ return [
+ '<url>',
+ `  <loc>${escapeXml(entry.loc)}</loc>`,
+ `  <lastmod>${escapeXml(entry.lastmod)}</lastmod>`,
+ `  <changefreq>${escapeXml(entry.changefreq)}</changefreq>`,
+ `  <priority>${escapeXml(entry.priority)}</priority>`,
+ '</url>'
+ ].join('\n');
+ }).join('\n');
+
+ const xml = `<?xml version="1.0" encoding="UTF-8"?>\n`
+ + `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${xmlItems}\n</urlset>`;
+
+ return res.type('application/xml').send(xml);
+ } catch (err) {
+ const fallbackLoc = toAbsoluteUrl('/');
+ const fallback = `<?xml version="1.0" encoding="UTF-8"?>\n`
+ + `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+ + `<url><loc>${escapeXml(fallbackLoc)}</loc><lastmod>${formatSitemapDate()}</lastmod></url>\n`
+ + `</urlset>`;
+ return res.type('application/xml').send(fallback);
  }
 });
 
@@ -2086,9 +2715,37 @@ app.get('/', async (req, res) => {
  deliveryTime: homeStatsCore.deliveryTime || '5-10 dakika',
  rating: homeStatsCore.rating || '0.0/5'
  };
+ const homePubgIntent = hasPubgClickbaitIntent(selectedCategory, searchQuery);
+
+ const homeSeoOverrides = {
+ title: selectedCategory
+ ? (homePubgIntent
+ ? `PUBG Ücretsiz Pin Fırsatları: ${selectedCategory} | ${SEO_SITE_NAME}`
+ : `${selectedCategory} Məhsulları | ${SEO_SITE_NAME}`)
+ : (homePubgIntent
+ ? `PUBG Ücretsiz Pin, UC Kampanyaları ve Şok Endirimlər | ${SEO_SITE_NAME}`
+ : `PUBG UC, Valorant VP ve E-Pin Kampanyaları | ${SEO_SITE_NAME}`),
+ description: searchQuery
+ ? (homePubgIntent
+ ? `"${searchQuery}" üçün PUBG pin kampaniyaları, bonus və sürətli çatdırılma nəticələri.`
+ : `"${searchQuery}" axtarışı üçün AZPINX nəticələri.`)
+ : (homePubgIntent
+ ? 'PUBG ücretsiz pin axtaranlar üçün kampaniya taktikləri, UC bonus imkanları və təhlükəsiz alış yolları AZPINX-də.'
+ : 'AZPINX üzərindən oyun içi məhsullar, UC, VP, pin və rəqəmsal kodları təhlükəsiz və sürətli alın.'),
+ keywords: homePubgIntent
+ ? 'pubg ücretsiz pin, pubg uc kampaniya, uc bonus, uc endirim, azpinx'
+ : undefined,
+ extraStructuredData: [
+ buildCollectionItemListSchema(selectedCategory ? `${selectedCategory} məhsulları` : 'Populyar məhsullar', products),
+ buildBreadcrumbSchema([{ name: 'Ana Səhifə', url: '/' }])
+ ].filter(Boolean)
+ };
+ if (searchQuery) homeSeoOverrides.robots = 'noindex,follow';
+ const seo = createSeoMeta(req, res.locals.settings || {}, homeSeoOverrides);
 
  res.render('index', {
  title: 'Ana Səhifə',
+ seo,
  categories,
  sliders,
  quickActions: categories, // Using dynamic categories here
@@ -2177,9 +2834,40 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  const startIndex = (page - 1) * limit;
  const totalPages = Math.ceil(allProducts.length / limit);
  const products = allProducts.slice(startIndex, startIndex + limit);
+ const listingPubgIntent = hasPubgClickbaitIntent(selectedCategory, searchQuery);
+
+ const listingSeoOverrides = {
+ title: selectedCategory
+ ? (listingPubgIntent
+ ? `PUBG Ücretsiz Pin ve UC Paketləri: ${selectedCategory} | ${SEO_SITE_NAME}`
+ : `${selectedCategory} Məhsulları | ${SEO_SITE_NAME}`)
+ : (listingPubgIntent
+ ? `PUBG Ücretsiz Pin, UC Kampaniya Paketləri | ${SEO_SITE_NAME}`
+ : `Bütün Məhsullar | ${SEO_SITE_NAME}`),
+ description: selectedCategory
+ ? (listingPubgIntent
+ ? `${selectedCategory} üçün PUBG pin kampaniyaları, bonus UC paketləri və ani çatdırılma.`
+ : `${selectedCategory} üçün AZPINX məhsulları, sürətli çatdırılma və təhlükəsiz ödəniş.`)
+ : (listingPubgIntent
+ ? 'PUBG ücretsiz pin və UC kampaniya axtarışları üçün ən çox klik alan məhsullar AZPINX-də.'
+ : 'AZPINX platformasında oyun içi məhsullar, pin və rəqəmsal kodlar.'),
+ keywords: listingPubgIntent
+ ? 'pubg ücretsiz pin, uc paketləri, pubg uc, bonus pin, azpinx pubg'
+ : undefined,
+ extraStructuredData: [
+ buildCollectionItemListSchema(selectedCategory || 'Bütün məhsullar', products),
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'Bütün Məhsullar', url: '/all-products' }
+ ])
+ ].filter(Boolean)
+ };
+ if (searchQuery) listingSeoOverrides.robots = 'noindex,follow';
+ const seo = createSeoMeta(req, res.locals.settings || {}, listingSeoOverrides);
 
  res.render('allproducts', {
  title: 'Bütün Məhsullar',
+ seo,
  categories,
  featuredProducts: products,
  currentPage: page,
@@ -2194,12 +2882,223 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  }
 });
 
+app.get('/pubg-ucretsiz-pin', async (req, res) => {
+ try {
+ const [mappedProducts, resellerDiscountPercent] = await Promise.all([
+ getMappedProducts(),
+ getResellerDiscountPercent()
+ ]);
+
+ const allProducts = applyResellerPricing(mappedProducts, req.session.user, resellerDiscountPercent)
+ .filter((p) => p.status === 'sale' && p.is_active);
+ const pubgProducts = allProducts
+ .filter((p) => hasPubgClickbaitIntent(p.category, p.name, p.description))
+ .slice(0, 12);
+
+ const faqSchema = {
+ '@context': 'https://schema.org',
+ '@type': 'FAQPage',
+ mainEntity: [
+ {
+ '@type': 'Question',
+ name: 'PUBG ücretsiz pin gerçekten var mı?',
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: 'Tamamen bedava pin vaatleri riskli ola bilər. AZPINX kampanya ve bonus dönemlerinde avantajlı paketler sunur.'
+ }
+ },
+ {
+ '@type': 'Question',
+ name: 'PUBG UC teslimatı ne kadar sürer?',
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: 'Çoğu siparişte teslimat dakikalar içinde tamamlanır ve sipariş durumu panelden izlenebilir.'
+ }
+ }
+ ]
+ };
+
+ const seo = createSeoMeta(req, res.locals.settings || {}, {
+ title: `PUBG Ücretsiz Pin 2026: Şok Kampanyalar ve UC Paketləri | ${SEO_SITE_NAME}`,
+ description: 'PUBG ücretsiz pin axtaranlar üçün real kampaniya rehberi: bonus imkanları, təhlükəsiz alış və sürətli UC çatdırılması.',
+ keywords: 'pubg ücretsiz pin, pubg uc, uc kampanya, bedava pin, pubg bonus, azpinx',
+ canonicalPath: '/pubg-ucretsiz-pin',
+ extraStructuredData: [
+ buildCollectionItemListSchema('PUBG kampaniya məhsulları', pubgProducts),
+ faqSchema,
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'PUBG Ücretsiz Pin', url: '/pubg-ucretsiz-pin' }
+ ])
+ ].filter(Boolean)
+ });
+
+ return res.render('pubg_ucretsiz_pin', {
+ title: 'PUBG Ücretsiz Pin Kampaniya Rehberi',
+ seo,
+ pubgProducts
+ });
+ } catch (e) {
+ console.error('PUBG SEO landing error:', e.message);
+ return res.status(500).send('Server Error');
+ }
+});
+
+app.get('/azerbaycanda-alisveris', async (req, res) => {
+ try {
+ const [mappedProducts, resellerDiscountPercent] = await Promise.all([
+ getMappedProducts(),
+ getResellerDiscountPercent()
+ ]);
+
+ const products = applyResellerPricing(mappedProducts, req.session.user, resellerDiscountPercent)
+ .filter((p) => p.status === 'sale' && p.is_active)
+ .slice(0, 12);
+
+ const settingsMap = res.locals.settings || {};
+ const paymentText = normalizeOptionalString(settingsMap.footer_payment_text) || 'M10 / MilliÖN / eManat';
+ const whatsappRaw = normalizeOptionalString(settingsMap.footer_whatsapp_value) || '';
+ const whatsappDigits = String(whatsappRaw).replace(/[^\d]/g, '');
+ const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : '';
+ const howToSchema = {
+ '@context': 'https://schema.org',
+ '@type': 'HowTo',
+ name: 'Azərbaycanda rəqəmsal alış-verişə başlamaq',
+ totalTime: 'PT10M',
+ step: [
+ {
+ '@type': 'HowToStep',
+ name: 'Məhsul seçimi',
+ text: 'Populyar məhsulları seçin və səbətə əlavə edin.'
+ },
+ {
+ '@type': 'HowToStep',
+ name: 'AZN ilə ödəniş',
+ text: 'Kart köçürməsi, IBAN və ya balans üsulu ilə ödəniş edin.'
+ },
+ {
+ '@type': 'HowToStep',
+ name: 'Sifarişi izləmə',
+ text: 'Profil bölməsindən sifariş statusunu canlı izləyin.'
+ }
+ ]
+ };
+ const serviceSchema = {
+ '@context': 'https://schema.org',
+ '@type': 'Service',
+ name: 'AZPINX Rəqəmsal Məhsul Satışı',
+ provider: {
+ '@type': 'Organization',
+ name: SEO_SITE_NAME,
+ url: SEO_SITE_ORIGIN
+ },
+ areaServed: {
+ '@type': 'Country',
+ name: 'Azerbaijan'
+ },
+ availableChannel: {
+ '@type': 'ServiceChannel',
+ serviceUrl: toAbsoluteUrl('/checkout')
+ }
+ };
+
+ const seo = createSeoMeta(req, settingsMap, {
+ title: `Azərbaycanda Alış-verişə Başla: Güvənli Ödəniş və Sürətli Çatdırılma | ${SEO_SITE_NAME}`,
+ description: 'Azərbaycanda rəqəmsal alış-verişə başlamaq üçün 3 addım: məhsul seç, təhlükəsiz ödə, sifarişi dəqiqələr içində al.',
+ keywords: 'azerbaycanda alisveris, azn odeme, m10 million emanat, oyun pin satisi, azpinx',
+ canonicalPath: '/azerbaycanda-alisveris',
+ extraStructuredData: [
+ howToSchema,
+ serviceSchema,
+ buildCollectionItemListSchema('Azərbaycanda populyar məhsullar', products),
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'Azərbaycanda Alış-veriş', url: '/azerbaycanda-alisveris' }
+ ])
+ ].filter(Boolean)
+ });
+
+ return res.render('azerbaycanda_alisveris', {
+ title: 'Azərbaycanda Alış-verişə Başla',
+ seo,
+ products,
+ paymentText,
+ whatsappRaw,
+ whatsappHref
+ });
+ } catch (e) {
+ console.error('Azerbaycan conversion landing error:', e.message);
+ return res.status(500).send('Server Error');
+ }
+});
+
 app.get('/faq', (req, res) => {
- res.render('faq', { title: 'Tez-tez Verilən Suallar (FAQ)' });
+ const faqSchema = {
+ '@context': 'https://schema.org',
+ '@type': 'FAQPage',
+ mainEntity: [
+ {
+ '@type': 'Question',
+ name: 'Balansımı necə artıra bilərəm?',
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: 'Profil bölməsindən Balans Artır seçib ödəniş etdikdən sonra qəbz şəklini yükləyin. Təsdiq bir neçə dəqiqə içində tamamlanır.'
+ }
+ },
+ {
+ '@type': 'Question',
+ name: 'Məhsul nə qədər vaxta çatdırılır?',
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: 'AZPINX sistemində çatdırılma adətən 5-15 dəqiqə ərzində tamamlanır və bir çox kod dərhal təqdim edilir.'
+ }
+ },
+ {
+ '@type': 'Question',
+ name: 'PUBG Player ID yoxlanışı nədir?',
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: 'Player ID yoxlanışı yanlış ID-yə göndəriş riskini azaltmaq üçün istifadə olunur və oyunçu adı ilə uyğunluq yoxlanır.'
+ }
+ },
+ {
+ '@type': 'Question',
+ name: 'Sifarişi ləğv etmək olar?',
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: 'Tamamlanmış rəqəmsal sifarişlər ləğv edilmir. Pending sifarişlər üçün dəstək komandası ilə əlaqə saxlamaq mümkündür.'
+ }
+ }
+ ]
+ };
+
+ const seo = createSeoMeta(req, res.locals.settings || {}, {
+ title: `Tez-tez Verilən Suallar | ${SEO_SITE_NAME}`,
+ description: 'AZPINX istifadəçiləri üçün balans artırma, çatdırılma, PUBG ID yoxlanışı və sifariş qaydaları haqqında FAQ.',
+ extraStructuredData: [
+ faqSchema,
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'FAQ', url: '/faq' }
+ ])
+ ].filter(Boolean)
+ });
+
+ res.render('faq', { title: 'Tez-tez Verilən Suallar (FAQ)', seo });
 });
 
 app.get('/terms', (req, res) => {
- res.render('terms', { title: 'İstifadə Şərtləri və Qaydalar' });
+ const seo = createSeoMeta(req, res.locals.settings || {}, {
+ title: `İstifadə Şərtləri və Qaydalar | ${SEO_SITE_NAME}`,
+ description: 'AZPINX platformasının istifadə şərtləri, ödəniş, çatdırılma və məsuliyyət qaydaları.',
+ extraStructuredData: [
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'Şərtlər', url: '/terms' }
+ ])
+ ].filter(Boolean)
+ });
+ res.render('terms', { title: 'İstifadə Şərtləri və Qaydalar', seo });
 });
 
 app.get('/vpn-blocked', (req, res) => {
@@ -2374,7 +3273,38 @@ app.get('/product/:id', async (req, res) => {
  .filter(p => p.category === product.category && p.id != product.id && p.status === 'sale' && p.is_active)
  .slice(0, 4);
  const requiresPlayerId = productRequiresPubgPlayerId(product);
- res.render('product', { title: product.name, product, similarProducts, requiresPlayerId });
+ const productPath = `/product/${encodeURIComponent(String(product.id))}`;
+ const productUrl = toAbsoluteUrl(productPath);
+ const productImage = normalizeOptionalString(product.image);
+ const ogOverrides = {
+ type: 'product',
+ url: productUrl
+ };
+ if (productImage) ogOverrides.image = toAbsoluteUrl(productImage);
+
+ const productSeo = createSeoMeta(req, res.locals.settings || {}, {
+ title: `${product.name} | ${SEO_SITE_NAME}`,
+ description: limitSeoText(product.description || `${product.name} AZPINX məhsulu`, 160),
+ canonicalUrl: productUrl,
+ og: ogOverrides,
+ twitter: productImage ? { image: toAbsoluteUrl(productImage) } : {},
+ extraStructuredData: [
+ buildProductSchema(product, productUrl),
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'Bütün Məhsullar', url: '/all-products' },
+ { name: String(product.name || 'Məhsul'), url: productPath }
+ ])
+ ].filter(Boolean)
+ });
+
+ res.render('product', {
+ title: product.name,
+ seo: productSeo,
+ product,
+ similarProducts,
+ requiresPlayerId
+ });
 });
 
 // --- Auth Routes ---
@@ -3099,7 +4029,8 @@ app.post('/profile/public/update', uploadAvatar.single('avatar'), async (req, re
  const selectedRank = normalizeOptionalString(req.body.rank_key).toLowerCase();
  const publicEnabled = req.body.public_profile_enabled ? 1 : 0;
  const safeRank = USER_RANK_OPTIONS.some((r) => r.key === selectedRank) ? selectedRank : 'member';
- const avatarPath = req.file ? '/uploads/avatars/' + req.file.filename : null;
+ const avatarFileName = req.file ? path.basename(String(req.file.filename || '').trim()) : '';
+ const avatarPath = avatarFileName ? `${AVATAR_URL_PREFIX}${avatarFileName}` : null;
 
  let sql = 'UPDATE users SET public_bio = ?, rank_key = ?, public_profile_enabled = ?';
  const params = [bio, safeRank, publicEnabled];
@@ -3111,6 +4042,23 @@ app.post('/profile/public/update', uploadAvatar.single('avatar'), async (req, re
  params.push(req.session.user.id);
 
  await db.execute(sql, params);
+ if (avatarFileName && req.file?.path) {
+ try {
+ const avatarBuffer = fs.readFileSync(req.file.path);
+ const avatarMime = String(req.file.mimetype || '').trim() || getMimeTypeForAvatarFilename(avatarFileName);
+ await upsertAvatarBackup(req.session.user.id, avatarFileName, avatarMime, avatarBuffer);
+ } catch (avatarErr) {
+ console.warn('Avatar backup write warning:', avatarErr.message);
+ }
+ }
+ if (req.session.user) {
+ req.session.user.rank_key = safeRank;
+ req.session.user.public_bio = bio;
+ req.session.user.public_profile_enabled = publicEnabled;
+ if (avatarPath) {
+ req.session.user.avatar_path = avatarPath;
+ }
+ }
  req.session.success = 'Profil məlumatları yeniləndi.';
  return res.redirect('/profile');
  } catch (e) {
@@ -3140,8 +4088,22 @@ app.get('/people', async (req, res) => {
  users = users.filter((u) => String(u.full_name || '').toLowerCase().includes(needle));
  }
 
+ const peopleSeoOverrides = {
+ title: `İcma Profilləri | ${SEO_SITE_NAME}`,
+ description: 'AZPINX icmasında aktiv istifadəçi profilləri, rank məlumatları və son fəaliyyətlər.',
+ extraStructuredData: [
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'İcma Profilləri', url: '/people' }
+ ])
+ ].filter(Boolean)
+ };
+ if (q) peopleSeoOverrides.robots = 'noindex,follow';
+ const seo = createSeoMeta(req, res.locals.settings || {}, peopleSeoOverrides);
+
  return res.render('people', {
  title: 'İcma Profilləri',
+ seo,
  users,
  searchQuery: q || ''
  });
@@ -3162,15 +4124,44 @@ app.get('/u/:id', async (req, res) => {
  if (!rows.length) return res.redirect('/people');
  const profileUser = rows[0];
  if (!profileUser.public_profile_enabled) return res.redirect('/people');
+ const rankMeta = getUserRankMeta(profileUser.rank_key);
 
  const [publicOrders] = await db.execute(
  'SELECT id, product_name, amount, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
  [userId]
  );
 
+ const profilePath = `/u/${profileUser.id}`;
+ const profileUrl = toAbsoluteUrl(profilePath);
+ const profileImage = normalizeOptionalString(profileUser.avatar_path);
+ const personSchema = {
+ '@context': 'https://schema.org',
+ '@type': 'Person',
+ name: String(profileUser.full_name || 'İstifadəçi'),
+ url: profileUrl,
+ description: limitSeoText(profileUser.public_bio || 'AZPINX icma istifadəçisi', 180)
+ };
+ if (profileImage) personSchema.image = toAbsoluteUrl(profileImage);
+ if (rankMeta?.label) personSchema.jobTitle = String(rankMeta.label);
+ const seo = createSeoMeta(req, res.locals.settings || {}, {
+ title: `${profileUser.full_name} | ${SEO_SITE_NAME} Profil`,
+ description: limitSeoText(profileUser.public_bio || `${profileUser.full_name} AZPINX icma profili`, 160),
+ canonicalUrl: profileUrl,
+ og: profileImage ? { image: toAbsoluteUrl(profileImage), url: profileUrl } : { url: profileUrl },
+ extraStructuredData: [
+ personSchema,
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'İcma Profilləri', url: '/people' },
+ { name: String(profileUser.full_name || 'Profil'), url: profilePath }
+ ])
+ ].filter(Boolean)
+ });
+
  return res.render('public_profile', {
  title: `${profileUser.full_name} - Profil`,
- profileUser: { ...profileUser, rank_meta: getUserRankMeta(profileUser.rank_key) },
+ seo,
+ profileUser: { ...profileUser, rank_meta: rankMeta },
  publicOrders
  });
  } catch (e) {

@@ -80,6 +80,48 @@
  </div>
  </section>
 
+ <section class="section-container trend-searches">
+ <div class="section-header">
+ <h3>Trend Axtarışlar</h3>
+ <a href="/pubg-ucretsiz-pin" class="view-all">PUBG Rehberinə keç <i class="ri-arrow-right-line"></i></a>
+ </div>
+ <div class="trend-search-links">
+ <a href="/pubg-ucretsiz-pin" class="trend-search-link hot">PUBG Ücretsiz Pin 2026</a>
+ <a href="/all-products?search=pubg" class="trend-search-link">PUBG UC Kampaniyaları</a>
+ <a href="/all-products?search=uc" class="trend-search-link">UC Bonus Paketləri</a>
+ <a href="/all-products?search=valorant" class="trend-search-link">Valorant VP Endirim</a>
+ <a href="/all-products?search=pin" class="trend-search-link">E-Pin Flash Satış</a>
+ </div>
+ </section>
+
+ <section class="section-container az-shop-start">
+ <div class="section-header">
+ <h3>Azərbaycanda Alış-verişi Başlat</h3>
+ <a href="/azerbaycanda-alisveris" class="view-all">3 addım planı <i class="ri-arrow-right-line"></i></a>
+ </div>
+ <div class="az-shop-start-grid">
+ <article class="az-shop-start-card">
+ <i class="ri-search-eye-line"></i>
+ <h4>Məhsulu Seç</h4>
+ <p>Trend məhsullardan birini seçin və sifarişi dərhal başladın.</p>
+ </article>
+ <article class="az-shop-start-card">
+ <i class="ri-shield-check-line"></i>
+ <h4>Yerli Ödəniş Et</h4>
+ <p>AZN ilə təhlükəsiz ödəniş: kart, IBAN və balans üsulları.</p>
+ </article>
+ <article class="az-shop-start-card">
+ <i class="ri-flashlight-line"></i>
+ <h4>Çatdırılmanı Al</h4>
+ <p>Sifariş statusunu profilinizdən izləyin, dəstək 7/24 yanınızdadır.</p>
+ </article>
+ </div>
+ <div class="az-shop-start-actions">
+ <a href="/azerbaycanda-alisveris" class="btn btn-primary">Alış-verişə Başla</a>
+ <a href="/all-products" class="btn btn-outline">Məhsullara Bax</a>
+ </div>
+ </section>
+
  <!-- Dynamic Sections or Featured Products -->
  <% if (searchQuery || selectedCategory) { %>
  <!-- Search/Category Result View (Standard Grid) -->
@@ -340,6 +382,106 @@
  <%- include('partials/footer') %>
 
  <style>
+ .trend-searches {
+ margin-top: 16px;
+ border: 1px solid rgba(148, 163, 184, 0.22);
+ border-radius: 14px;
+ background: linear-gradient(130deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+ }
+
+ .trend-search-links {
+ display: flex;
+ flex-wrap: wrap;
+ gap: 10px;
+ }
+
+ .trend-search-link {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ padding: 10px 14px;
+ border-radius: 999px;
+ border: 1px solid rgba(148, 163, 184, 0.3);
+ color: #e2e8f0;
+ font-size: 13px;
+ font-weight: 700;
+ text-decoration: none;
+ background: rgba(15, 23, 42, 0.58);
+ transition: all 0.2s ease;
+ }
+
+ .trend-search-link:hover {
+ text-decoration: none;
+ color: #f8fafc;
+ transform: translateY(-2px);
+ border-color: rgba(96, 165, 250, 0.8);
+ }
+
+ .trend-search-link.hot {
+ background: linear-gradient(120deg, rgba(239, 68, 68, 0.25), rgba(249, 115, 22, 0.25));
+ border-color: rgba(249, 115, 22, 0.75);
+ color: #fff7ed;
+ }
+
+ .az-shop-start {
+ border: 1px solid rgba(148, 163, 184, 0.2);
+ border-radius: 14px;
+ background: linear-gradient(125deg, rgba(2, 6, 23, 0.92), rgba(15, 23, 42, 0.88));
+ }
+
+ .az-shop-start-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+ gap: 12px;
+ margin-top: 8px;
+ }
+
+ .az-shop-start-card {
+ border: 1px solid rgba(148, 163, 184, 0.24);
+ border-radius: 12px;
+ padding: 14px;
+ background: rgba(15, 23, 42, 0.7);
+ }
+
+ .az-shop-start-card i {
+ display: inline-flex;
+ width: 36px;
+ height: 36px;
+ align-items: center;
+ justify-content: center;
+ border-radius: 50%;
+ background: rgba(59, 130, 246, 0.15);
+ color: #93c5fd;
+ font-size: 18px;
+ margin-bottom: 8px;
+ }
+
+ .az-shop-start-card h4 {
+ margin: 0 0 6px;
+ font-size: 16px;
+ color: #f8fafc;
+ }
+
+ .az-shop-start-card p {
+ margin: 0;
+ font-size: 13px;
+ color: #cbd5e1;
+ line-height: 1.55;
+ }
+
+ .az-shop-start-actions {
+ margin-top: 14px;
+ display: flex;
+ gap: 10px;
+ flex-wrap: wrap;
+ }
+
+ @media (max-width: 768px) {
+ .az-shop-start-actions .btn {
+ width: 100%;
+ }
+ }
+
  .testimonials-section {
  margin-top: 26px;
  }

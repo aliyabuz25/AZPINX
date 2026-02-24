@@ -1,0 +1,48 @@
+SEO Guncelleme Listesi
+Tarih: 24.02.2026
+
+1) Teknik SEO Altyapisi Guclendirildi
+- Merkezi SEO yapisi kuruldu: canonical URL, hreflang, robots, Open Graph, Twitter meta, JSON-LD.
+- Sayfa bazli SEO yonetimi eklendi ve tum sayfalarda tek noktadan yonetilir hale getirildi.
+
+2) Robots ve Sitemap Gelistirmeleri
+- robots.txt guclendirildi; admin, auth ve API gibi alanlar kontrollu sekilde ayrildi.
+- sitemap.xml dinamik hale getirildi; kategori ve urun URL'leri otomatik ekleniyor.
+- Yeni landing sayfalari sitemap'e dahil edildi:
+  /pubg-ucretsiz-pin
+  /azerbaycanda-alisveris
+
+3) Google Dogrulama Hazirligi
+- Google Search Console meta dogrulama destegi eklendi (GOOGLE_SITE_VERIFICATION).
+- googleXXXXXXXX.html dogrulama dosyasi route'u eklendi (GOOGLE_VERIFICATION_TOKEN).
+
+4) Sayfa Bazli SEO Icerikleri
+- Ana sayfa, tum urunler, urun detayi, FAQ, terms, people ve public profile sayfalarina ozel SEO metasi eklendi.
+- Product, FAQ, Breadcrumb, ItemList schema'lari entegre edildi.
+- "Azerbaycanda alisveris" landing sayfasina ek olarak HowTo ve Service schema eklendi.
+
+5) CTR ve Icerik Guclendirmeleri
+- "PUBG ucretsiz pin" odakli landing sayfasi eklendi.
+- Ana sayfaya trend arama bloklari ve donusum odakli ic linkler eklendi.
+- Footer'a yeni stratejik ic linkler eklendi:
+  /azerbaycanda-alisveris
+  /pubg-ucretsiz-pin
+
+6) Azerbaycan Donusum (Satis Baslatma) Iyilestirmeleri
+- Yeni donusum sayfasi eklendi: /azerbaycanda-alisveris
+- Checkout akisina yerel guven/donusum ogeleri eklendi:
+  - Odemeye guven strip'i
+  - WhatsApp destek kisayolu
+  - Kart/IBAN kopyala butonlari
+  - Alici Guven Paketi karti
+- Checkout tarafinda teknik guvenlik ve UX guclendirildi:
+  - Cift tiklama/cift gonderim engeli
+  - Buton yukleniyor durumu
+  - Dosya tipi ve boyut dogrulamasi (dekont)
+  - Alan dogrulamalari (ad/soyad, tutar)
+  - Ag hatasi yonetimi
+
+7) Dogrulama ve Kontroller
+- server.js syntax kontrolu basariyla tamamlandi.
+- EJS template derleme kontrolleri basariyla tamamlandi.
+

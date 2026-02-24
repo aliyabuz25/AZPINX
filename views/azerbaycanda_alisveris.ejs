@@ -1,0 +1,152 @@
+<%- include('partials/header') %>
+
+<main class="az-start-page smooth-enter">
+ <section class="section-container az-start-hero">
+ <p class="az-start-kicker">Azərbaycan bazarı üçün xüsusi alış-veriş axını</p>
+ <h1>Azərbaycanda Alış-verişə Bu Gün Başla</h1>
+ <p class="az-start-lead">
+  Məhsulu seçin, AZN ilə təhlükəsiz ödəniş edin, sifarişinizi dəqiqələr içində hesabınızda görün.
+  Ödəniş üsulları: <strong><%= paymentText %></strong>
+ </p>
+
+ <div class="az-start-steps">
+  <article class="az-step-card">
+   <span class="az-step-no">1</span>
+   <h3>Məhsulu Seç</h3>
+   <p>Populyar oyun və rəqəmsal kodlar arasında sizə uyğun məhsulu seçin.</p>
+  </article>
+  <article class="az-step-card">
+   <span class="az-step-no">2</span>
+   <h3>AZN ilə Ödə</h3>
+   <p>Kart köçürməsi, IBAN və balans üsulları ilə təhlükəsiz ödəniş edin.</p>
+  </article>
+  <article class="az-step-card">
+   <span class="az-step-no">3</span>
+   <h3>Dərhal Təsdiq Al</h3>
+   <p>Sifariş statusunu profilinizdən izləyin, dəstək lazım olduqda dərhal əlaqə saxlayın.</p>
+  </article>
+ </div>
+
+ <div class="az-start-cta">
+  <a href="/all-products" class="btn btn-primary">Məhsulları Aç</a>
+  <% if (locals.user) { %>
+  <a href="/checkout" class="btn btn-outline">Checkout-a Keç</a>
+  <% } else { %>
+  <a href="/register" class="btn btn-outline">Qeydiyyatdan Keç</a>
+  <a href="/login" class="btn btn-outline">Daxil Ol</a>
+  <% } %>
+  <% if (whatsappHref) { %>
+  <a href="<%= whatsappHref %>" target="_blank" rel="noopener" class="btn btn-outline">
+   <i class="ri-whatsapp-line"></i> WhatsApp Dəstək
+  </a>
+  <% } %>
+ </div>
+ </section>
+
+ <section class="section-container">
+ <div class="section-header">
+  <h3>Azərbaycanda Ən Çox Alınan Məhsullar</h3>
+  <a href="/all-products" class="view-all">Hamısına bax <i class="ri-arrow-right-line"></i></a>
+ </div>
+
+ <% if (products && products.length > 0) { %>
+ <div class="product-grid">
+  <% products.forEach(function(product) { %>
+  <%- include('partials/product_card', { product: product }) %>
+  <% }) %>
+ </div>
+ <% } else { %>
+ <div class="text-center py-5">
+  <i class="ri-shopping-bag-3-line icon-3x text-muted mb-3"></i>
+  <p class="text-muted">Hazırda məhsul siyahısı yenilənir. Bir az sonra yenidən yoxlayın.</p>
+ </div>
+ <% } %>
+ </section>
+</main>
+
+<%- include('partials/footer') %>
+
+<style>
+.az-start-hero {
+ border: 1px solid rgba(148, 163, 184, 0.22);
+ border-radius: 16px;
+ background: linear-gradient(145deg, rgba(2, 6, 23, 0.95), rgba(15, 23, 42, 0.9));
+ color: #e2e8f0;
+}
+
+.az-start-kicker {
+ display: inline-flex;
+ margin-bottom: 10px;
+ padding: 6px 12px;
+ border-radius: 999px;
+ border: 1px solid rgba(56, 189, 248, 0.7);
+ background: rgba(56, 189, 248, 0.15);
+ color: #bae6fd;
+ font-size: 12px;
+ font-weight: 700;
+}
+
+.az-start-hero h1 {
+ margin: 0 0 10px;
+ font-size: clamp(26px, 4vw, 40px);
+ color: #f8fafc;
+}
+
+.az-start-lead {
+ max-width: 880px;
+ color: #cbd5e1;
+ line-height: 1.65;
+}
+
+.az-start-steps {
+ margin-top: 22px;
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+ gap: 12px;
+}
+
+.az-step-card {
+ border: 1px solid rgba(148, 163, 184, 0.28);
+ border-radius: 12px;
+ padding: 14px;
+ background: rgba(15, 23, 42, 0.75);
+}
+
+.az-step-no {
+ display: inline-grid;
+ place-items: center;
+ width: 28px;
+ height: 28px;
+ border-radius: 50%;
+ background: rgba(16, 185, 129, 0.2);
+ color: #6ee7b7;
+ font-weight: 800;
+ margin-bottom: 8px;
+}
+
+.az-step-card h3 {
+ margin: 0 0 7px;
+ font-size: 16px;
+ color: #f8fafc;
+}
+
+.az-step-card p {
+ margin: 0;
+ font-size: 13px;
+ color: #cbd5e1;
+ line-height: 1.55;
+}
+
+.az-start-cta {
+ margin-top: 18px;
+ display: flex;
+ flex-wrap: wrap;
+ gap: 10px;
+}
+
+@media (max-width: 768px) {
+ .az-start-cta .btn {
+ width: 100%;
+ }
+}
+</style>
