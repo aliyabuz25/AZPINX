@@ -44,6 +44,15 @@
  <div class="card-header border-transparent">
  <h3 class="card-title">Məhsul Kataloqu</h3>
  <div class="card-tools">
+ <a href="/admin/products/export" class="btn btn-sm btn-success mr-2">
+ <i class="ri-download-2-line"></i> Export JSON
+ </a>
+ <form action="/admin/products/import" method="POST" enctype="multipart/form-data" class="d-inline-flex align-items-center mr-2">
+ <input type="file" name="backup_file" accept="application/json,.json" required class="form-control form-control-sm mr-1" style="width: 210px;">
+ <button type="submit" class="btn btn-sm btn-warning">
+ <i class="ri-upload-2-line"></i> Import JSON
+ </button>
+ </form>
  <a href="/admin/products/add" class="btn btn-sm btn-info mr-2">
  <i class="ri-add-line"></i> Yeni Məhsul
  </a>

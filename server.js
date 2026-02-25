@@ -222,6 +222,10 @@ const uploadAvatar = multer({
  storage: avatarStorage,
  limits: { fileSize: Infinity, files: Infinity }
 });
+const uploadJsonBackup = multer({
+ storage: multer.memoryStorage(),
+ limits: { fileSize: 10 * 1024 * 1024, files: 1 }
+});
 
 
 // API Config
@@ -5419,6 +5423,118 @@ app.get('/admin/products', isAdmin, async (req, res) => {
  filters: { q, status, active, source },
  pagination: { currentPage, totalPages, totalItems, perPage, baseQuery }
  });
+});
+
+app.get('/admin/products/export', isAdmin, async (req, res) => {
+ try {
+ const [rows] = await db.execute(
+ 'SELECT id, api_id, name, category, price, description, image_path, status, is_active, created_at, updated_at FROM products ORDER BY id ASC'
+ );
+ const payload = {
+ version: 1,
+ exported_at: new Date().toISOString(),
+ source: SEO_SITE_NAME,
+ total: rows.length,
+ products: rows
+ };
+ const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+ res.setHeader('Content-Disposition', `attachment; filename="products-backup-${stamp}.json"`);
+ return res.type('application/json').send(JSON.stringify(payload, null, 2));
+ } catch (e) {
+ console.error('Products export error:', e.message);
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('Export xətası: ' + e.message));
+ }
+});
+
+app.post('/admin/products/import', isAdmin, (req, res, next) => {
+ uploadJsonBackup.single('backup_file')(req, res, (err) => {
+ if (err instanceof multer.MulterError) {
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('Import faylı yüklənmə xətası: ' + err.message));
+ }
+ if (err) {
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('Import xətası: ' + err.message));
+ }
+ return next();
+ });
+}, async (req, res) => {
+ try {
+ if (!req.file || !req.file.buffer || !req.file.buffer.length) {
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('JSON faylı seçilməyib.'));
+ }
+
+ const rawText = String(req.file.buffer.toString('utf8') || '').trim();
+ if (!rawText) {
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('JSON faylı boşdur.'));
+ }
+
+ let parsed;
+ try {
+ parsed = JSON.parse(rawText);
+ } catch (jsonErr) {
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('JSON formatı yanlışdır.'));
+ }
+
+ const rows = Array.isArray(parsed) ? parsed : parsed?.products;
+ if (!Array.isArray(rows) || !rows.length) {
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('Import ediləcək məhsul tapılmadı.'));
+ }
+
+ const stats = {
+ inserted: 0,
+ updated: 0,
+ skipped: 0
+ };
+
+ for (const item of rows.slice(0, 20000)) {
+ const id = Number(item?.id);
+ const apiId = normalizeOptionalString(item?.api_id);
+ const name = normalizeOptionalString(item?.name);
+ const category = normalizeOptionalString(item?.category);
+ const description = normalizeOptionalString(item?.description);
+ const imagePath = normalizeOptionalString(item?.image_path || item?.image);
+ const status = ['sale', 'draft'].includes(String(item?.status || '').toLowerCase())
+ ? String(item.status).toLowerCase()
+ : 'sale';
+ const priceValue = Number(item?.price);
+ const isActive = Number(item?.is_active) === 0 ? 0 : 1;
+
+ if (!name || !category || !Number.isFinite(priceValue)) {
+ stats.skipped += 1;
+ continue;
+ }
+
+ let existingId = null;
+ if (Number.isInteger(id) && id > 0) {
+ const [byId] = await db.execute('SELECT id FROM products WHERE id = ? LIMIT 1', [id]);
+ if (byId.length) existingId = Number(byId[0].id);
+ }
+ if (!existingId && apiId) {
+ const [byApi] = await db.execute('SELECT id FROM products WHERE api_id = ? LIMIT 1', [apiId]);
+ if (byApi.length) existingId = Number(byApi[0].id);
+ }
+
+ if (existingId) {
+ await db.execute(
+ 'UPDATE products SET api_id = ?, name = ?, category = ?, price = ?, description = ?, image_path = ?, status = ?, is_active = ? WHERE id = ?',
+ [apiId, name, category, Number(priceValue.toFixed(2)), description, imagePath, status, isActive, existingId]
+ );
+ stats.updated += 1;
+ } else {
+ await db.execute(
+ 'INSERT INTO products (api_id, name, category, price, description, image_path, status, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+ [apiId, name, category, Number(priceValue.toFixed(2)), description, imagePath, status, isActive]
+ );
+ stats.inserted += 1;
+ }
+ }
+
+ invalidateRuntimeCaches('products');
+ const successMsg = `Import tamamlandı. Yeni: ${stats.inserted}, Yenilənən: ${stats.updated}, Keçildi: ${stats.skipped}`;
+ return adminRedirect(req, res, '/admin/products?success=' + encodeURIComponent(successMsg));
+ } catch (e) {
+ console.error('Products import error:', e.message);
+ return adminRedirect(req, res, '/admin/products?error=' + encodeURIComponent('Import xətası: ' + e.message));
+ }
 });
 
 // Admin Product Edit Page
