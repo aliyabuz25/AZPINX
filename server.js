@@ -256,7 +256,7 @@ const APP_CACHE_TTL = {
  CATEGORIES_MS: Number(process.env.CATEGORIES_CACHE_TTL_MS || 45000),
  SLIDERS_MS: Number(process.env.SLIDERS_CACHE_TTL_MS || 45000),
  HOME_STATS_MS: Number(process.env.HOME_STATS_CACHE_TTL_MS || 30000),
- USER_BALANCE_TOUCH_MS: Number(process.env.USER_BALANCE_TOUCH_MS || 15000)
+ USER_BALANCE_TOUCH_MS: Number(process.env.USER_BALANCE_TOUCH_MS || 60000)
 };
 
 const runtimeCache = {
@@ -268,6 +268,14 @@ const runtimeCache = {
  sliders: { value: null, expiresAt: 0, inflight: null },
  homeStats: { value: null, expiresAt: 0, inflight: null }
 };
+
+function runInBackground(taskFn) {
+ Promise.resolve()
+ .then(taskFn)
+ .catch((err) => {
+  if (err) console.warn('Background task warning:', err.message || err);
+ });
+}
 
 const LICENSE_CONFIG = {
  CODES_PATH: process.env.LICENSE_CODES_PATH || path.join(__dirname, 'data', 'license_codes.json'),
@@ -2306,7 +2314,7 @@ app.use(async (req, res, next) => {
 
  const shouldTouchLastSeen = !req.session.last_seen_touch_at || (now - req.session.last_seen_touch_at) > 120000;
  if (shouldTouchLastSeen) {
- await db.execute('UPDATE users SET last_seen_at = NOW() WHERE id = ?', [req.session.user.id]);
+ runInBackground(() => db.execute('UPDATE users SET last_seen_at = NOW() WHERE id = ?', [req.session.user.id]));
  req.session.last_seen_touch_at = now;
  }
  }
@@ -2342,10 +2350,10 @@ app.use(async (req, res, next) => {
  ? `u:${req.session.user.id}`
  : `g:${getClientIp(req) || 'unknown'}:${String(req.headers['user-agent'] || '').slice(0, 80)}`;
 
- await db.execute(
- 'INSERT INTO site_access_logs (user_id, visitor_key, request_path) VALUES (?, ?, ?)',
- [req.session.user?.id || null, visitorIdentity, pathValue.slice(0, 255)]
- );
+ runInBackground(() => db.execute(
+  'INSERT INTO site_access_logs (user_id, visitor_key, request_path) VALUES (?, ?, ?)',
+  [req.session.user?.id || null, visitorIdentity, pathValue.slice(0, 255)]
+ ));
  req.session.last_access_log_at = now;
  }
  }

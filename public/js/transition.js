@@ -5,39 +5,65 @@
     const splashInner = splash.querySelector('.azpin-splash-inner');
     const splashLogo = splash.querySelector('.azpin-splash-logo');
     const minimumVisibleMs = 520;
+    const maxVisibleMs = 4500;
     const startedAt = Date.now();
+    let hideStarted = false;
+    let hidden = false;
+
+    function forceHideSplash() {
+        hidden = true;
+        hideStarted = true;
+        splash.classList.add('is-hidden');
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+        splash.style.pointerEvents = 'none';
+        document.body.classList.remove('is-page-leaving');
+    }
 
     function hideSplash() {
+        if (hidden || hideStarted) return;
+        hideStarted = true;
         const elapsed = Date.now() - startedAt;
         const wait = Math.max(0, minimumVisibleMs - elapsed);
 
         window.setTimeout(() => {
+            if (hidden) return;
             if (window.gsap) {
                 const pulseTarget = splashLogo || splashInner;
-                const tl = gsap.timeline({
-                    onComplete: () => {
-                        gsap.to(splash, {
-                            opacity: 0,
-                            duration: 0.28,
-                            ease: 'power2.out',
-                            onComplete: () => splash.classList.add('is-hidden')
-                        });
-                        if (splashInner) {
-                            gsap.to(splashInner, { scale: 0.98, opacity: 0.92, duration: 0.28, ease: 'power2.out' });
+                try {
+                    const tl = gsap.timeline({
+                        onComplete: () => {
+                            if (hidden) return;
+                            gsap.to(splash, {
+                                opacity: 0,
+                                duration: 0.28,
+                                ease: 'power2.out',
+                                onComplete: forceHideSplash
+                            });
+                            if (splashInner) {
+                                gsap.to(splashInner, { scale: 0.98, opacity: 0.92, duration: 0.28, ease: 'power2.out' });
+                            }
                         }
-                    }
-                });
+                    });
 
-                if (pulseTarget) {
-                    tl.to(pulseTarget, { scale: 1.08, duration: 0.14, ease: 'sine.out' })
-                        .to(pulseTarget, { scale: 1, duration: 0.14, ease: 'sine.inOut' })
-                        .to(pulseTarget, { scale: 1.08, duration: 0.14, ease: 'sine.out' })
-                        .to(pulseTarget, { scale: 1, duration: 0.14, ease: 'sine.inOut' });
+                    if (pulseTarget) {
+                        tl.to(pulseTarget, { scale: 1.08, duration: 0.14, ease: 'sine.out' })
+                            .to(pulseTarget, { scale: 1, duration: 0.14, ease: 'sine.inOut' })
+                            .to(pulseTarget, { scale: 1.08, duration: 0.14, ease: 'sine.out' })
+                            .to(pulseTarget, { scale: 1, duration: 0.14, ease: 'sine.inOut' });
+                    } else {
+                        forceHideSplash();
+                    }
+                } catch (err) {
+                    forceHideSplash();
                 }
             } else {
-                splash.classList.add('is-hidden');
+                forceHideSplash();
             }
         }, wait);
+
+        // Absolute failsafe: never keep splash forever
+        window.setTimeout(forceHideSplash, maxVisibleMs);
     }
 
     function isInternalLink(anchor) {
@@ -81,13 +107,17 @@
         hideSplash();
     } else {
         window.addEventListener('load', hideSplash, { once: true });
+        document.addEventListener('DOMContentLoaded', hideSplash, { once: true });
     }
 
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
-            splash.classList.add('is-hidden');
-            document.body.classList.remove('is-page-leaving');
+            forceHideSplash();
         }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') hideSplash();
     });
 
     document.addEventListener('click', (event) => {

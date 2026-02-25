@@ -1,4 +1,144 @@
 document.addEventListener('DOMContentLoaded', () => {
+ const AZPINX_ENGINE = 'engine';
+ const AZPINX_VERSION = 'v2.0.0';
+ const AZPINX_BUILD = '2026-02-25';
+ const ASCII_AZPINX = [
+ '   ___   ______  ____  ____ _   __   _  __',
+ '  /   | /__  / / __ \\/  _// | / /  | |/ /',
+ ' / /| |   / / / /_/ // / /  |/ /   |   / ',
+ '/ ___ |  / /_/ ____// / / /|  /   /   |  ',
+ '/_/  |_| /____/_/  /___//_/ |_/   /_/|_|  '
+ ].join('\n');
+
+ const consoleState = {
+ ip: 'Unknown',
+ city: 'Unknown',
+ region: 'Unknown',
+ country: 'Unknown',
+ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
+ updatedAt: new Date().toISOString(),
+ source: 'local'
+ };
+
+ function fetchWithTimeout(url, timeoutMs) {
+ return Promise.race([
+ fetch(url, { cache: 'no-store' }),
+ new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs))
+ ]);
+ }
+
+ async function refreshGeoInfo() {
+ try {
+ const resp = await fetchWithTimeout('https://ipapi.co/json/', 2200);
+ if (!resp || !resp.ok) throw new Error('geo_response_not_ok');
+ const data = await resp.json();
+ if (!data || typeof data !== 'object') throw new Error('geo_payload_invalid');
+ consoleState.ip = String(data.ip || consoleState.ip || 'Unknown');
+ consoleState.city = String(data.city || consoleState.city || 'Unknown');
+ consoleState.region = String(data.region || data.region_code || consoleState.region || 'Unknown');
+ consoleState.country = String(data.country_name || data.country || consoleState.country || 'Unknown');
+ consoleState.timezone = String(data.timezone || consoleState.timezone || 'Unknown');
+ consoleState.updatedAt = new Date().toISOString();
+ consoleState.source = 'ipapi.co';
+ } catch (err) {
+ consoleState.updatedAt = new Date().toISOString();
+ consoleState.source = 'fallback';
+ }
+ return { ...consoleState };
+ }
+
+ function printAzpinxConsoleBanner() {
+ const versionLine = `Version: ${AZPINX_VERSION} | Build: ${AZPINX_BUILD}`;
+ const ipLine = `IP: ${consoleState.ip}`;
+ const locLine = `Location: ${consoleState.city}, ${consoleState.region}, ${consoleState.country}`;
+ const tzLine = `Timezone: ${consoleState.timezone}`;
+ const srcLine = `Geo source: ${consoleState.source} | Updated: ${consoleState.updatedAt}`;
+ console.log('%c' + ASCII_AZPINX, 'color:#3b82f6;font-weight:700;line-height:1.15;font-family:monospace;');
+ console.log('%cAZPINX %c' + AZPINX_ENGINE, 'color:#10b981;font-weight:800;font-size:16px;', 'color:#94a3b8;font-size:12px;');
+ console.log('%c' + versionLine, 'color:#e2e8f0;font-size:11px;');
+ console.log('%c' + ipLine, 'color:#facc15;font-size:11px;');
+ console.log('%c' + locLine, 'color:#facc15;font-size:11px;');
+ console.log('%c' + tzLine, 'color:#facc15;font-size:11px;');
+ console.log('%c' + srcLine, 'color:#94a3b8;font-size:10px;');
+ console.log('%cType azpinx.help() for userland console commands.', 'color:#22d3ee;font-size:11px;');
+ }
+
+ window.azpinx = {
+ help() {
+ console.table([
+ { command: 'azpinx.help()', description: 'Command list' },
+ { command: 'azpinx.status()', description: 'Version + runtime status' },
+ { command: 'azpinx.geo()', description: 'Refresh and print IP/location' },
+ { command: 'azpinx.cart()', description: 'Current cart snapshot' },
+ { command: 'azpinx.clearCart()', description: 'Clear local cart' },
+ { command: 'azpinx.banner()', description: 'Reprint ASCII banner' },
+ { command: 'azpinx.ping()', description: 'Simple health output' }
+ ]);
+ },
+ status() {
+ const snapshot = {
+ engine: AZPINX_ENGINE,
+ version: AZPINX_VERSION,
+ build: AZPINX_BUILD,
+ url: window.location.href,
+ userAgent: navigator.userAgent,
+ language: navigator.language,
+ online: navigator.onLine,
+ ip: consoleState.ip,
+ location: `${consoleState.city}, ${consoleState.region}, ${consoleState.country}`,
+ timezone: consoleState.timezone,
+ geoSource: consoleState.source,
+ geoUpdatedAt: consoleState.updatedAt
+ };
+ console.table(snapshot);
+ return snapshot;
+ },
+ async geo() {
+ const info = await refreshGeoInfo();
+ printAzpinxConsoleBanner();
+ return info;
+ },
+ cart() {
+ const items = JSON.parse(localStorage.getItem('azpin_cart') || '[]');
+ console.table(items);
+ return items;
+ },
+ clearCart() {
+ localStorage.removeItem('azpin_cart');
+ console.log('azpin_cart cleared.');
+ return true;
+ },
+ banner() {
+ printAzpinxConsoleBanner();
+ },
+ ping() {
+ const payload = { ok: true, ts: new Date().toISOString(), path: window.location.pathname };
+ console.log(payload);
+ return payload;
+ }
+ };
+
+ refreshGeoInfo().finally(printAzpinxConsoleBanner);
+
+ let devtoolsWasOpen = false;
+ function isDevtoolsOpen() {
+ const widthGap = window.outerWidth - window.innerWidth;
+ const heightGap = window.outerHeight - window.innerHeight;
+ return widthGap > 160 || heightGap > 160;
+ }
+
+ function watchDevtoolsConsole() {
+ const openNow = isDevtoolsOpen();
+ if (openNow && !devtoolsWasOpen) {
+ printAzpinxConsoleBanner();
+ }
+ devtoolsWasOpen = openNow;
+ }
+
+ window.setInterval(watchDevtoolsConsole, 1200);
+ window.addEventListener('resize', watchDevtoolsConsole, { passive: true });
+ watchDevtoolsConsole();
+
  // Select elements
  const cartTrigger = document.getElementById('cartTrigger');
  const cartCount = document.querySelector('.cart-count');
