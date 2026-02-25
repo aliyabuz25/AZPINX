@@ -1,0 +1,131 @@
+<%- include('partials/header') %>
+
+<main class="epin-az-page smooth-enter">
+ <section class="section-container epin-az-hero">
+  <span class="epin-az-badge">Axtarış trendi: e-pin azerbaycan</span>
+  <h1>Azərbaycanda E-Pin Al: PUBG UC, Valorant VP və Rəqəmsal Kodlar</h1>
+  <p>
+   AZPINX üzərindən e-pin, oyun valyutası və rəqəmsal kodları təhlükəsiz şəkildə alın.
+   PUBG UC, Valorant VP, Free Fire Diamond və digər məhsullar üçün sürətli çatdırılma və şəffaf qiymətlər təqdim olunur.
+  </p>
+  <div class="epin-az-cta">
+   <a href="/all-products" class="btn btn-primary">Bütün E-Pin Məhsulları</a>
+   <a href="/all-products?search=pubg" class="btn btn-outline">PUBG UC Paketləri</a>
+   <a href="/all-products?search=valorant" class="btn btn-outline">Valorant VP Paketləri</a>
+  </div>
+ </section>
+
+ <section class="section-container">
+  <div class="section-header">
+   <h3>Azərbaycanda Populyar E-Pin Məhsulları</h3>
+   <a href="/all-products" class="view-all">Hamısına bax <i class="ri-arrow-right-line"></i></a>
+  </div>
+
+  <% if (products && products.length > 0) { %>
+  <div class="product-grid">
+   <% products.forEach(function(product) { %>
+   <%- include('partials/product_card', { product: product }) %>
+   <% }) %>
+  </div>
+  <% } else { %>
+  <div class="text-center py-5">
+   <i class="ri-gamepad-line icon-3x text-muted mb-3"></i>
+   <p class="text-muted">Hazırda məhsul siyahısı yenilənir. Bütün məhsullar bölməsini yoxlayın.</p>
+  </div>
+  <% } %>
+ </section>
+
+ <section class="section-container epin-az-faq">
+  <div class="section-header">
+   <h3>E-Pin Azərbaycan FAQ</h3>
+  </div>
+  <div class="epin-az-faq-grid">
+   <article>
+    <h4>E-pin kodu nədir?</h4>
+    <p>E-pin kodu oyun və ya platformada balans/artırım üçün istifadə olunan rəqəmsal koddur.</p>
+   </article>
+   <article>
+    <h4>PUBG UC neçə dəqiqəyə çatdırılır?</h4>
+    <p>Əksər sifarişlərdə çatdırılma qısa müddətdə tamamlanır və status paneldə görünür.</p>
+   </article>
+   <article>
+    <h4>AZPINX-də hansı kateqoriyalar var?</h4>
+    <p>PUBG UC, Valorant VP, Free Fire Diamond və müxtəlif rəqəmsal məhsul kateqoriyaları mövcuddur.</p>
+   </article>
+  </div>
+ </section>
+</main>
+
+<%- include('partials/footer') %>
+
+<style>
+.epin-az-hero {
+ border: 1px solid rgba(148, 163, 184, 0.22);
+ border-radius: 16px;
+ background: linear-gradient(145deg, rgba(2, 6, 23, 0.95), rgba(15, 23, 42, 0.9));
+ color: #e2e8f0;
+}
+
+.epin-az-badge {
+ display: inline-flex;
+ margin-bottom: 10px;
+ padding: 6px 12px;
+ border-radius: 999px;
+ border: 1px solid rgba(45, 212, 191, 0.7);
+ background: rgba(45, 212, 191, 0.14);
+ color: #99f6e4;
+ font-size: 12px;
+ font-weight: 700;
+}
+
+.epin-az-hero h1 {
+ margin: 0 0 10px;
+ font-size: clamp(26px, 4vw, 40px);
+ color: #f8fafc;
+}
+
+.epin-az-hero p {
+ max-width: 860px;
+ color: #cbd5e1;
+ line-height: 1.65;
+}
+
+.epin-az-cta {
+ margin-top: 18px;
+ display: flex;
+ gap: 10px;
+ flex-wrap: wrap;
+}
+
+.epin-az-faq-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+ gap: 12px;
+}
+
+.epin-az-faq-grid article {
+ border: 1px solid rgba(148, 163, 184, 0.28);
+ border-radius: 12px;
+ padding: 14px;
+ background: rgba(15, 23, 42, 0.75);
+}
+
+.epin-az-faq-grid h4 {
+ margin: 0 0 7px;
+ font-size: 16px;
+ color: #f8fafc;
+}
+
+.epin-az-faq-grid p {
+ margin: 0;
+ font-size: 13px;
+ color: #cbd5e1;
+ line-height: 1.55;
+}
+
+@media (max-width: 768px) {
+ .epin-az-cta .btn {
+ width: 100%;
+ }
+}
+</style>

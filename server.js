@@ -1594,6 +1594,31 @@ function buildCollectionItemListSchema(name, products = []) {
  };
 }
 
+function buildFaqSchema(questions = []) {
+ const mainEntity = questions
+ .map((entry) => {
+ const question = normalizeOptionalString(entry?.question);
+ const answer = normalizeOptionalString(entry?.answer);
+ if (!question || !answer) return null;
+ return {
+ '@type': 'Question',
+ name: question,
+ acceptedAnswer: {
+ '@type': 'Answer',
+ text: answer
+ }
+ };
+ })
+ .filter(Boolean);
+
+ if (!mainEntity.length) return null;
+ return {
+ '@context': 'https://schema.org',
+ '@type': 'FAQPage',
+ mainEntity
+ };
+}
+
 function buildProductSchema(product = {}, canonicalUrl) {
  const productId = normalizeOptionalString(product.id);
  if (!productId && productId !== 0) return null;
@@ -2409,6 +2434,7 @@ app.get('/sitemap.xml', async (req, res) => {
  pushEntry('/all-products', { priority: '0.9', changefreq: 'hourly' });
  pushEntry('/pubg-ucretsiz-pin', { priority: '0.85', changefreq: 'daily' });
  pushEntry('/azerbaycanda-alisveris', { priority: '0.88', changefreq: 'daily' });
+ pushEntry('/epin-azerbaycan', { priority: '0.89', changefreq: 'daily' });
  pushEntry('/faq', { priority: '0.6', changefreq: 'monthly' });
  pushEntry('/terms', { priority: '0.4', changefreq: 'monthly' });
  pushEntry('/people', { priority: '0.5', changefreq: 'daily' });
@@ -2729,6 +2755,20 @@ app.get('/', async (req, res) => {
  const isPrimaryHome = !searchQuery && !selectedCategory && Number(page) === 1;
  const homePrimaryTitle = 'AZPINX | AZƏRBAYCANDA ƏN UCUZ E-PINLƏR, PUBG UC, VALORANT VP, FREE FIRE DIAMOND VƏ RƏQƏMSAL KOD SATIŞI';
 
+ const homeFaqSchema = buildFaqSchema([
+ {
+ question: 'E-pin nədir və AZPINX-də necə alınır?',
+ answer: 'E-pin rəqəmsal kod məhsuludur. AZPINX-də məhsulu seçib təhlükəsiz ödəniş etdikdən sonra kod və ya top-up çatdırılması qısa müddətdə tamamlanır.'
+ },
+ {
+ question: 'PUBG UC və Valorant VP sifarişləri nə qədər vaxta çatdırılır?',
+ answer: 'Əksər sifarişlər bir neçə dəqiqə içində tamamlanır. Statusu profil və sifariş bölməsindən canlı izləmək mümkündür.'
+ },
+ {
+ question: 'Azərbaycanda hansı ödəniş üsulları dəstəklənir?',
+ answer: 'Platformada AZN əsaslı ödəniş axını mövcuddur və istifadəçilər balans, köçürmə və paneldə aktiv olan yerli üsullarla ödəyə bilirlər.'
+ }
+ ]);
  const homeSeoOverrides = {
  title: selectedCategory
  ? (homePubgIntent
@@ -2746,10 +2786,11 @@ app.get('/', async (req, res) => {
  : 'AZPINX üzərindən oyun içi məhsullar, UC, VP, pin və rəqəmsal kodları təhlükəsiz və sürətli alın.'),
  keywords: homePubgIntent
  ? 'pubg ücretsiz pin, pubg uc kampaniya, uc bonus, uc endirim, azpinx'
- : undefined,
+ : 'epin azerbaycan, pubg uc azerbaycan, valorant vp azerbaycan, free fire almaz, oyun pin satisi',
  extraStructuredData: [
  buildCollectionItemListSchema(selectedCategory ? `${selectedCategory} məhsulları` : 'Populyar məhsullar', products),
- buildBreadcrumbSchema([{ name: 'Ana Səhifə', url: '/' }])
+ buildBreadcrumbSchema([{ name: 'Ana Səhifə', url: '/' }]),
+ isPrimaryHome ? homeFaqSchema : null
  ].filter(Boolean)
  };
  if (isPrimaryHome) {
@@ -2860,6 +2901,20 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  const products = allProducts.slice(startIndex, startIndex + limit);
  const listingPubgIntent = hasPubgClickbaitIntent(selectedCategory, searchQuery);
 
+ const listingFaqSchema = buildFaqSchema([
+ {
+ question: 'PUBG UC neçə dəqiqəyə gəlir?',
+ answer: 'Əksər sifarişlərdə UC və digər top-up məhsulları çox qısa müddətdə hesabda görünür.'
+ },
+ {
+ question: 'E-pin kodu harada istifadə olunur?',
+ answer: 'Kod məhsulun aid olduğu oyunun və ya platformanın redeem/top-up bölməsində istifadə edilir.'
+ },
+ {
+ question: 'AZPINX-də hansı məhsullar var?',
+ answer: 'PUBG UC, Valorant VP, Free Fire Diamond və müxtəlif rəqəmsal oyun məhsulları kateqoriyalar üzrə təqdim olunur.'
+ }
+ ]);
  const listingSeoOverrides = {
  title: selectedCategory
  ? (listingPubgIntent
@@ -2877,9 +2932,10 @@ app.get(['/all-products', '/allproducts'], async (req, res) => {
  : 'AZPINX platformasında oyun içi məhsullar, pin və rəqəmsal kodlar.'),
  keywords: listingPubgIntent
  ? 'pubg ücretsiz pin, uc paketləri, pubg uc, bonus pin, azpinx pubg'
- : undefined,
+ : 'epin, oyun kodlari, pubg uc, valorant vp, free fire diamond, dijital kod azerbaycan',
  extraStructuredData: [
  buildCollectionItemListSchema(selectedCategory || 'Bütün məhsullar', products),
+ listingFaqSchema,
  buildBreadcrumbSchema([
  { name: 'Ana Səhifə', url: '/' },
  { name: 'Bütün Məhsullar', url: '/all-products' }
@@ -3052,6 +3108,58 @@ app.get('/azerbaycanda-alisveris', async (req, res) => {
  });
  } catch (e) {
  console.error('Azerbaycan conversion landing error:', e.message);
+ return res.status(500).send('Server Error');
+ }
+});
+
+app.get('/epin-azerbaycan', async (req, res) => {
+ try {
+ const [mappedProducts, resellerDiscountPercent] = await Promise.all([
+ getMappedProducts(),
+ getResellerDiscountPercent()
+ ]);
+
+ const products = applyResellerPricing(mappedProducts, req.session.user, resellerDiscountPercent)
+ .filter((p) => p.status === 'sale' && p.is_active)
+ .slice(0, 12);
+
+ const faqSchema = buildFaqSchema([
+ {
+ question: 'E-pin nədir?',
+ answer: 'E-pin rəqəmsal məhsul və ya balans kodudur. Alışdan sonra kod dərhal təqdim oluna bilər və ya top-up xidməti kimi tətbiq olunur.'
+ },
+ {
+ question: 'PUBG UC qiymətləri necə dəyişir?',
+ answer: 'Qiymətlər kampaniya, kateqoriya və stok vəziyyətinə görə yenilənə bilər. Ən aktual qiymət məhsul kartlarında görünür.'
+ },
+ {
+ question: 'AZPINX hansı oyun məhsullarını satır?',
+ answer: 'Platformada PUBG UC, Valorant VP, Free Fire Diamond və müxtəlif oyunlar üçün rəqəmsal kodlar mövcuddur.'
+ }
+ ]);
+
+ const seo = createSeoMeta(req, res.locals.settings || {}, {
+ title: `E-Pin Azərbaycan 2026: PUBG UC, Valorant VP və Rəqəmsal Kodlar | ${SEO_SITE_NAME}`,
+ description: 'Azərbaycanda e-pin almaq üçün sürətli və təhlükəsiz yol: PUBG UC, Valorant VP, Free Fire Diamond və digər rəqəmsal kodlar AZPINX-də.',
+ keywords: 'epin azerbaycan, pubg uc azerbaycan, valorant vp, free fire diamond, oyun kodlari, dijital kod',
+ canonicalPath: '/epin-azerbaycan',
+ extraStructuredData: [
+ faqSchema,
+ buildCollectionItemListSchema('E-pin Azərbaycan məhsulları', products),
+ buildBreadcrumbSchema([
+ { name: 'Ana Səhifə', url: '/' },
+ { name: 'E-Pin Azərbaycan', url: '/epin-azerbaycan' }
+ ])
+ ].filter(Boolean)
+ });
+
+ return res.render('epin_azerbaycan', {
+ title: 'E-Pin Azərbaycan',
+ seo,
+ products
+ });
+ } catch (e) {
+ console.error('E-pin SEO landing error:', e.message);
  return res.status(500).send('Server Error');
  }
 });
